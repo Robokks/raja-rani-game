@@ -40,12 +40,21 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
 .roomcode{font-size:44px;font-weight:800;letter-spacing:10px;text-align:center;color:var(--ink);background:#fffdf6;border:2px dashed rgba(58,42,24,.35);border-radius:8px;padding:10px 0;margin-top:10px;}
 .player-list{margin-top:12px;}
 .pl-row{display:flex;align-items:center;gap:10px;background:#fffdf6;border-radius:6px;padding:10px 14px;margin-top:8px;font-weight:700;font-size:16px;border:1.5px solid rgba(58,42,24,.15);}
-.pl-row .tag{margin-left:auto;font-family:'Catamaran';font-size:11px;font-weight:800;letter-spacing:1px;background:var(--gold);color:#fff;padding:2px 8px;border-radius:10px;}
+.pl-row .tag{font-family:'Catamaran';font-size:11px;font-weight:800;letter-spacing:1px;background:var(--gold);color:#fff;padding:2px 8px;border-radius:10px;white-space:nowrap;}
 .pl-row.empty{opacity:.45;font-weight:600;border-style:dashed;}
 .np-picker{display:flex;gap:8px;margin-top:8px;}
 .np-btn{flex:1;padding:10px 0;font-family:'Baloo Thambi 2';font-size:18px;font-weight:800;border:2px solid rgba(58,42,24,.3);border-radius:8px;background:#fffdf6;color:var(--ink);cursor:pointer;}
 .np-btn.active{background:var(--ink);color:var(--kraft);border-color:var(--ink);}
 .np-btn:disabled{opacity:.35;pointer-events:none;}
+.avatar-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}
+.av-opt{font-size:26px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:8px;border:2px solid transparent;cursor:pointer;background:#fffdf6;transition:transform .1s;}
+.av-opt:active{transform:scale(.88);}
+.av-opt.selected{border-color:var(--red);background:#fce8e7;transform:scale(1.1);}
+.kick-btn{background:none;border:none;color:var(--red);font-size:17px;font-weight:800;cursor:pointer;padding:2px 6px;margin-left:auto;line-height:1;flex-shrink:0;}
+.offline-badge{font-family:'Catamaran';font-size:10px;font-weight:800;color:#fff;background:#999;padding:1px 6px;border-radius:8px;margin-left:4px;vertical-align:middle;}
+.timer-bar{height:6px;background:rgba(58,42,24,.15);border-radius:3px;margin-top:10px;overflow:hidden;}
+.timer-fill{height:100%;background:var(--green);border-radius:3px;transition:background .4s;}
+.timer-num{text-align:center;font-size:20px;font-weight:800;margin-top:4px;}
 .dice-wrap{display:flex;flex-direction:column;align-items:center;margin-top:24px;}
 .dice{width:110px;height:110px;background:var(--paper);border-radius:20px;box-shadow:0 8px 0 var(--shadow),0 12px 24px rgba(0,0,0,.2);display:flex;align-items:center;justify-content:center;font-size:68px;cursor:pointer;transition:transform .08s;line-height:1;}
 .dice:active{transform:scale(.92);}
@@ -65,7 +74,7 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
 .progress-track{height:4px;background:rgba(58,42,24,.15);border-radius:2px;margin-top:20px;overflow:hidden;}
 .progress-fill{height:100%;background:var(--red);border-radius:2px;}
 @keyframes shrinkWidth{from{width:100%;}to{width:0%;}}
-.chain-progress{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:2px;margin-top:12px;padding:2px 4px;}
+.chain-progress{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:2px;margin-top:8px;padding:2px 4px;}
 .cp-role{font-family:'Catamaran';font-size:12px;font-weight:800;background:#fffdf6;border:2px solid rgba(58,42,24,.2);border-radius:20px;padding:3px 9px;white-space:nowrap;}
 .cp-role.declared{background:var(--gold);color:#fff;border-color:var(--gold);}
 .cp-role.found{background:var(--green);color:#fff;border-color:var(--green);}
@@ -120,6 +129,8 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
   <div class="panel">
     <label>உங்க பெயர் / Your name</label>
     <input type="text" id="myname" maxlength="12" placeholder="Name" autocomplete="off">
+    <label>Avatar தேர்வு / Pick your avatar</label>
+    <div class="avatar-grid" id="avatar-grid"></div>
     <button class="btn" onclick="createRoom()">&#x2795; Create room</button>
     <label style="margin-top:18px;">Room code join பண்ண</label>
     <input type="text" class="code" id="joincode" maxlength="4" placeholder="ABCD" autocomplete="off"
@@ -136,12 +147,18 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
   <div class="panel">
     <div class="centertext">Room code &mdash; நண்பர்களுக்கு சொல்லுங்க:</div>
     <div class="roomcode" id="lobby-code"></div>
-    <div id="lobby-np-section">
+    <div id="lobby-host-settings">
       <label>Number of players / வீரர்கள் எத்தனை</label>
       <div class="np-picker" id="np-picker">
         <button class="np-btn active" onclick="setNumPlayers(4)">4</button>
         <button class="np-btn" onclick="setNumPlayers(5)">5</button>
         <button class="np-btn" onclick="setNumPlayers(6)">6</button>
+      </div>
+      <label>Guess timer / நேரம்</label>
+      <div class="np-picker" id="timer-picker">
+        <button class="np-btn" onclick="setTimer(15)">15s</button>
+        <button class="np-btn active" onclick="setTimer(30)">30s</button>
+        <button class="np-btn" onclick="setTimer(60)">60s</button>
       </div>
     </div>
     <div class="player-list" id="lobby-players"></div>
@@ -194,6 +211,8 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
 <!-- CHAIN -->
 <div class="screen" id="scr-chain">
   <div class="tagwrap"><span class="roundtag" id="chain-round"></span></div>
+  <div class="timer-bar"><div class="timer-fill" id="chain-timer-fill" style="width:100%;"></div></div>
+  <div class="timer-num" id="chain-timer-num">30s</div>
   <div class="chain-progress" id="chain-progress"></div>
   <div id="chain-finder-label" class="centertext" style="margin-top:10px;font-size:15px;"></div>
   <div class="candidates" id="chain-candidates"></div>
@@ -261,6 +280,74 @@ function chainTarget(s){return getRoles(s.numPlayers)[s.chainStep+1].key;}
 const $=id=>document.getElementById(id);
 const gun=Gun(['https://gun-us.herokuapp.com/gun','https://gun-eu.herokuapp.com/gun','wss://relay.peer.ooo/gun']);
 
+// ── Avatar picker ──────────────────────────────────────────────
+const AVATARS=['🐯','🦁','🐻','🐼','🐨','🦊','🐸','🐙','🦄','🐲','🦋','⭐'];
+let myAvatar=localStorage.getItem('rr-avatar')||'🐯';
+(function(){
+  const grid=$('avatar-grid');
+  AVATARS.forEach(em=>{
+    const b=document.createElement('button');
+    b.className='av-opt'+(em===myAvatar?' selected':'');
+    b.textContent=em;b.type='button';
+    b.onclick=()=>{
+      myAvatar=em;localStorage.setItem('rr-avatar',em);
+      grid.querySelectorAll('.av-opt').forEach(x=>x.classList.toggle('selected',x.textContent===em));
+    };
+    grid.appendChild(b);
+  });
+})();
+
+// ── Sound effects ────────────────────────────────────────────
+let audioCtx=null;
+function getAudio(){
+  if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  return audioCtx;
+}
+function playSound(type){
+  try{
+    const ctx=getAudio();
+    const g=ctx.createGain();g.connect(ctx.destination);
+    if(type==='flip'){
+      const len=Math.floor(ctx.sampleRate*0.12);
+      const buf=ctx.createBuffer(1,len,ctx.sampleRate);
+      const d=buf.getChannelData(0);
+      for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2);
+      const src=ctx.createBufferSource();src.buffer=buf;src.connect(g);
+      g.gain.setValueAtTime(0.3,ctx.currentTime);src.start();
+    }else if(type==='correct'){
+      [523,784].forEach((f,i)=>{
+        const o=ctx.createOscillator();o.type='sine';o.frequency.value=f;o.connect(g);
+        const t=ctx.currentTime+i*0.12;
+        g.gain.setValueAtTime(0.4,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.3);
+        o.start(t);o.stop(t+0.3);
+      });
+    }else if(type==='wrong'){
+      const o=ctx.createOscillator();o.type='sawtooth';
+      o.frequency.setValueAtTime(300,ctx.currentTime);
+      o.frequency.linearRampToValueAtTime(100,ctx.currentTime+0.3);
+      o.connect(g);g.gain.setValueAtTime(0.25,ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.3);
+      o.start();o.stop(ctx.currentTime+0.3);
+    }else if(type==='complete'){
+      [523,659,784,1047].forEach((f,i)=>{
+        const o=ctx.createOscillator();o.type='triangle';o.frequency.value=f;o.connect(g);
+        const t=ctx.currentTime+i*0.1;
+        g.gain.setValueAtTime(0.35,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.25);
+        o.start(t);o.stop(t+0.25);
+      });
+    }else if(type==='dice'){
+      for(let i=0;i<4;i++){
+        const o=ctx.createOscillator();o.type='square';
+        o.frequency.value=200+Math.random()*400;o.connect(g);
+        const t=ctx.currentTime+i*0.08;
+        g.gain.setValueAtTime(0.15,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.05);
+        o.start(t);o.stop(t+0.05);
+      }
+    }
+  }catch(e){}
+}
+
+// ── Connection probe ───────────────────────────────────────────
 (function probeConn(){
   const dot=$('conn-dot'),txt=$('conn-txt');
   const p=gun.get('rr-probe-'+Math.random().toString(36).slice(2,6));
@@ -270,18 +357,24 @@ const gun=Gun(['https://gun-us.herokuapp.com/gun','https://gun-eu.herokuapp.com/
   setTimeout(()=>{if(dot.className==='conn-dot'){dot.className='conn-dot err';txt.textContent='Relay slow — try refreshing';}},5000);
 })();
 
+// ── Module state ─────────────────────────────────────────────
 let myId='p'+Math.random().toString(36).slice(2,10),myName='',roomCode=null,me=-1;
 let state=null,lastVer=-1,busy=false,mycardTimer=null,renderedPhase=null;
 let chatCollapsed=true,unreadCount=0;
+let chainTimerInterval=null,heartbeatInterval=null;
 const seenMsgs=new Set();
+const lastSeenMap={};
 
 const show=id=>{document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));$(id).classList.add('active');window.scrollTo(0,0);};
 const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
 const deepCopy=o=>JSON.parse(JSON.stringify(o));
 const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const av=p=>(p&&p.avatar)||'🎮';
 
+// ── Gun helpers ──────────────────────────────────────────────
 function roomKey(c){return 'rr-v3-'+c;}
 function chatKey(c){return 'rr-chat-'+c;}
+function presKey(c){return 'rr-pres-'+c;}
 
 function readRoom(code){
   return new Promise(resolve=>{
@@ -304,6 +397,10 @@ function subscribeRoom(code){
     try{
       const s=JSON.parse(d.s);
       if(s.version===lastVer)return;
+      if((s.kickedIds||[]).includes(myId)){
+        alert('You were removed from the room.');
+        location.reload();return;
+      }
       lastVer=s.version;state=s;
       me=s.players.findIndex(p=>p.id===myId);
       render();
@@ -311,6 +408,27 @@ function subscribeRoom(code){
   });
 }
 
+// ── Heartbeat ────────────────────────────────────────────────
+function pingPresence(){
+  if(!roomCode)return;
+  gun.get(presKey(roomCode)).get(myId).put({t:Date.now()});
+}
+function subscribePresence(code){
+  gun.get(presKey(code)).map().on((d,key)=>{
+    if(d&&d.t)lastSeenMap[key]=d.t;
+  });
+}
+function isOffline(pid){
+  const t=lastSeenMap[pid];
+  return !!(t&&Date.now()-t>20000);
+}
+function startHeartbeat(){
+  clearInterval(heartbeatInterval);
+  pingPresence();
+  heartbeatInterval=setInterval(pingPresence,8000);
+}
+
+// ── Chat ───────────────────────────────────────────────────
 function subscribeChat(code){
   gun.get(chatKey(code)).map().on((d,key)=>{
     if(!d||!d.msg||seenMsgs.has(key))return;
@@ -343,6 +461,7 @@ function toggleChat(){
 }
 function submitChat(){const i=$('chat-input');sendChat(i.value);i.value='';}
 
+// ── Room management ────────────────────────────────────────────
 function getName(){
   myName=$('myname').value.trim();
   if(!myName){$('home-err').textContent='பெயர் போடுங்க! Enter your name.';return false;}
@@ -360,11 +479,13 @@ async function createRoom(){
     }
     roomCode=code;me=0;
     const s={code,version:0,phase:'lobby',round:1,totalRounds:5,numPlayers:4,
-      players:[{id:myId,name:myName,score:0}],
+      chainTimerSecs:30,kickedIds:[],
+      players:[{id:myId,name:myName,score:0,avatar:myAvatar}],
       playerRoles:null,diceRoller:0,diceValue:null,
       chainStep:0,chainFinder:null,declaredRajaIdx:null,
       foundPlayers:[],roundPoints:{},lastResult:null};
-    writeRoom(s);subscribeRoom(code);subscribeChat(code);show('scr-lobby');
+    writeRoom(s);subscribeRoom(code);subscribeChat(code);subscribePresence(code);startHeartbeat();
+    show('scr-lobby');
   }catch(e){$('home-err').textContent='Connection error — try again.';console.error(e);}
   busy=false;
 }
@@ -380,19 +501,32 @@ async function joinRoom(){
   if(!s.players.some(p=>p.id===myId)){
     let name=myName;
     if(s.players.some(p=>p.name.toLowerCase()===name.toLowerCase()))name+='2';
-    s.players.push({id:myId,name,score:0});myName=name;
+    s.players.push({id:myId,name,score:0,avatar:myAvatar});myName=name;
   }
   roomCode=code;me=s.players.findIndex(p=>p.id===myId);
   $('home-err').textContent='';
-  writeRoom(s);subscribeRoom(code);subscribeChat(code);show('scr-lobby');busy=false;
+  writeRoom(s);subscribeRoom(code);subscribeChat(code);subscribePresence(code);startHeartbeat();
+  show('scr-lobby');busy=false;
 }
 
 const isHost=()=>me===0;
 
+// ── Lobby controls ─────────────────────────────────────────────
 function setNumPlayers(n){
   if(!isHost()||!state||state.phase!=='lobby')return;
   if(state.players.length>n)return;
   const s=deepCopy(state);s.numPlayers=n;writeRoom(s);
+}
+function setTimer(n){
+  if(!isHost()||!state||state.phase!=='lobby')return;
+  const s=deepCopy(state);s.chainTimerSecs=n;writeRoom(s);
+}
+async function hostKick(playerId){
+  if(!isHost()||!state||state.phase!=='lobby')return;
+  const s=await readRoom(roomCode);if(!s)return;
+  s.kickedIds=[...(s.kickedIds||[]),playerId];
+  s.players=s.players.filter(p=>p.id!==playerId);
+  writeRoom(s);
 }
 async function hostStart(){
   if(!isHost()||!state||state.players.length!==state.numPlayers||busy)return;
@@ -406,10 +540,12 @@ function beginRound(s){
   writeRoom(s);
 }
 
+// ── Dice ───────────────────────────────────────────────────
 function tapDice(){
   if(busy||!state||state.phase!=='dice'||me!==state.diceRoller)return;
   const el=$('dice-el');
   if(el.classList.contains('rolling'))return;
+  playSound('dice');
   el.classList.add('rolling');
   const faces=['⚀','⚁','⚂','⚃','⚄','⚅'];
   const iv=setInterval(()=>{el.textContent=faces[Math.floor(Math.random()*6)];},120);
@@ -426,6 +562,7 @@ async function rollDice(){
   writeRoom(s);busy=false;
 }
 
+// ── My card ──────────────────────────────────────────────────
 function scheduleAdvance(s){
   if(!isHost())return;
   clearTimeout(mycardTimer);
@@ -436,6 +573,7 @@ function scheduleAdvance(s){
   },delay);
 }
 
+// ── Chain ───────────────────────────────────────────────────
 async function declareRaja(){
   if(busy||!state||state.phase!=='declare')return;
   if(state.playerRoles[me]!=='raja')return;
@@ -453,14 +591,15 @@ async function guessPlayer(targetIdx){
   if((s.foundPlayers||[]).includes(targetIdx)||targetIdx===me){busy=false;return;}
   const target=chainTarget(s);
   if(s.playerRoles[targetIdx]===target){
+    playSound('correct');
     const pts=ROLE_DEFS[s.playerRoles[s.chainFinder]].pts;
     s.roundPoints[s.chainFinder]=(s.roundPoints[s.chainFinder]||0)+pts;
     s.foundPlayers=[...(s.foundPlayers||[]),targetIdx];
-    s.chainStep++;
-    s.chainFinder=targetIdx;
+    s.chainStep++;s.chainFinder=targetIdx;
     if(s.chainStep===s.numPlayers-1)finalizeRound(s);
     else writeRoom(s);
   }else{
+    playSound('wrong');
     const tmp=s.playerRoles[s.chainFinder];
     s.playerRoles[s.chainFinder]=s.playerRoles[targetIdx];
     s.playerRoles[targetIdx]=tmp;
@@ -471,13 +610,38 @@ async function guessPlayer(targetIdx){
 }
 
 function finalizeRound(s){
+  playSound('complete');
   s.players.forEach((p,i)=>{p.score+=(s.roundPoints[i]||0);});
   s.lastResult=s.players.map((p,i)=>({
-    playerIdx:i,name:p.name,roleKey:s.playerRoles[i],pts:s.roundPoints[i]||0,
+    playerIdx:i,name:p.name,roleKey:s.playerRoles[i],pts:s.roundPoints[i]||0,avatar:p.avatar||'🎮',
   }));
   s.phase='result';writeRoom(s);
 }
 
+// ── Chain timer ──────────────────────────────────────────────
+function startChainTimer(s){
+  clearInterval(chainTimerInterval);
+  const total=s.chainTimerSecs||30;
+  const deadline=s.ts+total*1000;
+  chainTimerInterval=setInterval(()=>{
+    if(!state||state.phase!=='chain'){clearInterval(chainTimerInterval);return;}
+    const rem=Math.max(0,Math.ceil((deadline-Date.now())/1000));
+    const pct=rem/total*100;
+    const numEl=$('chain-timer-num'),fillEl=$('chain-timer-fill');
+    if(numEl)numEl.textContent=rem+'s';
+    if(fillEl){fillEl.style.width=pct+'%';fillEl.style.background=rem<=10?'var(--red)':'var(--green)';}
+    if(rem===0){
+      clearInterval(chainTimerInterval);
+      if(state&&state.phase==='chain'&&state.chainFinder===me){
+        const pool=[...Array(state.numPlayers).keys()]
+          .filter(i=>i!==me&&!(state.foundPlayers||[]).includes(i));
+        if(pool.length)guessPlayer(pool[Math.floor(Math.random()*pool.length)]);
+      }
+    }
+  },250);
+}
+
+// ── Round flow ───────────────────────────────────────────────
 async function hostNextRound(){
   if(!isHost()||!state||busy)return;
   busy=true;
@@ -492,11 +656,13 @@ async function hostRematch(){
   s.players.forEach(p=>p.score=0);s.round=1;beginRound(s);busy=false;
 }
 
+// ── Render ──────────────────────────────────────────────────
 function render(){
   const s=state;if(!s)return;
   const chatPhases=['declare','chain','result','over'];
   $('chat-panel').style.display=chatPhases.includes(s.phase)?'block':'none';
   $('mychit').style.display='none';
+  if(s.phase!=='chain')clearInterval(chainTimerInterval);
   const phaseChanged=s.phase!==renderedPhase;
   renderedPhase=s.phase;
   switch(s.phase){
@@ -512,23 +678,30 @@ function render(){
 
 function renderLobby(s){
   $('lobby-code').textContent=s.code;
-  const npSec=$('lobby-np-section');
+  const hostSec=$('lobby-host-settings');
   if(isHost()){
-    npSec.style.display='block';
+    hostSec.style.display='block';
     $('np-picker').querySelectorAll('.np-btn').forEach(btn=>{
       const n=parseInt(btn.textContent);
       btn.classList.toggle('active',n===s.numPlayers);
       btn.disabled=s.players.length>n;
     });
-  }else{npSec.style.display='none';}
+    $('timer-picker').querySelectorAll('.np-btn').forEach(btn=>{
+      btn.classList.toggle('active',parseInt(btn.textContent)===(s.chainTimerSecs||30));
+    });
+  }else{hostSec.style.display='none';}
   const box=$('lobby-players');box.innerHTML='';
   for(let i=0;i<s.numPlayers;i++){
     const d=document.createElement('div');
     if(s.players[i]){
+      const p=s.players[i];
       d.className='pl-row';
-      d.innerHTML='&#x1f464; '+esc(s.players[i].name)
-        +(i===0?'<span class="tag">HOST</span>':'')
-        +(s.players[i].id===myId?' <small style="opacity:.5;">(you)</small>':'');
+      let inner='<span style="font-size:22px;">'+av(p)+'</span> '+esc(p.name);
+      if(i===0)inner+=' <span class="tag">HOST</span>';
+      if(p.id===myId)inner+=' <small style="opacity:.5;">(you)</small>';
+      if(isHost()&&i!==0&&p.id!==myId)
+        inner+='<button class="kick-btn" onclick="hostKick(\''+p.id+'\')" title="Remove">✕</button>';
+      d.innerHTML=inner;
     }else{d.className='pl-row empty';d.textContent='Waiting…';}
     box.appendChild(d);
   }
@@ -564,6 +737,7 @@ function renderMycard(s,phaseChanged){
     ro.key==='thirudan'?'🤫 ஷ்ஷ்! Don\'t get caught…':
     'Memorise your role… Round starts soon';
   if(phaseChanged){
+    playSound('flip');
     const inner=$('flip-inner');
     inner.classList.remove('flipped');
     const pf=$('mc-progress');
@@ -598,21 +772,24 @@ function renderChain(s){
   const area=$('chain-candidates');area.innerHTML='';
   (s.foundPlayers||[]).forEach(pi=>{
     if(pi==null)return;
-    const ro=ROLE_DEFS[s.playerRoles[pi]];
+    const p=s.players[pi];const ro=ROLE_DEFS[s.playerRoles[pi]];
     const d=document.createElement('div');
     d.className='candidate revealed';
-    d.innerHTML='<span class="cface">'+ro.emoji+'</span><span class="cname">'+esc(s.players[pi].name)+'</span><span class="crole">'+ro.ta+' ✓</span>';
+    d.innerHTML='<span class="cface">'+av(p)+'</span><span class="cname">'+esc(p.name)+'</span><span class="crole">'+ro.emoji+' '+ro.ta+' ✓</span>';
     area.appendChild(d);
   });
   for(let pi=0;pi<s.numPlayers;pi++){
     if((s.foundPlayers||[]).includes(pi))continue;
     if(pi===s.chainFinder)continue;
+    const p=s.players[pi];
+    const offBadge=isOffline(p.id)?'<span class="offline-badge">offline</span>':'';
     const d=document.createElement('div');
     d.className='candidate'+(isMyTurn?'':' passive');
-    d.innerHTML='<span class="cface">🫣</span><span class="cname">'+esc(s.players[pi].name)+'</span><span class="cq">?</span>';
+    d.innerHTML='<span class="cface">'+av(p)+'</span><span class="cname">'+esc(p.name)+offBadge+'</span><span class="cq">?</span>';
     if(isMyTurn)d.onclick=()=>guessPlayer(pi);
     area.appendChild(d);
   }
+  startChainTimer(s);
   showBadge(s);show('scr-chain');
 }
 
@@ -639,7 +816,7 @@ function renderResult(s){
     const ro=ROLE_DEFS[p.roleKey];
     const row=document.createElement('div');
     row.className='role-row';
-    row.innerHTML='<span class="em">'+ro.emoji+'</span>'+esc(p.name)+' <small style="opacity:.55;">('+ro.ta+')</small><span class="pt">+'+p.pts+'</span>';
+    row.innerHTML='<span class="em">'+(p.avatar||'🎮')+' '+ro.emoji+'</span>'+esc(p.name)+' <small style="opacity:.55;">('+ro.ta+')</small><span class="pt">+'+p.pts+'</span>';
     list.appendChild(row);
   });
   renderTable('res-table',s);
@@ -662,14 +839,17 @@ function renderOver(s){
 function showBadge(s){
   if(!s.playerRoles||me<0)return;
   const ro=ROLE_DEFS[s.playerRoles[me]];if(!ro)return;
-  const el=$('mychit');el.textContent='You: '+ro.emoji+' '+ro.ta;el.style.display='block';
+  const p=s.players[me];
+  const el=$('mychit');
+  el.textContent=(p?av(p)+' ':'')+ro.emoji+' '+ro.ta;
+  el.style.display='block';
 }
 
 function renderTable(id,s){
   const t=$(id);
   const sorted=s.players.map((p,i)=>({...p,i})).sort((a,b)=>b.score-a.score);
   t.innerHTML=sorted.map((p,idx)=>
-    '<tr class="'+(idx===0?'leader':'')+'"><td>'+(idx===0?'👑 ':'')+esc(p.name)+(p.id===myId?' <small style="opacity:.5;">(you)</small>':'')+'</td><td>'+p.score+'</td></tr>'
+    '<tr class="'+(idx===0?'leader':'')+'"><td>'+(idx===0?'👑 ':'')+av(p)+' '+esc(p.name)+(p.id===myId?' <small style="opacity:.5;">(you)</small>':'')+'</td><td>'+p.score+'</td></tr>'
   ).join('');
 }
 </script>
