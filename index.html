@@ -3,167 +3,205 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>ராஜா ராணி | Raja Rani WiFi Game</title>
+<title>ராஜா ராணி | Raja Rani Game</title>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+Thambi+2:wght@500;700;800&family=Catamaran:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
-  :root{
-    --kraft:#d9b98a; --paper:#fdf6e3; --ink:#3a2a18;
-    --red:#b3322b; --green:#2e6e4e; --gold:#d49a2a;
-    --shadow:rgba(58,42,24,.25);
-  }
-  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-  html,body{height:100%;}
-  body{
-    font-family:'Baloo Thambi 2','Catamaran',sans-serif;
-    background:var(--kraft);
-    background-image:
-      radial-gradient(circle at 20% 10%,rgba(255,255,255,.25),transparent 40%),
-      radial-gradient(circle at 80% 90%,rgba(0,0,0,.08),transparent 45%);
-    color:var(--ink);
-    display:flex;flex-direction:column;align-items:center;
-    min-height:100%;padding:16px 14px 36px;user-select:none;
-  }
-  .screen{display:none;width:100%;max-width:430px;animation:fadein .3s ease;}
-  .screen.active{display:block;}
-  @keyframes fadein{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
-  .crown{font-size:44px;text-align:center;line-height:1;}
-  h1{text-align:center;font-weight:800;font-size:32px;color:var(--red);text-shadow:1px 2px 0 rgba(255,255,255,.5);line-height:1.1;}
-  .sub{text-align:center;font-family:'Catamaran';font-size:13px;font-weight:600;opacity:.7;margin-top:2px;letter-spacing:2px;text-transform:uppercase;}
-  .panel{background:var(--paper);border-radius:6px;box-shadow:0 6px 0 var(--shadow),0 10px 24px rgba(0,0,0,.12);padding:20px 18px;margin-top:16px;position:relative;}
-  .panel::before{content:"";position:absolute;inset:6px;border:1.5px dashed rgba(58,42,24,.25);border-radius:4px;pointer-events:none;}
-  label{font-family:'Catamaran';font-size:12px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;opacity:.65;display:block;margin:12px 0 4px;}
-  input[type=text]{width:100%;padding:10px 12px;font-family:'Baloo Thambi 2';font-size:18px;font-weight:700;border:2px solid rgba(58,42,24,.3);border-radius:6px;background:#fffdf6;color:var(--ink);outline:none;}
-  input[type=text]:focus{border-color:var(--red);}
-  input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-size:24px;}
-  .btn{display:block;width:100%;margin-top:16px;padding:14px 0;font-family:'Baloo Thambi 2';font-size:19px;font-weight:800;background:var(--red);color:#fff;border:none;border-radius:8px;cursor:pointer;box-shadow:0 5px 0 #7e1f1a;transition:transform .08s,box-shadow .08s;position:relative;z-index:1;}
-  .btn:active{transform:translateY(4px);box-shadow:0 1px 0 #7e1f1a;}
-  .btn.green{background:var(--green);box-shadow:0 5px 0 #1c4732;}
-  .btn.green:active{box-shadow:0 1px 0 #1c4732;}
-  .btn.ghost{background:transparent;color:var(--ink);box-shadow:none;border:2px solid rgba(58,42,24,.4);font-size:15px;padding:9px 0;}
-  .btn:disabled{opacity:.5;pointer-events:none;}
-  .hint{text-align:center;font-family:'Catamaran';font-size:13px;font-weight:600;opacity:.6;margin-top:10px;}
-  .centertext{text-align:center;font-size:18px;font-weight:700;margin-top:6px;}
-  .bigname{font-size:38px;font-weight:800;text-align:center;color:var(--red);line-height:1.1;margin-top:6px;word-break:break-word;}
-  .roomcode{font-size:46px;font-weight:800;letter-spacing:10px;text-align:center;color:var(--ink);background:#fffdf6;border:2px dashed rgba(58,42,24,.35);border-radius:8px;padding:10px 0;margin-top:10px;}
-  .player-list{margin-top:12px;}
-  .pl-row{display:flex;align-items:center;gap:10px;background:#fffdf6;border-radius:6px;padding:10px 14px;margin-top:8px;font-weight:700;font-size:17px;border:1.5px solid rgba(58,42,24,.15);position:relative;z-index:1;}
-  .pl-row .tag{margin-left:auto;font-family:'Catamaran';font-size:11px;font-weight:800;letter-spacing:1px;background:var(--gold);color:#fff;padding:2px 8px;border-radius:10px;}
-  .pl-row.empty{opacity:.45;font-weight:600;border-style:dashed;}
-  .chit-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:18px;}
-  .chit{aspect-ratio:1/1.15;background:var(--paper);border-radius:4px;box-shadow:0 4px 0 var(--shadow),0 8px 16px rgba(0,0,0,.15);display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;transition:transform .12s,box-shadow .12s;}
-  .chit:active{transform:scale(.96);}
-  .chit.myturn{box-shadow:0 4px 0 var(--red),0 8px 16px rgba(179,50,43,.3);outline:2px solid var(--red);}
-  .chit::before{content:"";position:absolute;inset:0;background:linear-gradient(to right,transparent 49.5%,rgba(58,42,24,.18) 49.5% 50.5%,transparent 50.5%),linear-gradient(to bottom,transparent 49.5%,rgba(58,42,24,.18) 49.5% 50.5%,transparent 50.5%);}
-  .chit .qm{font-size:46px;font-weight:800;color:rgba(58,42,24,.35);}
-  .chit.taken{opacity:.35;pointer-events:none;filter:grayscale(.6);}
-  .reveal-card{background:var(--paper);border-radius:8px;box-shadow:0 8px 0 var(--shadow),0 14px 28px rgba(0,0,0,.2);padding:28px 20px;margin-top:16px;text-align:center;animation:unfold .4s ease;}
-  @keyframes unfold{from{transform:scaleY(.2);opacity:0;}to{transform:none;opacity:1;}}
-  .reveal-card .emoji{font-size:72px;line-height:1;}
-  .reveal-card .role-ta{font-size:38px;font-weight:800;margin-top:6px;}
-  .reveal-card .role-en{font-family:'Catamaran';font-size:14px;font-weight:800;letter-spacing:3px;text-transform:uppercase;opacity:.6;}
-  .reveal-card .pts{font-size:20px;font-weight:800;margin-top:8px;color:var(--gold);}
-  .suspect{display:flex;align-items:center;gap:14px;background:var(--paper);border-radius:8px;padding:16px;margin-top:14px;box-shadow:0 4px 0 var(--shadow);cursor:pointer;transition:transform .1s,box-shadow .1s;}
-  .suspect:active{transform:scale(.97);}
-  .suspect:hover{transform:scale(1.01);}
-  .suspect .face{font-size:34px;}
-  .suspect .nm{font-size:21px;font-weight:800;}
-  .suspect .q{margin-left:auto;font-size:26px;font-weight:800;color:var(--red);}
-  .result-banner{text-align:center;border-radius:8px;padding:14px;margin-top:14px;font-size:18px;font-weight:800;color:#fff;animation:pop .35s ease;line-height:1.4;}
-  @keyframes pop{from{transform:scale(.7);opacity:0;}to{transform:none;opacity:1;}}
-  .result-banner.good{background:var(--green);box-shadow:0 5px 0 #1c4732;}
-  .result-banner.bad{background:var(--red);box-shadow:0 5px 0 #7e1f1a;}
-  .role-row{display:flex;align-items:center;gap:10px;background:var(--paper);border-radius:6px;padding:10px 14px;margin-top:8px;box-shadow:0 3px 0 var(--shadow);font-weight:700;font-size:16px;}
-  .role-row .em{font-size:24px;}
-  .role-row .pt{margin-left:auto;font-weight:800;color:var(--gold);}
-  .score-table{width:100%;margin-top:12px;border-collapse:collapse;}
-  .score-table td{padding:9px 8px;font-weight:700;font-size:17px;border-bottom:1.5px dashed rgba(58,42,24,.25);}
-  .score-table td:last-child{text-align:right;font-weight:800;color:var(--green);font-size:19px;}
-  .score-table tr.leader td{color:var(--red);}
-  .roundtag{text-align:center;font-family:'Catamaran';font-weight:800;font-size:13px;letter-spacing:2px;text-transform:uppercase;background:var(--ink);color:var(--kraft);display:inline-block;padding:4px 14px;border-radius:20px;}
-  .tagwrap{text-align:center;margin-top:4px;}
-  .waiting{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:14px;font-weight:700;opacity:.7;}
-  .dotpulse{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ink);animation:pulse 1s infinite alternate;}
-  .dotpulse:nth-child(2){animation-delay:.2s;}.dotpulse:nth-child(3){animation-delay:.4s;}
-  @keyframes pulse{from{opacity:.2;transform:scale(.7);}to{opacity:1;transform:scale(1);}}
-  .winner-big{font-size:64px;text-align:center;margin-top:8px;}
-  .err{text-align:center;color:var(--red);font-weight:700;margin-top:8px;min-height:20px;font-size:14px;}
-  .mychit{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--kraft);font-weight:800;padding:7px 18px;border-radius:20px;font-size:14px;z-index:50;box-shadow:0 4px 12px rgba(0,0,0,.35);white-space:nowrap;}
-  .conn-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;background:#888;vertical-align:middle;}
-  .conn-dot.ok{background:#2e6e4e;}
-  .conn-dot.err{background:#b3322b;}
+:root{--kraft:#d9b98a;--paper:#fdf6e3;--ink:#3a2a18;--red:#b3322b;--green:#2e6e4e;--gold:#d49a2a;--shadow:rgba(58,42,24,.25);}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;}
+body{font-family:'Baloo Thambi 2','Catamaran',sans-serif;background:var(--kraft);background-image:radial-gradient(circle at 20% 10%,rgba(255,255,255,.25),transparent 40%),radial-gradient(circle at 80% 90%,rgba(0,0,0,.08),transparent 45%);color:var(--ink);display:flex;flex-direction:column;align-items:center;min-height:100%;padding:16px 14px 72px;user-select:none;}
+.screen{display:none;width:100%;max-width:430px;animation:fadein .3s ease;}
+.screen.active{display:block;}
+@keyframes fadein{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+.crown{font-size:44px;text-align:center;line-height:1;}
+h1{text-align:center;font-weight:800;font-size:32px;color:var(--red);text-shadow:1px 2px 0 rgba(255,255,255,.5);line-height:1.1;}
+.sub{text-align:center;font-family:'Catamaran';font-size:13px;font-weight:600;opacity:.7;margin-top:2px;letter-spacing:2px;text-transform:uppercase;}
+.centertext{text-align:center;font-size:17px;font-weight:700;margin-top:6px;}
+.hint{text-align:center;font-family:'Catamaran';font-size:13px;font-weight:600;opacity:.6;margin-top:10px;}
+.err{text-align:center;color:var(--red);font-weight:700;margin-top:8px;min-height:20px;font-size:14px;}
+.tagwrap{text-align:center;margin-top:4px;}
+.roundtag{font-family:'Catamaran';font-weight:800;font-size:13px;letter-spacing:2px;text-transform:uppercase;background:var(--ink);color:var(--kraft);display:inline-block;padding:4px 14px;border-radius:20px;}
+.panel{background:var(--paper);border-radius:6px;box-shadow:0 6px 0 var(--shadow),0 10px 24px rgba(0,0,0,.12);padding:20px 18px;margin-top:16px;position:relative;}
+.panel::before{content:"";position:absolute;inset:6px;border:1.5px dashed rgba(58,42,24,.25);border-radius:4px;pointer-events:none;}
+label{font-family:'Catamaran';font-size:12px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;opacity:.65;display:block;margin:12px 0 4px;}
+input[type=text]{width:100%;padding:10px 12px;font-family:'Baloo Thambi 2';font-size:18px;font-weight:700;border:2px solid rgba(58,42,24,.3);border-radius:6px;background:#fffdf6;color:var(--ink);outline:none;}
+input[type=text]:focus{border-color:var(--red);}
+input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-size:24px;}
+.btn{display:block;width:100%;margin-top:16px;padding:14px 0;font-family:'Baloo Thambi 2';font-size:19px;font-weight:800;background:var(--red);color:#fff;border:none;border-radius:8px;cursor:pointer;box-shadow:0 5px 0 #7e1f1a;transition:transform .08s,box-shadow .08s;}
+.btn:active{transform:translateY(4px);box-shadow:0 1px 0 #7e1f1a;}
+.btn.green{background:var(--green);box-shadow:0 5px 0 #1c4732;}
+.btn.green:active{box-shadow:0 1px 0 #1c4732;}
+.btn.ghost{background:transparent;color:var(--ink);box-shadow:none;border:2px solid rgba(58,42,24,.4);font-size:15px;padding:9px 0;}
+.btn:disabled{opacity:.5;pointer-events:none;}
+.waiting{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:14px;font-weight:700;opacity:.7;}
+.dotpulse{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ink);animation:pulse 1s infinite alternate;}
+.dotpulse:nth-child(2){animation-delay:.2s;}.dotpulse:nth-child(3){animation-delay:.4s;}
+@keyframes pulse{from{opacity:.2;transform:scale(.7);}to{opacity:1;transform:scale(1);}}
+.roomcode{font-size:44px;font-weight:800;letter-spacing:10px;text-align:center;color:var(--ink);background:#fffdf6;border:2px dashed rgba(58,42,24,.35);border-radius:8px;padding:10px 0;margin-top:10px;}
+.player-list{margin-top:12px;}
+.pl-row{display:flex;align-items:center;gap:10px;background:#fffdf6;border-radius:6px;padding:10px 14px;margin-top:8px;font-weight:700;font-size:16px;border:1.5px solid rgba(58,42,24,.15);}
+.pl-row .tag{margin-left:auto;font-family:'Catamaran';font-size:11px;font-weight:800;letter-spacing:1px;background:var(--gold);color:#fff;padding:2px 8px;border-radius:10px;}
+.pl-row.empty{opacity:.45;font-weight:600;border-style:dashed;}
+.np-picker{display:flex;gap:8px;margin-top:8px;}
+.np-btn{flex:1;padding:10px 0;font-family:'Baloo Thambi 2';font-size:18px;font-weight:800;border:2px solid rgba(58,42,24,.3);border-radius:8px;background:#fffdf6;color:var(--ink);cursor:pointer;}
+.np-btn.active{background:var(--ink);color:var(--kraft);border-color:var(--ink);}
+.np-btn:disabled{opacity:.35;pointer-events:none;}
+.dice-wrap{display:flex;flex-direction:column;align-items:center;margin-top:24px;}
+.dice{width:110px;height:110px;background:var(--paper);border-radius:20px;box-shadow:0 8px 0 var(--shadow),0 12px 24px rgba(0,0,0,.2);display:flex;align-items:center;justify-content:center;font-size:68px;cursor:pointer;transition:transform .08s;line-height:1;}
+.dice:active{transform:scale(.92);}
+.dice.rolling{animation:diceRoll 1.2s ease-in-out;pointer-events:none;}
+@keyframes diceRoll{0%{transform:rotate(0)scale(1)}15%{transform:rotate(-20deg)scale(1.1)}35%{transform:rotate(30deg)scale(.9)}55%{transform:rotate(-15deg)scale(1.05)}75%{transform:rotate(25deg)scale(.95)}100%{transform:rotate(0)scale(1)}}
+.flip-scene{perspective:800px;width:210px;height:270px;margin:20px auto 0;}
+.flip-card-inner{width:100%;height:100%;position:relative;transition:transform .7s ease;transform-style:preserve-3d;}
+.flip-card-inner.flipped{transform:rotateY(180deg);}
+.flip-card-face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 8px 0 var(--shadow),0 14px 28px rgba(0,0,0,.2);}
+.flip-card-front{background:var(--kraft);background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.07) 0,rgba(255,255,255,.07) 1px,transparent 0,transparent 50%);background-size:8px 8px;}
+.flip-card-back{background:var(--paper);transform:rotateY(180deg);text-align:center;padding:20px 16px;}
+.flip-card-front .qm{font-size:72px;font-weight:800;color:rgba(58,42,24,.3);}
+.flip-card-back .role-emoji{font-size:68px;line-height:1;}
+.flip-card-back .role-ta{font-size:32px;font-weight:800;margin-top:6px;}
+.flip-card-back .role-en{font-family:'Catamaran';font-size:12px;font-weight:800;letter-spacing:3px;text-transform:uppercase;opacity:.6;}
+.flip-card-back .role-pts{font-size:17px;font-weight:800;margin-top:8px;color:var(--gold);}
+.progress-track{height:4px;background:rgba(58,42,24,.15);border-radius:2px;margin-top:20px;overflow:hidden;}
+.progress-fill{height:100%;background:var(--red);border-radius:2px;}
+@keyframes shrinkWidth{from{width:100%;}to{width:0%;}}
+.chain-progress{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:2px;margin-top:12px;padding:2px 4px;}
+.cp-role{font-family:'Catamaran';font-size:12px;font-weight:800;background:#fffdf6;border:2px solid rgba(58,42,24,.2);border-radius:20px;padding:3px 9px;white-space:nowrap;}
+.cp-role.declared{background:var(--gold);color:#fff;border-color:var(--gold);}
+.cp-role.found{background:var(--green);color:#fff;border-color:var(--green);}
+.cp-role.target{background:var(--red);color:#fff;border-color:var(--red);animation:tpulse 1s infinite alternate;}
+@keyframes tpulse{from{opacity:.75;transform:scale(1);}to{opacity:1;transform:scale(1.07);}}
+.cp-arrow{font-size:12px;opacity:.4;padding:0 2px;}
+.candidates{margin-top:12px;}
+.candidate{display:flex;align-items:center;gap:12px;background:var(--paper);border-radius:8px;padding:13px 14px;margin-top:10px;box-shadow:0 4px 0 var(--shadow);cursor:pointer;transition:transform .1s;}
+.candidate:active{transform:scale(.97);}
+.candidate.passive{cursor:default;}
+.candidate .cface{font-size:30px;}
+.candidate .cname{font-size:19px;font-weight:800;flex:1;}
+.candidate .cq{font-size:22px;font-weight:800;color:var(--red);}
+.candidate.revealed{background:#fffdf6;cursor:default;}
+.candidate.revealed .crole{margin-left:auto;font-weight:800;font-size:13px;font-family:'Catamaran';color:var(--green);}
+.mychit{position:fixed;bottom:58px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--kraft);font-weight:800;padding:7px 18px;border-radius:20px;font-size:13px;z-index:50;box-shadow:0 4px 12px rgba(0,0,0,.35);white-space:nowrap;}
+.result-banner{text-align:center;border-radius:8px;padding:14px;margin-top:14px;font-size:17px;font-weight:800;color:#fff;animation:pop .35s ease;line-height:1.5;}
+@keyframes pop{from{transform:scale(.7);opacity:0;}to{transform:none;opacity:1;}}
+.result-banner.good{background:var(--green);box-shadow:0 5px 0 #1c4732;}
+.role-row{display:flex;align-items:center;gap:10px;background:var(--paper);border-radius:6px;padding:10px 14px;margin-top:8px;box-shadow:0 3px 0 var(--shadow);font-weight:700;font-size:15px;}
+.role-row .em{font-size:22px;}
+.role-row .pt{margin-left:auto;font-weight:800;color:var(--gold);}
+.score-table{width:100%;margin-top:12px;border-collapse:collapse;}
+.score-table td{padding:9px 8px;font-weight:700;font-size:16px;border-bottom:1.5px dashed rgba(58,42,24,.25);}
+.score-table td:last-child{text-align:right;font-weight:800;color:var(--green);font-size:18px;}
+.score-table tr.leader td{color:var(--red);}
+.winner-big{font-size:64px;text-align:center;margin-top:8px;}
+.chat-panel{position:fixed;bottom:0;left:0;right:0;max-width:430px;margin:0 auto;background:var(--paper);border-top:2px solid rgba(58,42,24,.2);border-radius:12px 12px 0 0;box-shadow:0 -4px 16px rgba(0,0,0,.15);z-index:100;transition:transform .25s ease;display:none;}
+.chat-panel.collapsed{transform:translateY(calc(100% - 46px));}
+.chat-header{height:46px;padding:0 16px;display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:800;font-size:15px;border-radius:12px 12px 0 0;}
+.chat-badge{background:var(--red);color:#fff;border-radius:10px;font-size:11px;padding:1px 6px;font-weight:800;}
+.chat-toggle{margin-left:auto;font-size:12px;opacity:.6;}
+.chat-messages{height:175px;overflow-y:auto;padding:8px 14px;display:flex;flex-direction:column;gap:5px;}
+.chat-bubble{font-size:13px;font-weight:600;line-height:1.4;}
+.chat-bubble .who{font-weight:800;color:var(--red);}
+.chat-bubble.me .who{color:var(--green);}
+.chat-input-row{display:flex;gap:8px;padding:8px 14px 14px;}
+.chat-input-row input{flex:1;padding:8px 10px;font-family:'Baloo Thambi 2';font-size:15px;font-weight:700;border:2px solid rgba(58,42,24,.3);border-radius:6px;background:#fffdf6;color:var(--ink);outline:none;}
+.chat-input-row input:focus{border-color:var(--red);}
+.chat-send{padding:8px 16px;font-family:'Baloo Thambi 2';font-size:14px;font-weight:800;background:var(--red);color:#fff;border:none;border-radius:6px;cursor:pointer;}
+.conn-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;background:#888;vertical-align:middle;}
+.conn-dot.ok{background:#2e6e4e;}.conn-dot.err{background:#b3322b;}
 </style>
 </head>
 <body>
 
 <!-- HOME -->
 <div class="screen active" id="scr-home">
-  <div class="crown">👑</div>
+  <div class="crown">&#x1F451;</div>
   <h1>ராஜா ராணி</h1>
-  <div class="sub">4 phones • same WiFi</div>
+  <div class="sub">WiFi Multiplayer</div>
   <div class="panel">
     <label>உங்க பெயர் / Your name</label>
     <input type="text" id="myname" maxlength="12" placeholder="Name" autocomplete="off">
-    <button class="btn" onclick="createRoom()">➕ Create room</button>
+    <button class="btn" onclick="createRoom()">&#x2795; Create room</button>
     <label style="margin-top:18px;">Room code join பண்ண</label>
     <input type="text" class="code" id="joincode" maxlength="4" placeholder="ABCD" autocomplete="off"
       oninput="this.value=this.value.toUpperCase()">
-    <button class="btn green" onclick="joinRoom()">🚪 Join room</button>
+    <button class="btn green" onclick="joinRoom()">&#x1F6AA; Join room</button>
     <div class="err" id="home-err"></div>
   </div>
-  <p class="hint">
-    <span class="conn-dot" id="conn-dot"></span><span id="conn-txt">Connecting…</span><br>
-    Host creates room · Others join with code<br>
-    Share this page URL with friends on the same WiFi
-  </p>
+  <p class="hint"><span class="conn-dot" id="conn-dot"></span><span id="conn-txt">Connecting&hellip;</span><br>Host creates room &middot; Others join with code</p>
 </div>
 
 <!-- LOBBY -->
 <div class="screen" id="scr-lobby">
   <div class="tagwrap"><span class="roundtag">Lobby</span></div>
   <div class="panel">
-    <div class="centertext">Room code — நண்பர்களுக்கு சொல்லுங்க:</div>
+    <div class="centertext">Room code &mdash; நண்பர்களுக்கு சொல்லுங்க:</div>
     <div class="roomcode" id="lobby-code"></div>
+    <div id="lobby-np-section">
+      <label>Number of players / வீரர்கள் எத்தனை</label>
+      <div class="np-picker" id="np-picker">
+        <button class="np-btn active" onclick="setNumPlayers(4)">4</button>
+        <button class="np-btn" onclick="setNumPlayers(5)">5</button>
+        <button class="np-btn" onclick="setNumPlayers(6)">6</button>
+      </div>
+    </div>
     <div class="player-list" id="lobby-players"></div>
-    <button class="btn" id="lobby-start" onclick="hostStart()" style="display:none;" disabled>Waiting…</button>
-    <div class="waiting" id="lobby-wait"><span class="dotpulse"></span><span class="dotpulse"></span><span class="dotpulse"></span><span style="margin-left:4px;font-size:14px;">நண்பர்களை எதிர்பார்க்கிறோம்…</span></div>
+    <button class="btn" id="lobby-start" onclick="hostStart()" style="display:none;" disabled>Waiting&hellip;</button>
+    <div class="waiting" id="lobby-wait"><span class="dotpulse"></span><span class="dotpulse"></span><span class="dotpulse"></span><span style="margin-left:4px;font-size:13px;">நண்பர்களை எதிர்பார்க்கிறோம்&hellip;</span></div>
   </div>
 </div>
 
-<!-- PICK -->
-<div class="screen" id="scr-pick">
-  <div class="tagwrap"><span class="roundtag" id="pick-round"></span></div>
-  <div class="centertext" id="pick-msg" style="margin-top:12px;"></div>
-  <div class="chit-grid" id="chit-grid"></div>
-  <div class="hint" id="pick-hint" style="margin-top:16px;"></div>
-</div>
-
-<!-- MY ROLE -->
-<div class="screen" id="scr-myrole">
-  <div class="tagwrap"><span class="roundtag" id="mr-round"></span></div>
-  <div class="reveal-card">
-    <div class="emoji" id="mr-emoji"></div>
-    <div class="role-ta" id="mr-ta"></div>
-    <div class="role-en" id="mr-en"></div>
-    <div class="pts" id="mr-pts"></div>
-  </div>
-  <div class="waiting" style="margin-top:20px;"><span class="dotpulse"></span><span class="dotpulse"></span><span class="dotpulse"></span></div>
-  <div class="hint" id="mr-hint" style="margin-top:8px;"></div>
-</div>
-
-<!-- HUNT -->
-<div class="screen" id="scr-hunt">
-  <div class="tagwrap"><span class="roundtag" id="h-round"></span></div>
+<!-- DICE -->
+<div class="screen" id="scr-dice">
+  <div class="tagwrap"><span class="roundtag" id="dice-round"></span></div>
   <div class="panel" style="text-align:center;">
-    <div style="font-size:46px;">👑</div>
-    <div class="centertext">ராஜா: <b id="h-raja"></b></div>
-    <div class="centertext" style="margin-top:8px;font-size:16px;">📣 "போலீஸ் <b id="h-police"></b>… திருடனை கண்டுபிடி!"</div>
+    <div id="dice-msg" class="centertext" style="margin-top:0;font-size:16px;"></div>
+    <div class="dice-wrap">
+      <div class="dice" id="dice-el" onclick="tapDice()">&#x1F3B2;</div>
+      <div class="hint" id="dice-hint" style="margin-top:14px;"></div>
+    </div>
+    <div class="waiting" id="dice-wait" style="display:none;margin-top:18px;"><span class="dotpulse"></span><span class="dotpulse"></span><span class="dotpulse"></span></div>
   </div>
-  <div id="h-guess-area"></div>
+</div>
+
+<!-- MY CARD -->
+<div class="screen" id="scr-mycard">
+  <div class="tagwrap"><span class="roundtag" id="mc-round"></span></div>
+  <div style="text-align:center;margin-top:10px;font-weight:700;font-size:15px;opacity:.7;">உங்களின் சீட்டு / Your card</div>
+  <div class="flip-scene">
+    <div class="flip-card-inner" id="flip-inner">
+      <div class="flip-card-face flip-card-front"><span class="qm">?</span></div>
+      <div class="flip-card-face flip-card-back">
+        <div class="role-emoji" id="mc-emoji"></div>
+        <div class="role-ta" id="mc-ta"></div>
+        <div class="role-en" id="mc-en"></div>
+        <div class="role-pts" id="mc-pts"></div>
+      </div>
+    </div>
+  </div>
+  <div class="progress-track"><div class="progress-fill" id="mc-progress" style="width:100%;"></div></div>
+  <div class="hint" id="mc-hint" style="margin-top:12px;"></div>
+</div>
+
+<!-- DECLARE -->
+<div class="screen" id="scr-declare">
+  <div class="tagwrap"><span class="roundtag" id="decl-round"></span></div>
+  <div class="panel" style="text-align:center;padding-top:24px;padding-bottom:24px;">
+    <div style="font-size:52px;">&#x1F451;</div>
+    <div id="decl-content"></div>
+  </div>
+</div>
+
+<!-- CHAIN -->
+<div class="screen" id="scr-chain">
+  <div class="tagwrap"><span class="roundtag" id="chain-round"></span></div>
+  <div class="chain-progress" id="chain-progress"></div>
+  <div id="chain-finder-label" class="centertext" style="margin-top:10px;font-size:15px;"></div>
+  <div class="candidates" id="chain-candidates"></div>
 </div>
 
 <!-- RESULT -->
 <div class="screen" id="scr-result">
-  <div class="result-banner" id="res-banner"></div>
+  <div class="result-banner good" id="res-banner"></div>
   <div id="res-roles"></div>
   <div class="panel">
     <div class="tagwrap"><span class="roundtag">Scoreboard</span></div>
@@ -175,7 +213,7 @@
 
 <!-- WINNER -->
 <div class="screen" id="scr-winner">
-  <div class="winner-big">🏆</div>
+  <div class="winner-big">&#x1F3C6;</div>
   <h1 id="w-name"></h1>
   <div class="sub" id="w-pts"></div>
   <div class="panel">
@@ -188,426 +226,451 @@
 
 <div class="mychit" id="mychit" style="display:none;"></div>
 
-<!-- Gun.js — real-time P2P sync, no server needed -->
+<div class="chat-panel collapsed" id="chat-panel">
+  <div class="chat-header" onclick="toggleChat()">
+    &#x1F4AC; <span>Chat</span>
+    <span class="chat-badge" id="chat-badge" style="display:none;"></span>
+    <span class="chat-toggle" id="chat-icon">&#x25B2;</span>
+  </div>
+  <div class="chat-messages" id="chat-messages"></div>
+  <div class="chat-input-row">
+    <input type="text" id="chat-input" maxlength="100" placeholder="Message&hellip;" autocomplete="off"
+      onkeydown="if(event.key==='Enter')submitChat()">
+    <button class="chat-send" onclick="submitChat()">Send</button>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
 <script>
-/* ============================================================
-   Raja Rani — WiFi multiplayer using Gun.js real-time sync.
-   Open this HTML on any device on the same WiFi network.
-   No server to run. Gun.js syncs state via public relay.
-   ============================================================ */
+const ROLE_DEFS = {
+  raja:     {key:'raja',     ta:'ராஜா',      en:'RAJA',      emoji:'👑', pts:1000},
+  rani:     {key:'rani',     ta:'ராணி',      en:'RANI',      emoji:'👸', pts:800},
+  manthiri: {key:'manthiri', ta:'மந்திரி',   en:'MANTHIRI',  emoji:'🧙', pts:600},
+  palkaran: {key:'palkaran', ta:'பால்காரன்',  en:'PAL KAREN', emoji:'🥛', pts:400},
+  police:   {key:'police',   ta:'போலீஸ்',    en:'POLICE',    emoji:'👮', pts:200},
+  thirudan: {key:'thirudan', ta:'திருடன்',   en:'THIRUDAN',  emoji:'🦹', pts:0},
+};
+const ROLE_CHAINS = {
+  4:['raja','rani','manthiri','thirudan'],
+  5:['raja','rani','manthiri','police','thirudan'],
+  6:['raja','rani','manthiri','palkaran','police','thirudan'],
+};
+function getRoles(n){return ROLE_CHAINS[n].map(k=>ROLE_DEFS[k]);}
+function chainTarget(s){return getRoles(s.numPlayers)[s.chainStep+1].key;}
 
-const ROLES = [
-  {key:'raja',   ta:'ராஜா',    en:'RAJA',   emoji:'👑', pts:1000},
-  {key:'rani',   ta:'ராணி',    en:'RANI',   emoji:'👸', pts:800},
-  {key:'police', ta:'போலீஸ்',  en:'POLICE', emoji:'👮', pts:500},
-  {key:'thief',  ta:'திருடன்', en:'THIRUDAN',emoji:'🦹', pts:0},
-];
-const TOTAL_ROUNDS = 5;
+const $=id=>document.getElementById(id);
+const gun=Gun(['https://gun-us.herokuapp.com/gun','https://gun-eu.herokuapp.com/gun','wss://relay.peer.ooo/gun']);
 
-// Gun.js setup — public relay servers for sync
-const gun = Gun([
-  'https://gun-us.herokuapp.com/gun',
-  'https://gun-eu.herokuapp.com/gun',
-  'wss://relay.peer.ooo/gun',
-]);
-
-// Check connection by attempting a small write/read
-(function checkConn(){
-  const dot = document.getElementById('conn-dot');
-  const txt = document.getElementById('conn-txt');
-  const probe = gun.get('rr-probe-' + Math.random().toString(36).slice(2,6));
-  probe.put({t: Date.now()});
-  probe.once(d => {
-    if(d){ dot.className='conn-dot ok'; txt.textContent='Connected ✓'; }
-    else { dot.className='conn-dot err'; txt.textContent='Relay unreachable — needs internet'; }
-  });
-  setTimeout(()=>{
-    if(dot.className==='conn-dot'){
-      dot.className='conn-dot err';
-      txt.textContent='Relay slow — try refreshing';
-    }
-  }, 5000);
+(function probeConn(){
+  const dot=$('conn-dot'),txt=$('conn-txt');
+  const p=gun.get('rr-probe-'+Math.random().toString(36).slice(2,6));
+  p.put({t:Date.now()});
+  p.once(d=>{if(d){dot.className='conn-dot ok';txt.textContent='Connected ✓';}
+    else{dot.className='conn-dot err';txt.textContent='Relay unreachable — needs internet';}});
+  setTimeout(()=>{if(dot.className==='conn-dot'){dot.className='conn-dot err';txt.textContent='Relay slow — try refreshing';}},5000);
 })();
 
-let myId   = 'p' + Math.random().toString(36).slice(2, 10);
-let myName = '';
-let roomCode = null;
-let me = -1;
-let state  = null;
-let lastVer = -1;
-let busy = false;
-let roomNode = null;
+let myId='p'+Math.random().toString(36).slice(2,10),myName='',roomCode=null,me=-1;
+let state=null,lastVer=-1,busy=false,mycardTimer=null,renderedPhase=null;
+let chatCollapsed=true,unreadCount=0;
+const seenMsgs=new Set();
 
-const $ = id => document.getElementById(id);
-const show = id => {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  $(id).classList.add('active');
-  window.scrollTo(0, 0);
-};
-const shuffle = a => {
-  for(let i = a.length-1; i > 0; i--){
-    const j = Math.floor(Math.random()*(i+1));
-    [a[i],a[j]] = [a[j],a[i]];
-  }
-  return a;
-};
+const show=id=>{document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));$(id).classList.add('active');window.scrollTo(0,0);};
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
+const deepCopy=o=>JSON.parse(JSON.stringify(o));
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
-// ---- storage helpers ----
-function roomKey(code){ return 'rr-v1-' + code; }
+function roomKey(c){return 'rr-v3-'+c;}
+function chatKey(c){return 'rr-chat-'+c;}
 
 function readRoom(code){
-  return new Promise(resolve => {
-    let done = false;
-    gun.get(roomKey(code)).once(data => {
-      if(done) return;
-      done = true;
-      if(data && data.s){
-        try { resolve(JSON.parse(data.s)); } catch { resolve(null); }
-      } else { resolve(null); }
+  return new Promise(resolve=>{
+    let done=false;
+    gun.get(roomKey(code)).once(d=>{
+      if(done)return;done=true;
+      if(d&&d.s){try{resolve(JSON.parse(d.s));}catch{resolve(null);}}else resolve(null);
     });
-    setTimeout(() => { if(!done){ done=true; resolve(null); } }, 4000);
+    setTimeout(()=>{if(!done){done=true;resolve(null);}},4000);
   });
 }
-
 function writeRoom(s){
-  s.version = (s.version||0) + 1;
-  s.ts = Date.now();
-  gun.get(roomKey(roomCode)).put({ s: JSON.stringify(s) });
-  state = s;
-  lastVer = s.version;
-  render();
+  s.version=(s.version||0)+1;s.ts=Date.now();
+  gun.get(roomKey(roomCode)).put({s:JSON.stringify(s)});
+  state=s;lastVer=s.version;render();
 }
-
 function subscribeRoom(code){
-  roomNode = gun.get(roomKey(code));
-  roomNode.on(data => {
-    if(!data || !data.s) return;
-    try {
-      const s = JSON.parse(data.s);
-      if(s.version === lastVer) return;
-      lastVer = s.version;
-      state = s;
-      me = s.players.findIndex(p => p.id === myId);
+  gun.get(roomKey(code)).on(d=>{
+    if(!d||!d.s)return;
+    try{
+      const s=JSON.parse(d.s);
+      if(s.version===lastVer)return;
+      lastVer=s.version;state=s;
+      me=s.players.findIndex(p=>p.id===myId);
       render();
-    } catch {}
+    }catch{}
   });
 }
 
-// ---- home ----
+function subscribeChat(code){
+  gun.get(chatKey(code)).map().on((d,key)=>{
+    if(!d||!d.msg||seenMsgs.has(key))return;
+    seenMsgs.add(key);
+    if(seenMsgs.size>500)seenMsgs.clear();
+    appendMsg(d);
+  });
+}
+function sendChat(txt){
+  if(!txt.trim()||!roomCode)return;
+  gun.get(chatKey(roomCode)).set({pid:myId,name:myName,msg:txt.trim().slice(0,100),t:Date.now()});
+}
+function appendMsg(d){
+  const box=$('chat-messages');
+  const el=document.createElement('div');
+  el.className='chat-bubble'+(d.pid===myId?' me':'');
+  const t=new Date(d.t||Date.now()).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  el.innerHTML='<span class="who">'+esc(d.name)+'</span> <small style="opacity:.5;">'+t+'</small><br>'+esc(d.msg);
+  box.appendChild(el);box.scrollTop=box.scrollHeight;
+  if(chatCollapsed&&d.pid!==myId){
+    unreadCount++;
+    const b=$('chat-badge');b.textContent=unreadCount;b.style.display='inline-block';
+  }
+}
+function toggleChat(){
+  chatCollapsed=!chatCollapsed;
+  $('chat-panel').classList.toggle('collapsed',chatCollapsed);
+  $('chat-icon').textContent=chatCollapsed?'▲':'▼';
+  if(!chatCollapsed){unreadCount=0;$('chat-badge').style.display='none';$('chat-messages').scrollTop=$('chat-messages').scrollHeight;}
+}
+function submitChat(){const i=$('chat-input');sendChat(i.value);i.value='';}
+
 function getName(){
-  myName = $('myname').value.trim();
-  if(!myName){ $('home-err').textContent = 'பெயர் போடுங்க! Enter your name.'; return false; }
+  myName=$('myname').value.trim();
+  if(!myName){$('home-err').textContent='பெயர் போடுங்க! Enter your name.';return false;}
   return true;
 }
-
 async function createRoom(){
-  if(busy || !getName()) return;
-  busy = true; $('home-err').textContent = '';
+  if(busy||!getName())return;
+  busy=true;$('home-err').textContent='';
   try{
-    let code;
-    const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ';
-    for(let t = 0; t < 6; t++){
-      code = Array.from({length:4}, () => chars[Math.floor(Math.random()*chars.length)]).join('');
-      const ex = await readRoom(code);
-      if(!ex || Date.now()-(ex.ts||0) > 4*3600*1000) break;
+    let code;const chars='ABCDEFGHJKMNPQRSTUVWXYZ';
+    for(let t=0;t<6;t++){
+      code=Array.from({length:4},()=>chars[Math.floor(Math.random()*chars.length)]).join('');
+      const ex=await readRoom(code);
+      if(!ex||Date.now()-(ex.ts||0)>4*3600*1000)break;
     }
-    roomCode = code;
-    const s = {
-      code, version:0, phase:'lobby', round:1, totalRounds:TOTAL_ROUNDS,
-      players:[{id:myId, name:myName, score:0}],
-      chits:[], chitOwner:[null,null,null,null], pickTurn:0, pickOrder:[],
-      suspects:[], guess:null, lastResult:null
-    };
-    me = 0;
-    writeRoom(s);
-    subscribeRoom(code);
-    show('scr-lobby');
-  } catch(e){
-    $('home-err').textContent = 'Connection error — try again.';
-    console.error(e);
-  }
-  busy = false;
+    roomCode=code;me=0;
+    const s={code,version:0,phase:'lobby',round:1,totalRounds:5,numPlayers:4,
+      players:[{id:myId,name:myName,score:0}],
+      playerRoles:null,diceRoller:0,diceValue:null,
+      chainStep:0,chainFinder:null,declaredRajaIdx:null,
+      foundPlayers:[],roundPoints:{},lastResult:null};
+    writeRoom(s);subscribeRoom(code);subscribeChat(code);show('scr-lobby');
+  }catch(e){$('home-err').textContent='Connection error — try again.';console.error(e);}
+  busy=false;
 }
-
 async function joinRoom(){
-  if(busy || !getName()) return;
-  const code = $('joincode').value.trim().toUpperCase();
-  if(code.length !== 4){ $('home-err').textContent = '4-letter code enter பண்ணுங்க.'; return; }
-  busy = true; $('home-err').textContent = 'Connecting…';
-  const s = await readRoom(code);
-  if(!s){ $('home-err').textContent = 'Room இல்லை! Code சரியா இருக்கா?'; busy=false; return; }
-  if(s.phase !== 'lobby'){ $('home-err').textContent = 'Game already started.'; busy=false; return; }
-  if(s.players.length >= 4){ $('home-err').textContent = 'Room full (4/4).'; busy=false; return; }
-  if(s.players.some(p=>p.id===myId)){ /* already in */ }
-  else {
-    let name = myName;
-    if(s.players.some(p=>p.name.toLowerCase()===name.toLowerCase())) name += '2';
-    s.players.push({id:myId, name, score:0});
-    myName = name;
+  if(busy||!getName())return;
+  const code=$('joincode').value.trim().toUpperCase();
+  if(code.length!==4){$('home-err').textContent='4-letter code enter பண்ணுங்க.';return;}
+  busy=true;$('home-err').textContent='Connecting…';
+  const s=await readRoom(code);
+  if(!s){$('home-err').textContent='Room இல்லை! Code சரியா இருக்கா?';busy=false;return;}
+  if(s.phase!=='lobby'){$('home-err').textContent='Game already started.';busy=false;return;}
+  if(s.players.length>=s.numPlayers){$('home-err').textContent='Room full ('+s.numPlayers+'/'+s.numPlayers+').';busy=false;return;}
+  if(!s.players.some(p=>p.id===myId)){
+    let name=myName;
+    if(s.players.some(p=>p.name.toLowerCase()===name.toLowerCase()))name+='2';
+    s.players.push({id:myId,name,score:0});myName=name;
   }
-  roomCode = code;
-  me = s.players.findIndex(p=>p.id===myId);
-  $('home-err').textContent = '';
-  writeRoom(s);
-  subscribeRoom(code);
-  show('scr-lobby');
-  busy = false;
+  roomCode=code;me=s.players.findIndex(p=>p.id===myId);
+  $('home-err').textContent='';
+  writeRoom(s);subscribeRoom(code);subscribeChat(code);show('scr-lobby');busy=false;
 }
 
-// ---- host actions ----
-function isHost(){ return me === 0; }
+const isHost=()=>me===0;
 
+function setNumPlayers(n){
+  if(!isHost()||!state||state.phase!=='lobby')return;
+  if(state.players.length>n)return;
+  const s=deepCopy(state);s.numPlayers=n;writeRoom(s);
+}
 async function hostStart(){
-  if(!isHost() || !state || state.players.length < 4 || busy) return;
-  busy = true;
-  beginRound({...state, players: state.players.map(p=>({...p}))});
-  busy = false;
+  if(!isHost()||!state||state.players.length!==state.numPlayers||busy)return;
+  busy=true;beginRound(deepCopy(state));busy=false;
+}
+function beginRound(s){
+  s.phase='dice';s.playerRoles=null;s.diceValue=null;
+  s.diceRoller=(s.round-1)%s.numPlayers;
+  s.chainStep=0;s.chainFinder=null;s.declaredRajaIdx=null;
+  s.foundPlayers=[];s.roundPoints={};s.lastResult=null;
+  writeRoom(s);
 }
 
-function beginRound(s){
-  s.phase = 'pick';
-  s.chits = shuffle(ROLES.map(r=>r.key));
-  s.chitOwner = [null, null, null, null];
-  s.pickTurn = 0;
-  s.pickOrder = shuffle([0,1,2,3]);
-  s.suspects = []; s.guess = null; s.lastResult = null;
-  writeRoom(s);
+function tapDice(){
+  if(busy||!state||state.phase!=='dice'||me!==state.diceRoller)return;
+  const el=$('dice-el');
+  if(el.classList.contains('rolling'))return;
+  el.classList.add('rolling');
+  const faces=['⚀','⚁','⚂','⚃','⚄','⚅'];
+  const iv=setInterval(()=>{el.textContent=faces[Math.floor(Math.random()*6)];},120);
+  setTimeout(()=>{clearInterval(iv);el.classList.remove('rolling');rollDice();},1200);
+}
+async function rollDice(){
+  if(busy)return;busy=true;
+  const s=await readRoom(roomCode);
+  if(!s||s.phase!=='dice'||me!==s.diceRoller){busy=false;return;}
+  const val=Math.floor(Math.random()*6)+1;
+  const keys=shuffle(getRoles(s.numPlayers).map(r=>r.key));
+  s.playerRoles=keys;s.diceValue=val;s.phase='mycard';
+  $('dice-el').textContent=['⚀','⚁','⚂','⚃','⚄','⚅'][val-1];
+  writeRoom(s);busy=false;
+}
+
+function scheduleAdvance(s){
+  if(!isHost())return;
+  clearTimeout(mycardTimer);
+  const delay=Math.max(400,3000-(Date.now()-s.ts));
+  mycardTimer=setTimeout(async()=>{
+    if(!state||state.phase!=='mycard')return;
+    const ns=deepCopy(state);ns.phase='declare';writeRoom(ns);
+  },delay);
+}
+
+async function declareRaja(){
+  if(busy||!state||state.phase!=='declare')return;
+  if(state.playerRoles[me]!=='raja')return;
+  busy=true;
+  const s=await readRoom(roomCode);
+  if(!s||s.phase!=='declare'||s.playerRoles[me]!=='raja'){busy=false;return;}
+  s.chainFinder=me;s.declaredRajaIdx=me;s.phase='chain';
+  writeRoom(s);busy=false;
+}
+
+async function guessPlayer(targetIdx){
+  if(busy)return;busy=true;
+  const s=await readRoom(roomCode);
+  if(!s||s.phase!=='chain'||s.chainFinder!==me){busy=false;return;}
+  if((s.foundPlayers||[]).includes(targetIdx)||targetIdx===me){busy=false;return;}
+  const target=chainTarget(s);
+  if(s.playerRoles[targetIdx]===target){
+    const pts=ROLE_DEFS[s.playerRoles[s.chainFinder]].pts;
+    s.roundPoints[s.chainFinder]=(s.roundPoints[s.chainFinder]||0)+pts;
+    s.foundPlayers=[...(s.foundPlayers||[]),targetIdx];
+    s.chainStep++;
+    s.chainFinder=targetIdx;
+    if(s.chainStep===s.numPlayers-1)finalizeRound(s);
+    else writeRoom(s);
+  }else{
+    const tmp=s.playerRoles[s.chainFinder];
+    s.playerRoles[s.chainFinder]=s.playerRoles[targetIdx];
+    s.playerRoles[targetIdx]=tmp;
+    s.chainFinder=targetIdx;
+    writeRoom(s);
+  }
+  busy=false;
+}
+
+function finalizeRound(s){
+  s.players.forEach((p,i)=>{p.score+=(s.roundPoints[i]||0);});
+  s.lastResult=s.players.map((p,i)=>({
+    playerIdx:i,name:p.name,roleKey:s.playerRoles[i],pts:s.roundPoints[i]||0,
+  }));
+  s.phase='result';writeRoom(s);
 }
 
 async function hostNextRound(){
-  if(!isHost() || busy) return;
-  busy = true;
-  const s = deepCopy(state);
-  if(s.round < s.totalRounds){ s.round++; beginRound(s); }
-  else { s.phase = 'over'; writeRoom(s); }
-  busy = false;
+  if(!isHost()||!state||busy)return;
+  busy=true;
+  const s=deepCopy(state);
+  if(s.round<s.totalRounds){s.round++;beginRound(s);}else{s.phase='over';writeRoom(s);}
+  busy=false;
 }
-
 async function hostRematch(){
-  if(!isHost() || busy) return;
-  busy = true;
-  const s = deepCopy(state);
-  s.players.forEach(p => p.score = 0);
-  s.round = 1;
-  beginRound(s);
-  busy = false;
+  if(!isHost()||!state||busy)return;
+  busy=true;
+  const s=deepCopy(state);
+  s.players.forEach(p=>p.score=0);s.round=1;beginRound(s);busy=false;
 }
 
-function deepCopy(o){ return JSON.parse(JSON.stringify(o)); }
-
-// ---- player actions ----
-async function pickChit(i){
-  if(busy) return;
-  busy = true;
-  const s = await readRoom(roomCode);
-  if(!s || s.phase !== 'pick'){ busy=false; return; }
-  if(s.pickOrder[s.pickTurn] !== me){ busy=false; return; }
-  if(s.chitOwner[i] !== null){ busy=false; return; }
-
-  s.chitOwner[i] = me;
-  s.pickTurn++;
-  if(s.pickTurn >= 4){
-    s.phase = 'hunt';
-    const roleOf = pi => s.chits[s.chitOwner.indexOf(pi)];
-    const raniP  = [0,1,2,3].find(p => roleOf(p)==='rani');
-    const thiefP = [0,1,2,3].find(p => roleOf(p)==='thief');
-    s.suspects = shuffle([raniP, thiefP]);
-  }
-  writeRoom(s);
-  busy = false;
-}
-
-async function makeGuess(suspectIdx){
-  if(busy) return;
-  busy = true;
-  const s = await readRoom(roomCode);
-  if(!s || s.phase !== 'hunt' || s.guess !== null){ busy=false; return; }
-
-  const myRole = roleOfPlayer(s, me);
-  if(myRole !== 'police'){ busy=false; return; }
-
-  const thiefP  = [0,1,2,3].find(p => roleOfPlayer(s,p)==='thief');
-  const policeP = me;
-  const correct = (suspectIdx === thiefP);
-
-  const pts = {};
-  [0,1,2,3].forEach(p => pts[p] = ROLES.find(r => r.key===roleOfPlayer(s,p)).pts);
-  if(!correct){ pts[policeP]=0; pts[thiefP]=500; }
-  [0,1,2,3].forEach(p => s.players[p].score += pts[p]);
-
-  s.guess = suspectIdx;
-  s.lastResult = {correct, thief:thiefP, police:policeP, pts};
-  s.phase = 'result';
-  writeRoom(s);
-  busy = false;
-}
-
-function roleOfPlayer(s, pi){
-  const slot = s.chitOwner.indexOf(pi);
-  return slot === -1 ? null : s.chits[slot];
-}
-const roleObj = k => ROLES.find(r => r.key === k);
-
-// ---- render ----
 function render(){
-  const s = state;
-  if(!s) return;
-  $('mychit').style.display = 'none';
-
-  if(s.phase === 'lobby'){
-    $('lobby-code').textContent = s.code;
-    const box = $('lobby-players'); box.innerHTML = '';
-    for(let i = 0; i < 4; i++){
-      const d = document.createElement('div');
-      if(s.players[i]){
-        d.className = 'pl-row';
-        d.innerHTML = `👤 ${esc(s.players[i].name)}` +
-          (i===0 ? `<span class="tag">HOST</span>` : '') +
-          (s.players[i].id===myId ? ` <small style="opacity:.5;">(you)</small>` : '');
-      } else {
-        d.className = 'pl-row empty';
-        d.textContent = 'Waiting…';
-      }
-      box.appendChild(d);
-    }
-    if(isHost()){
-      $('lobby-start').style.display = 'block';
-      $('lobby-wait').style.display  = 'none';
-      const ok = s.players.length === 4;
-      $('lobby-start').disabled = !ok;
-      $('lobby-start').textContent = ok ? '▶ Start game!' : `Waiting… (${s.players.length}/4)`;
-    } else {
-      $('lobby-start').style.display = 'none';
-      $('lobby-wait').style.display  = 'flex';
-    }
-    show('scr-lobby');
-    return;
+  const s=state;if(!s)return;
+  const chatPhases=['declare','chain','result','over'];
+  $('chat-panel').style.display=chatPhases.includes(s.phase)?'block':'none';
+  $('mychit').style.display='none';
+  const phaseChanged=s.phase!==renderedPhase;
+  renderedPhase=s.phase;
+  switch(s.phase){
+    case 'lobby':  return renderLobby(s);
+    case 'dice':   return renderDice(s);
+    case 'mycard': return renderMycard(s,phaseChanged);
+    case 'declare':return renderDeclare(s);
+    case 'chain':  return renderChain(s);
+    case 'result': return renderResult(s);
+    case 'over':   return renderOver(s);
   }
+}
 
-  if(s.phase === 'pick'){
-    const myRole = roleOfPlayer(s, me);
-    if(myRole){ renderMyRole(s, myRole); return; }
-    $('pick-round').textContent = `Round ${s.round} / ${s.totalRounds}`;
-    const curr = s.pickOrder[s.pickTurn];
-    const myTurn = curr === me;
-    $('pick-msg').innerHTML = myTurn
-      ? `<b>உங்க முறை!</b> சீட்டு எடுக்கோ 👇`
-      : `⏳ <b>${esc(s.players[curr].name)}</b> சீட்டு எடுக்கிறார்…`;
-    $('pick-hint').textContent = myTurn ? 'Tap a chit to pick!' : 'Wait for your turn…';
-    const grid = $('chit-grid'); grid.innerHTML = '';
-    for(let i = 0; i < 4; i++){
-      const d = document.createElement('div');
-      const taken = s.chitOwner[i] !== null;
-      d.className = 'chit' + (taken ? ' taken' : (myTurn ? ' myturn' : ''));
-      d.innerHTML = taken
-        ? '<span class="qm" style="font-size:32px;">✓</span>'
-        : '<span class="qm">?</span>';
-      if(!taken && myTurn) d.onclick = () => pickChit(i);
-      grid.appendChild(d);
-    }
-    show('scr-pick');
-    return;
-  }
-
-  if(s.phase === 'hunt'){
-    const myRole = roleOfPlayer(s, me);
-    const rajaP  = [0,1,2,3].find(p => roleOfPlayer(s,p)==='raja');
-    const policeP= [0,1,2,3].find(p => roleOfPlayer(s,p)==='police');
-    $('h-round').textContent = `Round ${s.round} / ${s.totalRounds}`;
-    $('h-raja').textContent   = s.players[rajaP].name;
-    $('h-police').textContent = s.players[policeP].name;
-    const area = $('h-guess-area'); area.innerHTML = '';
-    if(myRole === 'police'){
-      area.innerHTML = `<div class="centertext" style="margin-top:14px;">திருடன் யாரு? ஒருத்தர் ராணி, ஒருத்தர் திருடன்… Guess!</div>`;
-      s.suspects.forEach(pi => {
-        const d = document.createElement('div');
-        d.className = 'suspect';
-        d.innerHTML = `<span class="face">🫣</span><span class="nm">${esc(s.players[pi].name)}</span><span class="q">?</span>`;
-        d.onclick = () => makeGuess(pi);
-        area.appendChild(d);
-      });
-    } else {
-      area.innerHTML = `
-        <div class="waiting" style="margin-top:20px;"><span class="dotpulse"></span><span class="dotpulse"></span><span class="dotpulse"></span></div>
-        <div class="hint" style="margin-top:10px;">👮 ${esc(s.players[policeP].name)} is choosing… poker face 😶</div>`;
-    }
-    showRoleBadge(myRole);
-    show('scr-hunt');
-    return;
-  }
-
-  if(s.phase === 'result'){
-    const r = s.lastResult;
-    const b = $('res-banner');
-    b.className = 'result-banner ' + (r.correct ? 'good' : 'bad');
-    b.textContent = r.correct
-      ? `✅ Police சரியா கண்டுபிடிச்சாச்சு! ${esc(s.players[r.thief].name)} தான் திருடன்!`
-      : `❌ தப்பு! ${esc(s.players[r.thief].name)} தான் திருடன் 😂 Points swap!`;
-    const list = $('res-roles'); list.innerHTML = '';
-    [0,1,2,3].forEach(p => {
-      const ro = roleObj(roleOfPlayer(s, p));
-      const row = document.createElement('div');
-      row.className = 'role-row';
-      row.innerHTML = `<span class="em">${ro.emoji}</span> ${esc(s.players[p].name)} <small style="opacity:.55;">(${ro.ta})</small><span class="pt">+${r.pts[p]}</span>`;
-      list.appendChild(row);
+function renderLobby(s){
+  $('lobby-code').textContent=s.code;
+  const npSec=$('lobby-np-section');
+  if(isHost()){
+    npSec.style.display='block';
+    $('np-picker').querySelectorAll('.np-btn').forEach(btn=>{
+      const n=parseInt(btn.textContent);
+      btn.classList.toggle('active',n===s.numPlayers);
+      btn.disabled=s.players.length>n;
     });
-    renderTable('res-table', s);
-    if(isHost()){
-      $('res-next').style.display = 'block'; $('res-wait').style.display = 'none';
-      $('res-next').textContent = s.round < s.totalRounds ? `Round ${s.round+1} →` : '🏆 Final result';
-    } else {
-      $('res-next').style.display = 'none'; $('res-wait').style.display = 'flex';
-    }
-    show('scr-result');
-    return;
+  }else{npSec.style.display='none';}
+  const box=$('lobby-players');box.innerHTML='';
+  for(let i=0;i<s.numPlayers;i++){
+    const d=document.createElement('div');
+    if(s.players[i]){
+      d.className='pl-row';
+      d.innerHTML='&#x1f464; '+esc(s.players[i].name)
+        +(i===0?'<span class="tag">HOST</span>':'')
+        +(s.players[i].id===myId?' <small style="opacity:.5;">(you)</small>':'');
+    }else{d.className='pl-row empty';d.textContent='Waiting…';}
+    box.appendChild(d);
   }
+  if(isHost()){
+    $('lobby-start').style.display='block';$('lobby-wait').style.display='none';
+    const ok=s.players.length===s.numPlayers;
+    $('lobby-start').disabled=!ok;
+    $('lobby-start').textContent=ok?'▶ Start game!':'Waiting… ('+s.players.length+'/'+s.numPlayers+')';
+  }else{$('lobby-start').style.display='none';$('lobby-wait').style.display='flex';}
+  show('scr-lobby');
+}
 
-  if(s.phase === 'over'){
-    const sorted = [...s.players].sort((a,b) => b.score-a.score);
-    $('w-name').textContent = sorted[0].name;
-    $('w-pts').textContent  = sorted[0].score + ' pts • ராஜாவோட ராஜா!';
-    renderTable('w-table', s);
-    $('w-rematch').style.display = isHost() ? 'block' : 'none';
-    show('scr-winner');
-    return;
+function renderDice(s){
+  $('dice-round').textContent='Round '+s.round+' / '+s.totalRounds;
+  const isRoller=me===s.diceRoller;
+  const rollerName=(s.players[s.diceRoller]||{name:'?'}).name;
+  $('dice-msg').textContent=isRoller?'🎲 உங்க முறை! Tap to roll':'⏳ '+rollerName+' rolling the dice…';
+  $('dice-el').style.pointerEvents=isRoller?'auto':'none';
+  $('dice-el').style.opacity=isRoller?'1':'.55';
+  $('dice-hint').textContent=isRoller?'Tap the dice!':'';
+  $('dice-wait').style.display=isRoller?'none':'flex';
+  show('scr-dice');
+}
+
+function renderMycard(s,phaseChanged){
+  const ro=ROLE_DEFS[s.playerRoles[me]];
+  $('mc-round').textContent='Round '+s.round+' / '+s.totalRounds;
+  $('mc-emoji').textContent=ro.emoji;
+  $('mc-ta').textContent=ro.ta;
+  $('mc-en').textContent=ro.en;
+  $('mc-pts').textContent=ro.pts+' pts';
+  $('mc-hint').textContent=ro.key==='raja'?'👑 உங்களே ராஜா! Get ready to declare…':
+    ro.key==='thirudan'?'🤫 ஷ்ஷ்! Don\'t get caught…':
+    'Memorise your role… Round starts soon';
+  if(phaseChanged){
+    const inner=$('flip-inner');
+    inner.classList.remove('flipped');
+    const pf=$('mc-progress');
+    pf.style.cssText='width:100%;height:100%;background:var(--red);border-radius:2px;';
+    void pf.offsetWidth;
+    pf.style.cssText='width:100%;height:100%;background:var(--red);border-radius:2px;animation:shrinkWidth 3s linear forwards;';
+    setTimeout(()=>inner.classList.add('flipped'),300);
   }
+  scheduleAdvance(s);
+  show('scr-mycard');
 }
 
-function renderMyRole(s, key){
-  const ro = roleObj(key);
-  $('mr-round').textContent = `Round ${s.round} / ${s.totalRounds}`;
-  $('mr-emoji').textContent = ro.emoji;
-  $('mr-ta').textContent    = ro.ta;
-  $('mr-en').textContent    = ro.en;
-  $('mr-pts').textContent   = ro.pts + ' points if won';
-  $('mr-hint').textContent  =
-    key==='thief'  ? 'ஷ்ஷ்… don\'t get caught! 🤫 Others still picking…' :
-    key==='police' ? '🔍 Get ready to hunt the thief! Others picking…' :
-                     'Keep your poker face 😶 Others still picking…';
-  show('scr-myrole');
+function renderDeclare(s){
+  $('decl-round').textContent='Round '+s.round+' / '+s.totalRounds;
+  const amRaja=s.playerRoles&&s.playerRoles[me]==='raja';
+  $('decl-content').innerHTML=amRaja
+    ?'<div style="font-size:20px;font-weight:800;margin-top:12px;line-height:1.4;">உங்கள் தான் ராஜா!<br><span style="font-family:\'Catamaran\';font-size:14px;opacity:.7;">You are the Raja</span></div><button class="btn" style="margin-top:20px;" onclick="declareRaja()">👑 Declare yourself!</button>'
+    :'<div style="font-size:17px;font-weight:700;margin-top:14px;opacity:.7;">Waiting for Raja to declare…</div><div class="waiting" style="margin-top:16px;"><span class="dotpulse"></span><span class="dotpulse"></span><span class="dotpulse"></span></div>';
+  showBadge(s);show('scr-declare');
 }
 
-function showRoleBadge(key){
-  if(!key) return;
-  const ro = roleObj(key);
-  const el = $('mychit');
-  el.textContent = `You: ${ro.emoji} ${ro.ta}`;
-  el.style.display = 'block';
+function renderChain(s){
+  $('chain-round').textContent='Round '+s.round+' / '+s.totalRounds;
+  renderChainProgress(s);
+  const isMyTurn=me===s.chainFinder;
+  const target=chainTarget(s);
+  const tro=ROLE_DEFS[target];
+  const finderName=(s.players[s.chainFinder]||{name:'?'}).name;
+  $('chain-finder-label').innerHTML=isMyTurn
+    ?'<b>உங்க முறை!</b> Find <span style="color:var(--red);">'+tro.emoji+' '+tro.ta+'</span>'
+    :'👀 <b>'+esc(finderName)+'</b> is guessing…';
+  const area=$('chain-candidates');area.innerHTML='';
+  (s.foundPlayers||[]).forEach(pi=>{
+    if(pi==null)return;
+    const ro=ROLE_DEFS[s.playerRoles[pi]];
+    const d=document.createElement('div');
+    d.className='candidate revealed';
+    d.innerHTML='<span class="cface">'+ro.emoji+'</span><span class="cname">'+esc(s.players[pi].name)+'</span><span class="crole">'+ro.ta+' ✓</span>';
+    area.appendChild(d);
+  });
+  for(let pi=0;pi<s.numPlayers;pi++){
+    if((s.foundPlayers||[]).includes(pi))continue;
+    if(pi===s.chainFinder)continue;
+    const d=document.createElement('div');
+    d.className='candidate'+(isMyTurn?'':' passive');
+    d.innerHTML='<span class="cface">🫣</span><span class="cname">'+esc(s.players[pi].name)+'</span><span class="cq">?</span>';
+    if(isMyTurn)d.onclick=()=>guessPlayer(pi);
+    area.appendChild(d);
+  }
+  showBadge(s);show('scr-chain');
 }
 
-function renderTable(id, s){
-  const t = $(id);
-  const sorted = s.players.map((p,i) => ({...p, i})).sort((a,b) => b.score-a.score);
-  t.innerHTML = sorted.map((p, idx) =>
-    `<tr class="${idx===0?'leader':''}"><td>${idx===0?'👑 ':''}${esc(p.name)}${p.id===myId?' <small style="opacity:.5;">(you)</small>':''}</td><td>${p.score}</td></tr>`
+function renderChainProgress(s){
+  const roles=getRoles(s.numPlayers);
+  const prog=$('chain-progress');prog.innerHTML='';
+  roles.forEach((ro,idx)=>{
+    if(idx>0){const a=document.createElement('span');a.className='cp-arrow';a.textContent='→';prog.appendChild(a);}
+    const span=document.createElement('span');
+    let cls='cp-role';
+    if(idx===0)cls+=' declared';
+    else if(idx<=s.chainStep)cls+=' found';
+    else if(idx===s.chainStep+1)cls+=' target';
+    span.className=cls;
+    span.textContent=ro.emoji+' '+ro.ta;
+    prog.appendChild(span);
+  });
+}
+
+function renderResult(s){
+  $('res-banner').textContent='✅ Chain complete! Points this round:';
+  const list=$('res-roles');list.innerHTML='';
+  (s.lastResult||[]).forEach(p=>{
+    const ro=ROLE_DEFS[p.roleKey];
+    const row=document.createElement('div');
+    row.className='role-row';
+    row.innerHTML='<span class="em">'+ro.emoji+'</span>'+esc(p.name)+' <small style="opacity:.55;">('+ro.ta+')</small><span class="pt">+'+p.pts+'</span>';
+    list.appendChild(row);
+  });
+  renderTable('res-table',s);
+  if(isHost()){
+    $('res-next').style.display='block';$('res-wait').style.display='none';
+    $('res-next').textContent=s.round<s.totalRounds?'Round '+(s.round+1)+' →':'🏆 Final result';
+  }else{$('res-next').style.display='none';$('res-wait').style.display='flex';}
+  show('scr-result');
+}
+
+function renderOver(s){
+  const sorted=[...s.players].sort((a,b)=>b.score-a.score);
+  $('w-name').textContent=sorted[0].name;
+  $('w-pts').textContent=sorted[0].score+' pts • ராஜாவோட ராஜா!';
+  renderTable('w-table',s);
+  $('w-rematch').style.display=isHost()?'block':'none';
+  show('scr-winner');
+}
+
+function showBadge(s){
+  if(!s.playerRoles||me<0)return;
+  const ro=ROLE_DEFS[s.playerRoles[me]];if(!ro)return;
+  const el=$('mychit');el.textContent='You: '+ro.emoji+' '+ro.ta;el.style.display='block';
+}
+
+function renderTable(id,s){
+  const t=$(id);
+  const sorted=s.players.map((p,i)=>({...p,i})).sort((a,b)=>b.score-a.score);
+  t.innerHTML=sorted.map((p,idx)=>
+    '<tr class="'+(idx===0?'leader':'')+'"><td>'+(idx===0?'👑 ':'')+esc(p.name)+(p.id===myId?' <small style="opacity:.5;">(you)</small>':'')+'</td><td>'+p.score+'</td></tr>'
   ).join('');
-}
-
-function esc(str){
-  return String(str)
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 </script>
 </body>
