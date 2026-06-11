@@ -285,7 +285,7 @@ function getRoles(n){return ROLE_CHAINS[n].map(k=>ROLE_DEFS[k]);}
 function chainTarget(s){return getRoles(s.numPlayers)[s.chainStep+1].key;}
 
 const $=id=>document.getElementById(id);
-const gun=Gun(['https://gun-us.herokuapp.com/gun','https://gun-eu.herokuapp.com/gun','wss://relay.peer.ooo/gun']);
+const gun=Gun(['wss://relay.peer.ooo/gun','https://gun.eco/gun']);
 
 // ── Avatar picker ──────────────────────────────────────────────────────
 const AVATARS=['🐯','🦁','🐻','🐼','🐨','🦊','🐸','🐙','🦄','🐲','🦋','⭐'];
@@ -357,11 +357,21 @@ function playSound(type){
 // ── Connection probe ───────────────────────────────────────────────────
 (function probeConn(){
   const dot=$('conn-dot'),txt=$('conn-txt');
-  const p=gun.get('rr-probe-'+Math.random().toString(36).slice(2,6));
-  p.put({t:Date.now()});
-  p.once(d=>{if(d){dot.className='conn-dot ok';txt.textContent='Connected ✓';}
-    else{dot.className='conn-dot err';txt.textContent='Relay unreachable — needs internet';}});
-  setTimeout(()=>{if(dot.className==='conn-dot'){dot.className='conn-dot err';txt.textContent='Relay slow — try refreshing';}},5000);
+  let confirmed=false;
+  const key='rr-probe-'+Math.random().toString(36).slice(2,10);
+  const val=Date.now();
+  gun.get(key).put({v:val});
+  gun.get(key).on(d=>{
+    if(confirmed||!d||d.v!==val)return;
+    confirmed=true;
+    dot.className='conn-dot ok';txt.textContent='Connected ✓';
+  });
+  setTimeout(()=>{
+    if(!confirmed){
+      dot.className='conn-dot err';
+      txt.textContent='Relay offline — check internet & refresh';
+    }
+  },8000);
 })();
 
 // ── Module state ───────────────────────────────────────────────────────
