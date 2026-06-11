@@ -128,7 +128,7 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
 <div class="screen active" id="scr-home">
   <div class="crown">&#x1F451;</div>
   <h1>ராஜா ராணி</h1>
-  <div class="sub">WiFi Multiplayer</div>
+  <div class="sub">Online Multiplayer</div>
   <div class="panel">
     <label>உங்க பெயர் / Your name</label>
     <input type="text" id="myname" maxlength="12" placeholder="Name" autocomplete="off">
@@ -139,14 +139,12 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
     <input type="text" class="code" id="joincode" maxlength="4" placeholder="ABCD" autocomplete="off"
       oninput="this.value=this.value.toUpperCase()">
     <button class="btn green" onclick="joinRoom()">&#x1F6AA; Join room</button>
-    <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(58,42,24,.18);">
-      <label style="margin-top:0;">&#x1F4E1; Relay IP &mdash; local WiFi, no internet</label>
-      <input type="text" id="relay-ip" placeholder="Host's IP e.g. 192.168.1.5" autocomplete="off" style="font-size:15px;letter-spacing:.5px;">
-      <div id="relay-hint" style="font-family:'Catamaran';font-size:11px;font-weight:600;opacity:.65;margin-top:5px;line-height:1.5;"></div>
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(58,42,24,.18);font-family:'Catamaran';font-size:12px;font-weight:600;opacity:.7;text-align:center;">
+      &#x1F30D; Plays over internet via ntfy.sh &mdash; all players need WiFi / data
     </div>
     <div class="err" id="home-err"></div>
   </div>
-  <p class="hint"><span class="conn-dot" id="conn-dot"></span><span id="conn-txt">Tap Create or Join to connect</span><br>Host creates room &middot; Others join with code</p>
+  <p class="hint"><span class="conn-dot" id="conn-dot"></span><span id="conn-txt">Checking ntfy.sh…</span><br>Host creates room &middot; Others join with code</p>
 </div>
 
 <!-- LOBBY -->
@@ -357,71 +355,20 @@ function playSound(type){
   }catch(e){}
 }
 
-// ── WebSocket relay (replaces Gun.js) ─────────────────────────────────
-let ws=null,wsReady=false;
-
-function connectWS(onReady){
-  const ip=($('relay-ip').value||'').trim();
-  if(!ip&&!window.AndroidBridge){
-    $('conn-dot').className='conn-dot err';
-    $('conn-txt').textContent='Enter host IP above';
-    if(onReady)onReady(false);return;
-  }
-  const host=ip||'localhost';
+// ── ntfy.sh connectivity probe ─────────────────────────────────────────
+(function(){
   const dot=$('conn-dot'),txt=$('conn-txt');
-  dot.className='conn-dot';txt.textContent='Connecting…';
-  if(ws){try{ws.onclose=null;ws.close();}catch(e){}}
-  ws=new WebSocket('ws://'+host+':8765');
-  let fired=false;
-  function fire(ok){if(!fired){fired=true;if(onReady)onReady(ok);}}
-  ws.onopen=()=>{
-    wsReady=true;dot.className='conn-dot ok';txt.textContent='Local relay ✓';fire(true);
-  };
-  ws.onmessage=e=>{try{handleWsMsg(JSON.parse(e.data));}catch(ex){}};
-  ws.onclose=()=>{
-    wsReady=false;dot.className='conn-dot err';txt.textContent='Disconnected';fire(false);
-    if(roomCode)setTimeout(reconnectWS,3000);
-  };
-  ws.onerror=()=>{};
-  setTimeout(()=>{
-    if(!wsReady){
-      dot.className='conn-dot err';
-      txt.textContent='Cannot reach relay — check IP & WiFi';
-      fire(false);
-    }
-  },5000);
-}
-function reconnectWS(){
-  if(ws&&ws.readyState===WebSocket.OPEN)return;
-  connectWS(ok=>{if(ok&&roomCode)ws.send(JSON.stringify({type:'get',room:roomCode}));});
-}
-function wsSend(msg){
-  if(ws&&ws.readyState===WebSocket.OPEN)ws.send(JSON.stringify(msg));
-}
-function handleWsMsg(msg){
-  if(!msg||!msg.type)return;
-  if(msg.type==='state'){
-    if(msg.room!==roomCode)return;
-    const s=msg.data;if(!s||s.version<=lastVer)return;
-    if((s.kickedIds||[]).includes(myId)){alert('You were removed from the room.');location.reload();return;}
-    lastVer=s.version;state=s;me=s.players.findIndex(p=>p.id===myId);render();
-  }else if(msg.type==='chat'){
-    if(msg.room!==roomCode||!msg.msg)return;
-    const id=msg.id||msg.t+'';if(seenMsgs.has(id))return;seenMsgs.add(id);appendMsg(msg);
-  }else if(msg.type==='log'){
-    if(msg.room!==roomCode||!msg.msg)return;
-    const id=msg.id||msg.t+'';if(seenLogs.has(id))return;seenLogs.add(id);
-    logEntries.push({msg:msg.msg,t:msg.t||Date.now()});logEntries.sort((a,b)=>a.t-b.t);renderLog();
-  }else if(msg.type==='ping'){
-    if(msg.room!==roomCode||!msg.pid)return;lastSeenMap[msg.pid]=Date.now();
-  }
-}
+  fetch('https://ntfy.sh/',{method:'HEAD'})
+    .then(()=>{dot.className='conn-dot ok';txt.textContent='ntfy.sh relay ready ✓';})
+    .catch(()=>{dot.className='conn-dot err';txt.textContent='ntfy.sh offline — check internet';});
+})();
 
 // ── Module state ───────────────────────────────────────────────────────
 let myId='p'+Math.random().toString(36).slice(2,10),myName='',roomCode=null,me=-1;
 let state=null,lastVer=-1,busy=false,mycardTimer=null,renderedPhase=null;
 let chatCollapsed=true,unreadCount=0;
 let chainTimerInterval=null,heartbeatInterval=null;
+let roomEs=null,logEs=null,presEs=null,chatEs=null;
 const seenMsgs=new Set();
 const seenLogs=new Set();
 const logEntries=[];
@@ -433,34 +380,64 @@ const deepCopy=o=>JSON.parse(JSON.stringify(o));
 const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const av=p=>(p&&p.avatar)||'🎮';
 
-// ── Room helpers (WebSocket) ───────────────────────────────────────────
-function readRoom(code){
-  return new Promise(resolve=>{
-    if(!ws||ws.readyState!==WebSocket.OPEN){resolve(null);return;}
-    let done=false;
-    const handler=e=>{
+// ── ntfy.sh room helpers ───────────────────────────────────────────────
+const NTFY='https://ntfy.sh';
+async function readRoom(code){
+  try{
+    const res=await fetch(NTFY+'/rr-'+code+'-s/json?poll=1&since=all');
+    const text=await res.text();
+    let latest=null;
+    for(const line of text.trim().split('\n').filter(Boolean)){
       try{
-        const msg=JSON.parse(e.data);
-        if(msg.type==='state'&&msg.room===code&&!done){
-          done=true;ws.removeEventListener('message',handler);resolve(msg.data||null);
+        const ev=JSON.parse(line);
+        if(ev.event==='message'&&ev.message){
+          const s=JSON.parse(ev.message);
+          if(!latest||(s.version||0)>(latest.version||0))latest=s;
         }
       }catch{}
-    };
-    ws.addEventListener('message',handler);
-    ws.send(JSON.stringify({type:'get',room:code}));
-    setTimeout(()=>{if(!done){done=true;ws.removeEventListener('message',handler);resolve(null);}},4000);
-  });
+    }
+    return latest;
+  }catch{return null;}
 }
 function writeRoom(s){
   s.version=(s.version||0)+1;s.ts=Date.now();
-  wsSend({type:'state',room:roomCode,data:s});
+  fetch(NTFY+'/rr-'+roomCode+'-s',{method:'POST',body:JSON.stringify(s)});
   state=s;lastVer=s.version;render();
 }
+function subscribeRoom(code){
+  if(roomEs)roomEs.close();
+  const since=Math.floor((Date.now()-5000)/1000);
+  roomEs=new EventSource(NTFY+'/rr-'+code+'-s/sse?since='+since);
+  roomEs.onmessage=e=>{
+    try{
+      const ev=JSON.parse(e.data);if(ev.event!=='message')return;
+      const s=JSON.parse(ev.message);
+      if(s.version<=lastVer)return;
+      if((s.kickedIds||[]).includes(myId)){alert('You were removed.');location.reload();return;}
+      lastVer=s.version;state=s;me=s.players.findIndex(p=>p.id===myId);render();
+    }catch{}
+  };
+}
+function subscribeAll(code){subscribeRoom(code);subscribeLog(code);subscribePresence(code);subscribeChat(code);}
 
 // ── Game log ───────────────────────────────────────────────────────────
 function postLog(text){
   if(!roomCode)return;
-  wsSend({type:'log',room:roomCode,msg:text,t:Date.now(),id:Math.random().toString(36).slice(2)});
+  fetch(NTFY+'/rr-'+roomCode+'-l',{method:'POST',body:JSON.stringify({msg:text,t:Date.now()})});
+}
+function subscribeLog(code){
+  if(logEs)logEs.close();
+  const since=Math.floor((Date.now()-5000)/1000);
+  logEs=new EventSource(NTFY+'/rr-'+code+'-l/sse?since='+since);
+  logEs.onmessage=e=>{
+    try{
+      const ev=JSON.parse(e.data);if(ev.event!=='message')return;
+      const d=JSON.parse(ev.message);const k=ev.id;
+      if(!d.msg||seenLogs.has(k))return;
+      seenLogs.add(k);logEntries.push({msg:d.msg,t:d.t||Date.now()});
+      logEntries.sort((a,b)=>a.t-b.t);renderLog();
+    }catch{}
+  };
 }
 function renderLog(){
   const el=$('game-log');if(!el)return;
@@ -474,22 +451,44 @@ function renderLog(){
 // ── Heartbeat ──────────────────────────────────────────────────────────
 function pingPresence(){
   if(!roomCode)return;
-  wsSend({type:'ping',room:roomCode,pid:myId});
+  fetch(NTFY+'/rr-'+roomCode+'-p',{method:'POST',body:JSON.stringify({pid:myId,t:Date.now()})});
+}
+function subscribePresence(code){
+  if(presEs)presEs.close();
+  const since=Math.floor((Date.now()-25000)/1000);
+  presEs=new EventSource(NTFY+'/rr-'+code+'-p/sse?since='+since);
+  presEs.onmessage=e=>{
+    try{
+      const ev=JSON.parse(e.data);if(ev.event!=='message')return;
+      const d=JSON.parse(ev.message);if(d.pid&&d.t)lastSeenMap[d.pid]=d.t;
+    }catch{}
+  };
 }
 function isOffline(pid){
-  const t=lastSeenMap[pid];
-  return !!(t&&Date.now()-t>20000);
+  const t=lastSeenMap[pid];return !!(t&&Date.now()-t>20000);
 }
 function startHeartbeat(){
-  clearInterval(heartbeatInterval);
-  pingPresence();
+  clearInterval(heartbeatInterval);pingPresence();
   heartbeatInterval=setInterval(pingPresence,8000);
 }
 
 // ── Chat ───────────────────────────────────────────────────────────────
+function subscribeChat(code){
+  if(chatEs)chatEs.close();
+  const since=Math.floor((Date.now()-5000)/1000);
+  chatEs=new EventSource(NTFY+'/rr-'+code+'-c/sse?since='+since);
+  chatEs.onmessage=e=>{
+    try{
+      const ev=JSON.parse(e.data);if(ev.event!=='message')return;
+      const d=JSON.parse(ev.message);const k=ev.id;
+      if(!d.msg||seenMsgs.has(k))return;
+      seenMsgs.add(k);appendMsg(d);
+    }catch{}
+  };
+}
 function sendChat(txt){
   if(!txt.trim()||!roomCode)return;
-  wsSend({type:'chat',room:roomCode,pid:myId,name:myName,msg:txt.trim().slice(0,100),t:Date.now(),id:Math.random().toString(36).slice(2)});
+  fetch(NTFY+'/rr-'+roomCode+'-c',{method:'POST',body:JSON.stringify({pid:myId,name:myName,msg:txt.trim().slice(0,100),t:Date.now()})});
 }
 function appendMsg(d){
   const box=$('chat-messages');
@@ -518,9 +517,7 @@ function getName(){
   return true;
 }
 async function createRoom(){
-  if(busy||!getName())return;busy=true;$('home-err').textContent='Connecting…';
-  const ok=await new Promise(r=>connectWS(r));
-  if(!ok){$('home-err').textContent='Cannot connect — check IP & WiFi.';busy=false;return;}
+  if(busy||!getName())return;busy=true;$('home-err').textContent='Creating room…';
   try{
     let code;const chars='ABCDEFGHJKMNPQRSTUVWXYZ';
     for(let t=0;t<6;t++){
@@ -535,18 +532,15 @@ async function createRoom(){
       playerRoles:null,diceRoller:0,diceValue:null,
       chainStep:0,chainFinder:null,declaredRajaIdx:null,
       foundPlayers:[],roundPoints:{},lastResult:null};
-    writeRoom(s);startHeartbeat();show('scr-lobby');
-  }catch(e){$('home-err').textContent='Connection error — try again.';console.error(e);}
+    writeRoom(s);subscribeAll(code);startHeartbeat();show('scr-lobby');
+  }catch(e){$('home-err').textContent='Error — check internet.';console.error(e);}
   busy=false;
 }
 async function joinRoom(){
   if(busy||!getName())return;
   const code=$('joincode').value.trim().toUpperCase();
   if(code.length!==4){$('home-err').textContent='4-letter code enter பண்ணுங்க.';return;}
-  busy=true;$('home-err').textContent='Connecting…';
-  const ok=await new Promise(r=>connectWS(r));
-  if(!ok){$('home-err').textContent='Cannot connect — check IP & WiFi.';busy=false;return;}
-  $('home-err').textContent='Joining…';
+  busy=true;$('home-err').textContent='Joining…';
   const s=await readRoom(code);
   if(!s){$('home-err').textContent='Room இல்லை! Code சரியா இருக்கா?';busy=false;return;}
   if(s.phase!=='lobby'){$('home-err').textContent='Game already started.';busy=false;return;}
@@ -557,7 +551,7 @@ async function joinRoom(){
     s.players.push({id:myId,name,score:0,avatar:myAvatar});myName=name;
   }
   roomCode=code;me=s.players.findIndex(p=>p.id===myId);
-  $('home-err').textContent='';writeRoom(s);startHeartbeat();show('scr-lobby');busy=false;
+  $('home-err').textContent='';writeRoom(s);subscribeAll(code);startHeartbeat();show('scr-lobby');busy=false;
 }
 
 const isHost=()=>me===0;
@@ -915,16 +909,6 @@ function renderTable(id,s){
   ).join('');
 }
 
-// Pre-fill relay IP from Android bridge (host sees own IP; others type host's IP)
-if(window.AndroidBridge){
-  try{
-    const ip=window.AndroidBridge.getLocalIp();
-    if(ip){
-      $('relay-ip').value=ip;
-      $('relay-hint').innerHTML='📱 Host IP: <b>'+ip+'</b> &mdash; share this + room code with all players.<br>Other players: enter host\'s IP in the field above, then join.';
-    }
-  }catch(e){}
-}
 </script>
 </body>
 </html>
