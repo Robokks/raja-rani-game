@@ -363,7 +363,9 @@ let NTFY=(localStorage.getItem('rr-ntfy-url')||'https://ntfy.sh').replace(/\/+$/
   const el=$('ntfy-url');
   el.value=NTFY;
   el.oninput=()=>{
-    const v=el.value.trim().replace(/\/+$/,'');
+    let v=el.value.trim();
+    try{v=new URL(v).origin;}catch{}
+    v=v.replace(/\/+$/,'');
     if(v){NTFY=v;localStorage.setItem('rr-ntfy-url',v);}
   };
 })();
