@@ -2,15 +2,20 @@ package com.rajarani.game
 
 import android.annotation.SuppressLint
 import android.os.Bundle
+import android.util.Log
 import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
+import java.net.Inet4Address
+import java.net.NetworkInterface
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
+    private var relayServer: LocalRelayServer? = null
+    private val RELAY_PORT = 8765
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -18,6 +23,10 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         webView = findViewById(R.id.web_view)
+
+        // Start local relay — runs on LAN, no internet needed
+        startRelayServer()
+        val localIp = getLocalIp()
 
         webView.settings.apply {
             javaScriptEnabled = true
@@ -32,10 +41,11 @@ class MainActivity : AppCompatActivity() {
             allowUniversalAccessFromFileURLs = true
         }
 
+        // Expose local IP to JavaScript so the HTML can pre-fill the relay field
+        webView.addJavascriptInterface(AndroidBridge(localIp, RELAY_PORT), "AndroidBridge")
         webView.webViewClient = WebViewClient()
         webView.webChromeClient = WebChromeClient()
 
-        // Load game with HTTPS base URL so WebSocket connections to Gun.js relays work
         val html = assets.open("index.html").bufferedReader().readText()
         webView.loadDataWithBaseURL(
             "https://rajarani.local/",
@@ -44,6 +54,39 @@ class MainActivity : AppCompatActivity() {
             "UTF-8",
             null
         )
+    }
+
+    private fun startRelayServer() {
+        try {
+            relayServer = LocalRelayServer(RELAY_PORT)
+            relayServer?.start()
+            Log.i("RajaRani", "Local relay started on port $RELAY_PORT")
+        } catch (e: Exception) {
+            Log.e("RajaRani", "Failed to start relay server", e)
+        }
+    }
+
+    private fun getLocalIp(): String {
+        try {
+            val interfaces = NetworkInterface.getNetworkInterfaces()
+            while (interfaces.hasMoreElements()) {
+                val iface = interfaces.nextElement()
+                if (iface.isLoopback || !iface.isUp) continue
+                val addrs = iface.inetAddresses
+                while (addrs.hasMoreElements()) {
+                    val addr = addrs.nextElement()
+                    if (!addr.isLoopbackAddress && addr is Inet4Address) {
+                        return addr.hostAddress ?: ""
+                    }
+                }
+            }
+        } catch (e: Exception) { }
+        return ""
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        try { relayServer?.stop(100) } catch (e: Exception) { }
     }
 
     @Deprecated("Deprecated in Java")
