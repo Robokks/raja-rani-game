@@ -202,7 +202,7 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
         <div class="role-pts" id="mc-pts"></div>
       </div>
     </div>
-</div>
+  </div>
   <div class="progress-track"><div class="progress-fill" id="mc-progress" style="width:100%;"></div></div>
   <div class="hint" id="mc-hint" style="margin-top:12px;"></div>
 </div>
@@ -271,7 +271,6 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
 <script>
 const ROLE_DEFS = {
   raja:     {key:'raja',     ta:'ராஜா',      en:'RAJA',      emoji:'👑', pts:1000},
@@ -290,7 +289,6 @@ function getRoles(n){return ROLE_CHAINS[n].map(k=>ROLE_DEFS[k]);}
 function chainTarget(s){return getRoles(s.numPlayers)[s.chainStep+1].key;}
 
 const $=id=>document.getElementById(id);
-let gun=null;
 
 // ── Avatar picker ──────────────────────────────────────────────────────
 const AVATARS=['🐯','🦁','🐻','🐼','🐨','🦊','🐸','🐙','🦄','🐲','🦋','⭐'];
@@ -359,36 +357,64 @@ function playSound(type){
   }catch(e){}
 }
 
-// ── Gun init (lazy) ──────────────────────────────────────────────────
-function initGun(){
-  if(gun)return;
+// ── WebSocket relay (replaces Gun.js) ─────────────────────────────────
+let ws=null,wsReady=false;
+
+function connectWS(onReady){
   const ip=($('relay-ip').value||'').trim();
-  let peers;
-  if(ip){
-    peers=['ws://'+ip+':8765/gun'];
-  }else if(window.AndroidBridge){
-    peers=['ws://localhost:8765/gun'];
-  }else{
-    peers=['wss://relay.peer.ooo/gun','https://gun.eco/gun'];
+  if(!ip&&!window.AndroidBridge){
+    $('conn-dot').className='conn-dot err';
+    $('conn-txt').textContent='Enter host IP above';
+    if(onReady)onReady(false);return;
   }
-  gun=Gun(peers);
+  const host=ip||'localhost';
   const dot=$('conn-dot'),txt=$('conn-txt');
-  let ok=false;
-  const key='rr-probe-'+Math.random().toString(36).slice(2,10);
-  const val=Date.now();
-  gun.get(key).put({v:val});
-  gun.get(key).on(d=>{
-    if(ok||!d||d.v!==val)return;ok=true;
-    dot.className='conn-dot ok';
-    txt.textContent=(ip||window.AndroidBridge)?'Local relay ✓':'Connected ✓';
-  });
+  dot.className='conn-dot';txt.textContent='Connecting…';
+  if(ws){try{ws.onclose=null;ws.close();}catch(e){}}
+  ws=new WebSocket('ws://'+host+':8765');
+  let fired=false;
+  function fire(ok){if(!fired){fired=true;if(onReady)onReady(ok);}}
+  ws.onopen=()=>{
+    wsReady=true;dot.className='conn-dot ok';txt.textContent='Local relay ✓';fire(true);
+  };
+  ws.onmessage=e=>{try{handleWsMsg(JSON.parse(e.data));}catch(ex){}};
+  ws.onclose=()=>{
+    wsReady=false;dot.className='conn-dot err';txt.textContent='Disconnected';fire(false);
+    if(roomCode)setTimeout(reconnectWS,3000);
+  };
+  ws.onerror=()=>{};
   setTimeout(()=>{
-    if(!ok){
+    if(!wsReady){
       dot.className='conn-dot err';
-      txt.textContent=ip?'Cannot reach '+ip+':8765 — check IP & WiFi':
-        window.AndroidBridge?'Local relay error — restart app':'Relay offline — check internet';
+      txt.textContent='Cannot reach relay — check IP & WiFi';
+      fire(false);
     }
   },5000);
+}
+function reconnectWS(){
+  if(ws&&ws.readyState===WebSocket.OPEN)return;
+  connectWS(ok=>{if(ok&&roomCode)ws.send(JSON.stringify({type:'get',room:roomCode}));});
+}
+function wsSend(msg){
+  if(ws&&ws.readyState===WebSocket.OPEN)ws.send(JSON.stringify(msg));
+}
+function handleWsMsg(msg){
+  if(!msg||!msg.type)return;
+  if(msg.type==='state'){
+    if(msg.room!==roomCode)return;
+    const s=msg.data;if(!s||s.version<=lastVer)return;
+    if((s.kickedIds||[]).includes(myId)){alert('You were removed from the room.');location.reload();return;}
+    lastVer=s.version;state=s;me=s.players.findIndex(p=>p.id===myId);render();
+  }else if(msg.type==='chat'){
+    if(msg.room!==roomCode||!msg.msg)return;
+    const id=msg.id||msg.t+'';if(seenMsgs.has(id))return;seenMsgs.add(id);appendMsg(msg);
+  }else if(msg.type==='log'){
+    if(msg.room!==roomCode||!msg.msg)return;
+    const id=msg.id||msg.t+'';if(seenLogs.has(id))return;seenLogs.add(id);
+    logEntries.push({msg:msg.msg,t:msg.t||Date.now()});logEntries.sort((a,b)=>a.t-b.t);renderLog();
+  }else if(msg.type==='ping'){
+    if(msg.room!==roomCode||!msg.pid)return;lastSeenMap[msg.pid]=Date.now();
+  }
 }
 
 // ── Module state ───────────────────────────────────────────────────────
@@ -407,57 +433,34 @@ const deepCopy=o=>JSON.parse(JSON.stringify(o));
 const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const av=p=>(p&&p.avatar)||'🎮';
 
-// ── Gun helpers ────────────────────────────────────────────────────────
-function roomKey(c){return 'rr-v3-'+c;}
-function chatKey(c){return 'rr-chat-'+c;}
-function presKey(c){return 'rr-pres-'+c;}
-function logKey(c){return 'rr-log-'+c;}
-
+// ── Room helpers (WebSocket) ───────────────────────────────────────────
 function readRoom(code){
   return new Promise(resolve=>{
+    if(!ws||ws.readyState!==WebSocket.OPEN){resolve(null);return;}
     let done=false;
-    gun.get(roomKey(code)).once(d=>{
-      if(done)return;done=true;
-      if(d&&d.s){try{resolve(JSON.parse(d.s));}catch{resolve(null);}}else resolve(null);
-    });
-    setTimeout(()=>{if(!done){done=true;resolve(null);}},4000);
+    const handler=e=>{
+      try{
+        const msg=JSON.parse(e.data);
+        if(msg.type==='state'&&msg.room===code&&!done){
+          done=true;ws.removeEventListener('message',handler);resolve(msg.data||null);
+        }
+      }catch{}
+    };
+    ws.addEventListener('message',handler);
+    ws.send(JSON.stringify({type:'get',room:code}));
+    setTimeout(()=>{if(!done){done=true;ws.removeEventListener('message',handler);resolve(null);}},4000);
   });
 }
 function writeRoom(s){
   s.version=(s.version||0)+1;s.ts=Date.now();
-  gun.get(roomKey(roomCode)).put({s:JSON.stringify(s)});
+  wsSend({type:'state',room:roomCode,data:s});
   state=s;lastVer=s.version;render();
-}
-function subscribeRoom(code){
-  gun.get(roomKey(code)).on(d=>{
-    if(!d||!d.s)return;
-    try{
-      const s=JSON.parse(d.s);
-      if(s.version===lastVer)return;
-      if((s.kickedIds||[]).includes(myId)){
-        alert('You were removed from the room.');
-        location.reload();return;
-      }
-      lastVer=s.version;state=s;
-      me=s.players.findIndex(p=>p.id===myId);
-      render();
-    }catch{}
-  });
 }
 
 // ── Game log ───────────────────────────────────────────────────────────
 function postLog(text){
   if(!roomCode)return;
-  gun.get(logKey(roomCode)).set({msg:text,t:Date.now()});
-}
-function subscribeLog(code){
-  gun.get(logKey(code)).map().on((d,key)=>{
-    if(!d||!d.msg||seenLogs.has(key))return;
-    seenLogs.add(key);
-    logEntries.push({msg:d.msg,t:d.t||Date.now()});
-    logEntries.sort((a,b)=>a.t-b.t);
-    renderLog();
-  });
+  wsSend({type:'log',room:roomCode,msg:text,t:Date.now(),id:Math.random().toString(36).slice(2)});
 }
 function renderLog(){
   const el=$('game-log');if(!el)return;
@@ -471,12 +474,7 @@ function renderLog(){
 // ── Heartbeat ──────────────────────────────────────────────────────────
 function pingPresence(){
   if(!roomCode)return;
-  gun.get(presKey(roomCode)).get(myId).put({t:Date.now()});
-}
-function subscribePresence(code){
-  gun.get(presKey(code)).map().on((d,key)=>{
-    if(d&&d.t)lastSeenMap[key]=d.t;
-  });
+  wsSend({type:'ping',room:roomCode,pid:myId});
 }
 function isOffline(pid){
   const t=lastSeenMap[pid];
@@ -489,17 +487,9 @@ function startHeartbeat(){
 }
 
 // ── Chat ───────────────────────────────────────────────────────────────
-function subscribeChat(code){
-  gun.get(chatKey(code)).map().on((d,key)=>{
-    if(!d||!d.msg||seenMsgs.has(key))return;
-    seenMsgs.add(key);
-    if(seenMsgs.size>500)seenMsgs.clear();
-    appendMsg(d);
-  });
-}
 function sendChat(txt){
   if(!txt.trim()||!roomCode)return;
-  gun.get(chatKey(roomCode)).set({pid:myId,name:myName,msg:txt.trim().slice(0,100),t:Date.now()});
+  wsSend({type:'chat',room:roomCode,pid:myId,name:myName,msg:txt.trim().slice(0,100),t:Date.now(),id:Math.random().toString(36).slice(2)});
 }
 function appendMsg(d){
   const box=$('chat-messages');
@@ -528,9 +518,9 @@ function getName(){
   return true;
 }
 async function createRoom(){
-  if(busy||!getName())return;
-  initGun();
-  busy=true;$('home-err').textContent='';
+  if(busy||!getName())return;busy=true;$('home-err').textContent='Connecting…';
+  const ok=await new Promise(r=>connectWS(r));
+  if(!ok){$('home-err').textContent='Cannot connect — check IP & WiFi.';busy=false;return;}
   try{
     let code;const chars='ABCDEFGHJKMNPQRSTUVWXYZ';
     for(let t=0;t<6;t++){
@@ -538,15 +528,14 @@ async function createRoom(){
       const ex=await readRoom(code);
       if(!ex||Date.now()-(ex.ts||0)>4*3600*1000)break;
     }
-    roomCode=code;me=0;
+    roomCode=code;me=0;$('home-err').textContent='';
     const s={code,version:0,phase:'lobby',round:1,totalRounds:5,numPlayers:4,
       chainTimerSecs:30,kickedIds:[],
       players:[{id:myId,name:myName,score:0,avatar:myAvatar}],
       playerRoles:null,diceRoller:0,diceValue:null,
       chainStep:0,chainFinder:null,declaredRajaIdx:null,
       foundPlayers:[],roundPoints:{},lastResult:null};
-    writeRoom(s);subscribeRoom(code);subscribeChat(code);subscribePresence(code);subscribeLog(code);startHeartbeat();
-    show('scr-lobby');
+    writeRoom(s);startHeartbeat();show('scr-lobby');
   }catch(e){$('home-err').textContent='Connection error — try again.';console.error(e);}
   busy=false;
 }
@@ -554,8 +543,10 @@ async function joinRoom(){
   if(busy||!getName())return;
   const code=$('joincode').value.trim().toUpperCase();
   if(code.length!==4){$('home-err').textContent='4-letter code enter பண்ணுங்க.';return;}
-  initGun();
   busy=true;$('home-err').textContent='Connecting…';
+  const ok=await new Promise(r=>connectWS(r));
+  if(!ok){$('home-err').textContent='Cannot connect — check IP & WiFi.';busy=false;return;}
+  $('home-err').textContent='Joining…';
   const s=await readRoom(code);
   if(!s){$('home-err').textContent='Room இல்லை! Code சரியா இருக்கா?';busy=false;return;}
   if(s.phase!=='lobby'){$('home-err').textContent='Game already started.';busy=false;return;}
@@ -566,9 +557,7 @@ async function joinRoom(){
     s.players.push({id:myId,name,score:0,avatar:myAvatar});myName=name;
   }
   roomCode=code;me=s.players.findIndex(p=>p.id===myId);
-  $('home-err').textContent='';
-  writeRoom(s);subscribeRoom(code);subscribeChat(code);subscribePresence(code);subscribeLog(code);startHeartbeat();
-  show('scr-lobby');busy=false;
+  $('home-err').textContent='';writeRoom(s);startHeartbeat();show('scr-lobby');busy=false;
 }
 
 const isHost=()=>me===0;
@@ -932,7 +921,7 @@ if(window.AndroidBridge){
     const ip=window.AndroidBridge.getLocalIp();
     if(ip){
       $('relay-ip').value=ip;
-      $('relay-hint').innerHTML='📱 Your IP: <b>'+ip+'</b> &mdash; share with players on same WiFi.<br>Other players: replace with host\'s IP above.';
+      $('relay-hint').innerHTML='📱 Host IP: <b>'+ip+'</b> &mdash; share this + room code with all players.<br>Other players: enter host\'s IP in the field above, then join.';
     }
   }catch(e){}
 }
