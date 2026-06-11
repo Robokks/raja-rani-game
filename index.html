@@ -139,8 +139,10 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
     <input type="text" class="code" id="joincode" maxlength="4" placeholder="ABCD" autocomplete="off"
       oninput="this.value=this.value.toUpperCase()">
     <button class="btn green" onclick="joinRoom()">&#x1F6AA; Join room</button>
-    <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(58,42,24,.18);font-family:'Catamaran';font-size:12px;font-weight:600;opacity:.7;text-align:center;">
-      &#x1F30D; Plays over internet via ntfy.sh &mdash; all players need WiFi / data
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(58,42,24,.18);">
+      <label style="margin-top:0;">&#x1F4E1; ntfy server URL</label>
+      <input type="text" id="ntfy-url" placeholder="https://ntfy.sh" autocomplete="off" style="font-size:15px;letter-spacing:.5px;">
+      <div style="font-family:'Catamaran';font-size:11px;font-weight:600;opacity:.65;margin-top:4px;line-height:1.5;">Paste your ntfy.sh or self-hosted ntfy server URL &mdash; all players must use the same URL</div>
     </div>
     <div class="err" id="home-err"></div>
   </div>
@@ -355,12 +357,23 @@ function playSound(type){
   }catch(e){}
 }
 
-// ── ntfy.sh connectivity probe ─────────────────────────────────────────
+// ── ntfy server URL (user-configurable) ───────────────────────────────
+let NTFY=(localStorage.getItem('rr-ntfy-url')||'https://ntfy.sh').replace(/\/+$/,'');
+(function(){
+  const el=$('ntfy-url');
+  el.value=NTFY;
+  el.oninput=()=>{
+    const v=el.value.trim().replace(/\/+$/,'');
+    if(v){NTFY=v;localStorage.setItem('rr-ntfy-url',v);}
+  };
+})();
+
+// ── ntfy connectivity probe ────────────────────────────────────────────
 (function(){
   const dot=$('conn-dot'),txt=$('conn-txt');
-  fetch('https://ntfy.sh/',{method:'HEAD'})
-    .then(()=>{dot.className='conn-dot ok';txt.textContent='ntfy.sh relay ready ✓';})
-    .catch(()=>{dot.className='conn-dot err';txt.textContent='ntfy.sh offline — check internet';});
+  fetch(NTFY+'/',{method:'HEAD'})
+    .then(()=>{dot.className='conn-dot ok';txt.textContent=NTFY+' ready ✓';})
+    .catch(()=>{dot.className='conn-dot err';txt.textContent='Cannot reach '+NTFY+' — check URL';});
 })();
 
 // ── Module state ───────────────────────────────────────────────────────
@@ -381,7 +394,6 @@ const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'
 const av=p=>(p&&p.avatar)||'🎮';
 
 // ── ntfy.sh room helpers ───────────────────────────────────────────────
-const NTFY='https://ntfy.sh';
 async function readRoom(code){
   try{
     const res=await fetch(NTFY+'/rr-'+code+'-s/json?poll=1&since=all');
