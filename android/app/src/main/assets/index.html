@@ -139,9 +139,14 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
     <input type="text" class="code" id="joincode" maxlength="4" placeholder="ABCD" autocomplete="off"
       oninput="this.value=this.value.toUpperCase()">
     <button class="btn green" onclick="joinRoom()">&#x1F6AA; Join room</button>
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(58,42,24,.18);">
+      <label style="margin-top:0;">&#x1F4E1; Relay IP &mdash; local WiFi, no internet</label>
+      <input type="text" id="relay-ip" placeholder="Host's IP e.g. 192.168.1.5" autocomplete="off" style="font-size:15px;letter-spacing:.5px;">
+      <div id="relay-hint" style="font-family:'Catamaran';font-size:11px;font-weight:600;opacity:.65;margin-top:5px;line-height:1.5;"></div>
+    </div>
     <div class="err" id="home-err"></div>
   </div>
-  <p class="hint"><span class="conn-dot" id="conn-dot"></span><span id="conn-txt">Connecting&hellip;</span><br>Host creates room &middot; Others join with code</p>
+  <p class="hint"><span class="conn-dot" id="conn-dot"></span><span id="conn-txt">Tap Create or Join to connect</span><br>Host creates room &middot; Others join with code</p>
 </div>
 
 <!-- LOBBY -->
@@ -197,7 +202,7 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
         <div class="role-pts" id="mc-pts"></div>
       </div>
     </div>
-  </div>
+</div>
   <div class="progress-track"><div class="progress-fill" id="mc-progress" style="width:100%;"></div></div>
   <div class="hint" id="mc-hint" style="margin-top:12px;"></div>
 </div>
@@ -285,7 +290,7 @@ function getRoles(n){return ROLE_CHAINS[n].map(k=>ROLE_DEFS[k]);}
 function chainTarget(s){return getRoles(s.numPlayers)[s.chainStep+1].key;}
 
 const $=id=>document.getElementById(id);
-const gun=Gun(['wss://relay.peer.ooo/gun','https://gun.eco/gun']);
+let gun=null;
 
 // ── Avatar picker ──────────────────────────────────────────────────────
 const AVATARS=['🐯','🦁','🐻','🐼','🐨','🦊','🐸','🐙','🦄','🐲','🦋','⭐'];
@@ -354,25 +359,37 @@ function playSound(type){
   }catch(e){}
 }
 
-// ── Connection probe ───────────────────────────────────────────────────
-(function probeConn(){
+// ── Gun init (lazy) ──────────────────────────────────────────────────
+function initGun(){
+  if(gun)return;
+  const ip=($('relay-ip').value||'').trim();
+  let peers;
+  if(ip){
+    peers=['ws://'+ip+':8765/gun'];
+  }else if(window.AndroidBridge){
+    peers=['ws://localhost:8765/gun'];
+  }else{
+    peers=['wss://relay.peer.ooo/gun','https://gun.eco/gun'];
+  }
+  gun=Gun(peers);
   const dot=$('conn-dot'),txt=$('conn-txt');
-  let confirmed=false;
+  let ok=false;
   const key='rr-probe-'+Math.random().toString(36).slice(2,10);
   const val=Date.now();
   gun.get(key).put({v:val});
   gun.get(key).on(d=>{
-    if(confirmed||!d||d.v!==val)return;
-    confirmed=true;
-    dot.className='conn-dot ok';txt.textContent='Connected ✓';
+    if(ok||!d||d.v!==val)return;ok=true;
+    dot.className='conn-dot ok';
+    txt.textContent=(ip||window.AndroidBridge)?'Local relay ✓':'Connected ✓';
   });
   setTimeout(()=>{
-    if(!confirmed){
+    if(!ok){
       dot.className='conn-dot err';
-      txt.textContent='Relay offline — check internet & refresh';
+      txt.textContent=ip?'Cannot reach '+ip+':8765 — check IP & WiFi':
+        window.AndroidBridge?'Local relay error — restart app':'Relay offline — check internet';
     }
-  },8000);
-})();
+  },5000);
+}
 
 // ── Module state ───────────────────────────────────────────────────────
 let myId='p'+Math.random().toString(36).slice(2,10),myName='',roomCode=null,me=-1;
@@ -512,6 +529,7 @@ function getName(){
 }
 async function createRoom(){
   if(busy||!getName())return;
+  initGun();
   busy=true;$('home-err').textContent='';
   try{
     let code;const chars='ABCDEFGHJKMNPQRSTUVWXYZ';
@@ -536,6 +554,7 @@ async function joinRoom(){
   if(busy||!getName())return;
   const code=$('joincode').value.trim().toUpperCase();
   if(code.length!==4){$('home-err').textContent='4-letter code enter பண்ணுங்க.';return;}
+  initGun();
   busy=true;$('home-err').textContent='Connecting…';
   const s=await readRoom(code);
   if(!s){$('home-err').textContent='Room இல்லை! Code சரியா இருக்கா?';busy=false;return;}
@@ -905,6 +924,17 @@ function renderTable(id,s){
   t.innerHTML=sorted.map((p,idx)=>
     '<tr class="'+(idx===0?'leader':'')+'"><td>'+(idx===0?'👑 ':'')+av(p)+' '+esc(p.name)+(p.id===myId?' <small style="opacity:.5;">(you)</small>':'')+'</td><td>'+p.score+'</td></tr>'
   ).join('');
+}
+
+// Pre-fill relay IP from Android bridge (host sees own IP; others type host's IP)
+if(window.AndroidBridge){
+  try{
+    const ip=window.AndroidBridge.getLocalIp();
+    if(ip){
+      $('relay-ip').value=ip;
+      $('relay-hint').innerHTML='📱 Your IP: <b>'+ip+'</b> &mdash; share with players on same WiFi.<br>Other players: replace with host\'s IP above.';
+    }
+  }catch(e){}
 }
 </script>
 </body>
