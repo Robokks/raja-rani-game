@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: ["claude/multiplayer-raja-rani-wifi-ye9uzs", "main"]
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
