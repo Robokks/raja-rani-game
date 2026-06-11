@@ -7,6 +7,7 @@ import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import java.net.Inet4Address
 import java.net.NetworkInterface
@@ -23,37 +24,37 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         webView = findViewById(R.id.web_view)
-
-        // Start local relay — runs on LAN, no internet needed
         startRelayServer()
         val localIp = getLocalIp()
 
         webView.settings.apply {
             javaScriptEnabled = true
             domStorageEnabled = true
-            databaseEnabled = true
             mediaPlaybackRequiresUserGesture = false
             mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
             cacheMode = WebSettings.LOAD_NO_CACHE
-            @Suppress("DEPRECATION")
-            allowFileAccessFromFileURLs = true
-            @Suppress("DEPRECATION")
-            allowUniversalAccessFromFileURLs = true
         }
 
-        // Expose local IP to JavaScript so the HTML can pre-fill the relay field
         webView.addJavascriptInterface(AndroidBridge(localIp, RELAY_PORT), "AndroidBridge")
         webView.webViewClient = WebViewClient()
         webView.webChromeClient = WebChromeClient()
 
         val html = assets.open("index.html").bufferedReader().readText()
+        // Use http:// base URL so ws:// relay connections are not treated as mixed content
         webView.loadDataWithBaseURL(
-            "https://rajarani.local/",
+            "http://rajarani.local/",
             html,
             "text/html",
             "UTF-8",
             null
         )
+
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (webView.canGoBack()) webView.goBack()
+                else finish()
+            }
+        })
     }
 
     private fun startRelayServer() {
@@ -75,9 +76,8 @@ class MainActivity : AppCompatActivity() {
                 val addrs = iface.inetAddresses
                 while (addrs.hasMoreElements()) {
                     val addr = addrs.nextElement()
-                    if (!addr.isLoopbackAddress && addr is Inet4Address) {
+                    if (!addr.isLoopbackAddress && addr is Inet4Address)
                         return addr.hostAddress ?: ""
-                    }
                 }
             }
         } catch (e: Exception) { }
@@ -87,15 +87,5 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         try { relayServer?.stop(100) } catch (e: Exception) { }
-    }
-
-    @Deprecated("Deprecated in Java")
-    override fun onBackPressed() {
-        if (webView.canGoBack()) {
-            webView.goBack()
-        } else {
-            @Suppress("DEPRECATION")
-            super.onBackPressed()
-        }
     }
 }
