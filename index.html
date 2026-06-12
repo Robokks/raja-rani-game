@@ -587,8 +587,8 @@ async function joinRoom(){
   if(s.phase!=='lobby'){$('home-err').textContent='Game already started.';busy=false;return;}
   if(s.players.length>=s.numPlayers){$('home-err').textContent='Room full ('+s.numPlayers+'/'+s.numPlayers+').';busy=false;return;}
   if(!s.players.some(p=>p.id===myId)){
-    let name=myName;
-    if(s.players.some(p=>p.name.toLowerCase()===name.toLowerCase()))name+='2';
+    let name=myName,suffix=2;
+    while(s.players.some(p=>p.name.toLowerCase()===name.toLowerCase()))name=myName+(suffix++);
     s.players.push({id:myId,name,score:0,avatar:myAvatar});myName=name;
   }
   roomCode=code;me=s.players.findIndex(p=>p.id===myId);
