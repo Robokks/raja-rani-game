@@ -368,7 +368,8 @@ localStorage.setItem('rr-ntfy-url',NTFY);
 (function(){
   const el=$('ntfy-url');
   el.value=NTFY;
-  el.oninput=()=>{
+  el.oninput=()=>{NTFY=el.value.trim().replace(/\/+$/,'')||'https://ntfy.sh';};
+  el.onblur=()=>{
     const v=normalizeNtfy(el.value);
     NTFY=v;el.value=v;localStorage.setItem('rr-ntfy-url',v);
   };
@@ -540,7 +541,9 @@ function getName(){
   return true;
 }
 async function createRoom(){
-  if(busy||!getName())return;busy=true;$('home-err').textContent='Creating room…';
+  if(busy||!getName())return;busy=true;
+  NTFY=normalizeNtfy($('ntfy-url').value);localStorage.setItem('rr-ntfy-url',NTFY);$('ntfy-url').value=NTFY;
+  $('home-err').textContent='Creating room…';
   try{
     let code;const chars='ABCDEFGHJKMNPQRSTUVWXYZ';
     for(let t=0;t<6;t++){
@@ -563,7 +566,9 @@ async function joinRoom(){
   if(busy||!getName())return;
   const code=$('joincode').value.trim().toUpperCase();
   if(code.length!==4){$('home-err').textContent='4-letter code enter பண்ணுங்க.';return;}
-  busy=true;$('home-err').textContent='Joining…';
+  busy=true;
+  NTFY=normalizeNtfy($('ntfy-url').value);localStorage.setItem('rr-ntfy-url',NTFY);$('ntfy-url').value=NTFY;
+  $('home-err').textContent='Joining…';
   const s=await readRoom(code);
   if(!s){$('home-err').textContent='Room இல்லை! Code சரியா இருக்கா? (ntfy: '+NTFY+')';busy=false;return;}
   if(s.phase!=='lobby'){$('home-err').textContent='Game already started.';busy=false;return;}
