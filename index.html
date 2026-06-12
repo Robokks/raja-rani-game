@@ -594,9 +594,9 @@ function setTimer(n){
   if(!isHost()||!state||state.phase!=='lobby')return;
   const s=deepCopy(state);s.chainTimerSecs=n;writeRoom(s);
 }
-async function hostKick(playerId){
+function hostKick(playerId){
   if(!isHost()||!state||state.phase!=='lobby')return;
-  const s=await readRoom(roomCode);if(!s)return;
+  const s=deepCopy(state);
   const kicked=s.players.find(p=>p.id===playerId);
   s.kickedIds=[...(s.kickedIds||[]),playerId];
   s.players=s.players.filter(p=>p.id!==playerId);
@@ -627,10 +627,10 @@ function tapDice(){
   const iv=setInterval(()=>{el.textContent=faces[Math.floor(Math.random()*6)];},120);
   setTimeout(()=>{clearInterval(iv);el.classList.remove('rolling');rollDice();},1200);
 }
-async function rollDice(){
-  if(busy)return;busy=true;
-  const s=await readRoom(roomCode);
-  if(!s||s.phase!=='dice'||me!==s.diceRoller){busy=false;return;}
+function rollDice(){
+  if(busy||!state||state.phase!=='dice'||me!==state.diceRoller)return;
+  busy=true;
+  const s=deepCopy(state);
   const val=Math.floor(Math.random()*6)+1;
   const keys=shuffle(getRoles(s.numPlayers).map(r=>r.key));
   s.playerRoles=keys;s.diceValue=val;s.phase='mycard';
@@ -650,21 +650,20 @@ function scheduleAdvance(s){
 }
 
 // ── Chain ──────────────────────────────────────────────────────────────
-async function declareRaja(){
+function declareRaja(){
   if(busy||!state||state.phase!=='declare')return;
   if(state.playerRoles[me]!=='raja')return;
   busy=true;
-  const s=await readRoom(roomCode);
-  if(!s||s.phase!=='declare'||s.playerRoles[me]!=='raja'){busy=false;return;}
+  const s=deepCopy(state);
   s.chainFinder=me;s.declaredRajaIdx=me;s.phase='chain';
   postLog('👑 '+myName+' declared as Raja!');
   writeRoom(s);busy=false;
 }
 
-async function guessPlayer(targetIdx){
-  if(busy)return;busy=true;
-  const s=await readRoom(roomCode);
-  if(!s||s.phase!=='chain'||s.chainFinder!==me){busy=false;return;}
+function guessPlayer(targetIdx){
+  if(busy||!state||state.phase!=='chain'||state.chainFinder!==me)return;
+  busy=true;
+  const s=deepCopy(state);
   if((s.foundPlayers||[]).includes(targetIdx)||targetIdx===me){busy=false;return;}
   const target=chainTarget(s);
   const gName=(s.players[me]||{name:'?'}).name;
