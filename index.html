@@ -406,6 +406,15 @@ localStorage.setItem('rr-ntfy-url',NTFY);
     NTFY=v;el.value=v;localStorage.setItem('rr-ntfy-url',v);
   };
 })();
+// Pre-fill room code from URL ?room=CODE
+(function(){
+  const code=new URLSearchParams(location.search).get('room');
+  if(code&&code.length===4){
+    $('joincode').value=code.toUpperCase();
+    $('myname').focus();
+    $('home-err').textContent='👋 Room '+code.toUpperCase()+' — enter your name and tap Join!';
+  }
+})();
 
 // ── ntfy connectivity probe ────────────────────────────────────────────
 (function(){
@@ -660,7 +669,9 @@ async function createRoom(){
       playerRoles:null,diceRoller:0,diceValue:null,
       chainStep:0,chainFinder:null,declaredRajaIdx:null,
       foundPlayers:[],roundPoints:{},lastResult:null};
-    writeRoom(s);subscribeAll(code);startHeartbeat();show('scr-lobby');
+    writeRoom(s);subscribeAll(code);startHeartbeat();
+    history.replaceState(null,'','?room='+code);
+    show('scr-lobby');
   }catch(e){$('home-err').textContent='Error — check internet.';console.error(e);}
   busy=false;
 }
@@ -681,7 +692,9 @@ async function joinRoom(){
     s.players.push({id:myId,name,score:0,avatar:myAvatar});myName=name;
   }
   roomCode=code;me=s.players.findIndex(p=>p.id===myId);
-  $('home-err').textContent='';writeRoom(s);subscribeAll(code);startHeartbeat();show('scr-lobby');busy=false;
+  $('home-err').textContent='';writeRoom(s);subscribeAll(code);startHeartbeat();
+  history.replaceState(null,'','?room='+code);
+  show('scr-lobby');busy=false;
 }
 
 const isHost=()=>me===0;
