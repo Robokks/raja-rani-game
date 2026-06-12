@@ -342,7 +342,8 @@ localStorage.setItem('su-ntfy-url',NTFY);
   if(code&&code.length===4){$('joincode').value=code.toUpperCase();$('myname').focus();$('home-err').textContent='👋 Room '+code.toUpperCase()+' — enter your name and tap Join!';}
 })();
 
-let myId='p'+Math.random().toString(36).slice(2,10),myName='',roomCode=null,me=-1;
+let myId=localStorage.getItem('su-pid');if(!myId){myId='p'+Math.random().toString(36).slice(2,10);localStorage.setItem('su-pid',myId);}
+let myName='',roomCode=null,me=-1;
 let state=null,lastVer=-1,busy=false,renderedPhase=null;
 let roomEs=null,presEs=null,rxnEs=null,chatEs=null;
 let gameTimerInterval=null,roleRevealTimer=null,elimTimer=null;
@@ -479,9 +480,9 @@ async function joinRoom(){
   roomCode=code;me=s.players.findIndex(p=>p.id===myId);
   $('home-err').textContent='';writeRoom(s);subscribeAll(code);history.replaceState(null,'','sus.html?room='+code);show('scr-lobby');busy=false;
 }
-const isHost=()=>me===0;
-const myPlayer=()=>state&&state.players[me];
-const isAlive=()=>{const p=myPlayer();return p&&p.alive;};
+const isHost=()=>!!(state&&state.players.length&&state.players[0].id===myId);
+const myPlayer=()=>state&&state.players.find(p=>p.id===myId);
+const isAlive=()=>{const p=myPlayer();return !!(p&&p.alive);};
 const myRole=()=>state&&(state.roles||{})[myId];
 
 function setNumPlayers(n){if(!isHost()||!state||state.phase!=='lobby')return;if(state.players.length>n)return;const s=deepCopy(state);s.numPlayers=n;if(s.numImpostors>=n)s.numImpostors=Math.max(1,n-2);writeRoom(s);}
@@ -545,10 +546,13 @@ function startGameTimer(s){
     if(num)num.textContent=rem>60?Math.ceil(rem/60)+'m':rem+'s';
     if(rem===0){
       clearInterval(gameTimerInterval);
-      if(isHost()){
+      const doAdvance=()=>{
+        if(!state)return;
         if(state.phase==='discuss')advanceToVote(deepCopy(state));
         else if(state.phase==='vote')tallyVotes(deepCopy(state));
-      }
+      };
+      if(isHost())doAdvance();
+      else setTimeout(doAdvance,900+Math.random()*600);
     }
   },250);
 }
@@ -671,6 +675,15 @@ function renderDiscuss(s,phaseChanged){
     d.innerHTML=esc(av(p))+' <b>'+esc(p.name)+'</b>'+(p.id===myId?' <small style="opacity:.45;">(you)</small>':'')+'<span class="dead-skull">'+(p.alive?'':'💀')+'</span>';
     list.appendChild(d);
   });
+  let hostBtn=$('disc-force-vote');
+  if(!hostBtn){
+    hostBtn=document.createElement('button');hostBtn.id='disc-force-vote';hostBtn.className='btn';
+    hostBtn.style.cssText='margin-top:14px;background:var(--green);box-shadow:0 5px 0 #1c4732;';
+    hostBtn.textContent='→ Go to vote now';
+    hostBtn.onclick=()=>{if(state&&state.phase==='discuss')advanceToVote(deepCopy(state));};
+    $('scr-discuss').appendChild(hostBtn);
+  }
+  hostBtn.style.display=isHost()?'block':'none';
   startGameTimer(s);
   show('scr-discuss');
 }
