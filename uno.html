@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>UNO | Card Game</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+Thambi+2:wght@500;700;800&family=Catamaran:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--kraft:#d9b98a;--paper:#fdf6e3;--ink:#3a2a18;--red:#e74c3c;--green:#27ae60;--blue:#2980b9;--yellow:#f0b429;--wild:#8e44ad;--shadow:rgba(58,42,24,.25);}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;}
+body{font-family:'Baloo Thambi 2','Catamaran',sans-serif;background:var(--kraft);background-image:radial-gradient(circle at 20% 10%,rgba(255,255,255,.25),transparent 40%),radial-gradient(circle at 80% 90%,rgba(0,0,0,.08),transparent 45%);color:var(--ink);display:flex;flex-direction:column;align-items:center;min-height:100%;padding:16px 14px 80px;user-select:none;}
+.screen{display:none;width:100%;max-width:430px;animation:fadein .3s ease;}
+.screen.active{display:block;}
+@keyframes fadein{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+h1{text-align:center;font-weight:800;font-size:30px;color:var(--red);text-shadow:1px 2px 0 rgba(255,255,255,.5);margin-top:6px;}
+.sub{text-align:center;font-family:'Catamaran';font-size:13px;font-weight:600;opacity:.7;margin-top:2px;letter-spacing:2px;text-transform:uppercase;}
+.centertext{text-align:center;font-size:17px;font-weight:700;margin-top:6px;}
+.err{text-align:center;color:var(--red);font-weight:700;margin-top:8px;min-height:20px;font-size:14px;}
+.hint{text-align:center;font-family:'Catamaran';font-size:13px;font-weight:600;opacity:.6;margin-top:10px;}
+.tagwrap{text-align:center;margin-top:4px;}
+.roundtag{font-family:'Catamaran';font-weight:800;font-size:13px;letter-spacing:2px;text-transform:uppercase;background:var(--ink);color:var(--kraft);display:inline-block;padding:4px 14px;border-radius:20px;}
+.panel{background:var(--paper);border-radius:6px;box-shadow:0 6px 0 var(--shadow),0 10px 24px rgba(0,0,0,.12);padding:20px 18px;margin-top:16px;position:relative;}
+.panel::before{content:"";position:absolute;inset:6px;border:1.5px dashed rgba(58,42,24,.25);border-radius:4px;pointer-events:none;}
+label{font-family:'Catamaran';font-size:12px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;opacity:.65;display:block;margin:12px 0 4px;}
+input[type=text]{width:100%;padding:10px 12px;font-family:'Baloo Thambi 2';font-size:18px;font-weight:700;border:2px solid rgba(58,42,24,.3);border-radius:6px;background:#fffdf6;color:var(--ink);outline:none;}
+input[type=text]:focus{border-color:var(--red);}
+input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-size:24px;}
+.btn{display:block;width:100%;margin-top:16px;padding:14px 0;font-family:'Baloo Thambi 2';font-size:19px;font-weight:800;background:var(--red);color:#fff;border:none;border-radius:8px;cursor:pointer;box-shadow:0 5px 0 #a0281f;transition:transform .08s,box-shadow .08s;}
+.btn:active{transform:translateY(4px);box-shadow:0 1px 0 #a0281f;}
+.btn.green{background:var(--green);box-shadow:0 5px 0 #1a7a40;}
+.btn.green:active{box-shadow:0 1px 0 #1a7a40;}
+.btn.gold{background:var(--yellow);box-shadow:0 5px 0 #b07a10;color:var(--ink);}
+.btn.gold:active{box-shadow:0 1px 0 #b07a10;}
+.btn.ghost{background:transparent;color:var(--ink);box-shadow:none;border:2px solid rgba(58,42,24,.4);font-size:15px;padding:9px 0;}
+.btn:disabled{opacity:.5;pointer-events:none;}
+.waiting{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:14px;font-weight:700;opacity:.7;}
+.dotpulse{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ink);animation:pulse 1s infinite alternate;}
+.dotpulse:nth-child(2){animation-delay:.2s;}.dotpulse:nth-child(3){animation-delay:.4s;}
+@keyframes pulse{from{opacity:.2;transform:scale(.7);}to{opacity:1;transform:scale(1);}}
+.roomcode{font-size:44px;font-weight:800;letter-spacing:10px;text-align:center;color:var(--ink);background:#fffdf6;border:2px dashed rgba(58,42,24,.35);border-radius:8px;padding:10px 0;margin-top:10px;}
+.player-list{margin-top:12px;}
+.pl-row{display:flex;align-items:center;gap:10px;background:#fffdf6;border-radius:6px;padding:10px 14px;margin-top:8px;font-weight:700;font-size:16px;border:1.5px solid rgba(58,42,24,.15);}
+.pl-row .tag{font-family:'Catamaran';font-size:11px;font-weight:800;letter-spacing:1px;background:var(--yellow);color:var(--ink);padding:2px 8px;border-radius:10px;white-space:nowrap;}
+.pl-row.empty{opacity:.45;font-weight:600;border-style:dashed;}
+.np-picker{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+.np-btn{flex:1;min-width:36px;padding:10px 4px;font-family:'Baloo Thambi 2';font-size:16px;font-weight:800;border:2px solid rgba(58,42,24,.3);border-radius:8px;background:#fffdf6;color:var(--ink);cursor:pointer;}
+.np-btn.active{background:var(--ink);color:var(--kraft);border-color:var(--ink);}
+.np-btn:disabled{opacity:.35;pointer-events:none;}
+.avatar-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}
+.av-opt{font-size:26px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:8px;border:2px solid transparent;cursor:pointer;background:#fffdf6;transition:transform .1s;}
+.av-opt:active{transform:scale(.88);}
+.av-opt.selected{border-color:var(--red);background:#fce8e7;transform:scale(1.1);}
+.kick-btn{background:none;border:none;color:var(--red);font-size:17px;font-weight:800;cursor:pointer;padding:2px 6px;margin-left:auto;line-height:1;flex-shrink:0;}
+.conn-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;background:#888;vertical-align:middle;}
+.conn-dot.ok{background:#27ae60;}.conn-dot.err{background:#e74c3c;}
+
+/* ── UNO-specific game styles ── */
+.turn-banner{border-radius:10px;padding:11px 16px;margin-top:10px;font-size:16px;font-weight:800;text-align:center;background:rgba(58,42,24,.1);color:var(--ink);}
+.turn-banner.my-turn{background:var(--green);color:#fff;animation:turnPulse 1.2s infinite alternate;}
+@keyframes turnPulse{from{box-shadow:0 0 0 0 rgba(39,174,96,.5);}to{box-shadow:0 0 0 8px rgba(39,174,96,0);}}
+.dir-row{display:flex;align-items:center;justify-content:space-between;margin-top:8px;font-family:'Catamaran';font-size:13px;font-weight:800;opacity:.75;}
+.dir-row .last-action{font-size:12px;opacity:.8;font-style:italic;text-align:right;max-width:65%;line-height:1.3;}
+
+/* Opponents */
+.opponents-grid{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px;}
+.opp-card{flex:1;min-width:80px;max-width:130px;background:var(--paper);border-radius:8px;border:2px solid rgba(58,42,24,.15);padding:8px 6px;display:flex;flex-direction:column;align-items:center;gap:3px;position:relative;}
+.opp-card.active-opp{border-color:var(--yellow);background:#fffce8;box-shadow:0 3px 10px rgba(240,180,41,.3);}
+.opp-av{font-size:28px;line-height:1;}
+.opp-name{font-size:11px;font-weight:800;text-align:center;line-height:1.2;word-break:break-all;}
+.opp-count{font-family:'Catamaran';font-size:13px;font-weight:800;color:var(--ink);}
+.opp-uno-badge{font-family:'Catamaran';font-size:10px;font-weight:800;letter-spacing:.5px;background:var(--red);color:#fff;border-radius:8px;padding:2px 6px;margin-top:2px;}
+.catch-uno-btn{margin-top:4px;padding:4px 8px;font-family:'Baloo Thambi 2';font-size:11px;font-weight:800;background:var(--red);color:#fff;border:none;border-radius:6px;cursor:pointer;}
+.catch-uno-btn:active{opacity:.7;}
+
+/* Pile area */
+.pile-area{display:flex;align-items:center;gap:10px;margin-top:12px;background:rgba(58,42,24,.07);border-radius:10px;padding:10px 12px;}
+.color-bar{width:8px;height:96px;border-radius:4px;flex-shrink:0;transition:background .3s;}
+.color-bar.red{background:var(--red);}
+.color-bar.green{background:var(--green);}
+.color-bar.blue{background:var(--blue);}
+.color-bar.yellow{background:var(--yellow);}
+.color-bar.wild{background:linear-gradient(180deg,var(--red) 0%,var(--yellow) 33%,var(--green) 66%,var(--blue) 100%);}
+.pile-card{width:64px;height:96px;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:800;font-size:28px;border:3px solid rgba(255,255,255,.5);box-shadow:0 4px 10px rgba(0,0,0,.2);flex-shrink:0;position:relative;overflow:hidden;}
+.pile-card::after{content:attr(data-corner);position:absolute;top:4px;left:6px;font-size:13px;font-weight:800;opacity:.85;}
+.pile-card.c-red{background:var(--red);color:#fff;}
+.pile-card.c-green{background:var(--green);color:#fff;}
+.pile-card.c-blue{background:var(--blue);color:#fff;}
+.pile-card.c-yellow{background:var(--yellow);color:var(--ink);}
+.pile-card.c-wild{background:linear-gradient(135deg,var(--red) 0%,var(--yellow) 33%,var(--green) 66%,var(--blue) 100%);color:#fff;}
+.pile-info{flex:1;display:flex;flex-direction:column;gap:4px;}
+.active-color-label{font-family:'Catamaran';font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;opacity:.65;}
+.active-color-val{font-size:15px;font-weight:800;display:flex;align-items:center;gap:5px;}
+.active-color-dot{width:14px;height:14px;border-radius:50%;border:2px solid rgba(58,42,24,.3);}
+.active-color-dot.red{background:var(--red);}
+.active-color-dot.green{background:var(--green);}
+.active-color-dot.blue{background:var(--blue);}
+.active-color-dot.yellow{background:var(--yellow);}
+.pending-warn{font-family:'Catamaran';font-size:12px;font-weight:800;color:var(--red);margin-top:4px;}
+.deck-pile{width:52px;height:78px;border-radius:8px;background:var(--ink);background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.06) 0,rgba(255,255,255,.06) 2px,transparent 0,transparent 50%);background-size:8px 8px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:rgba(255,255,255,.7);font-size:11px;font-weight:800;letter-spacing:.5px;cursor:pointer;border:2px solid rgba(255,255,255,.15);box-shadow:0 4px 8px rgba(0,0,0,.25);flex-shrink:0;transition:transform .08s;}
+.deck-pile:active{transform:scale(.93);}
+.deck-pile .deck-icon{font-size:22px;margin-bottom:3px;}
+.deck-pile .deck-num{font-size:10px;}
+
+/* Hand */
+.hand-section{margin-top:14px;}
+.hand-label-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+.hand-label-row span{font-family:'Catamaran';font-size:12px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;opacity:.65;}
+.hand-scroll{display:flex;gap:6px;padding:6px 0 14px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin;}
+.hand-scroll::-webkit-scrollbar{height:3px;}
+.hand-scroll::-webkit-scrollbar-thumb{background:rgba(58,42,24,.28);border-radius:2px;}
+.hand-card{width:52px;height:78px;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:800;font-size:20px;cursor:pointer;border:2.5px solid rgba(255,255,255,.3);flex-shrink:0;transition:transform .1s,box-shadow .1s;position:relative;overflow:hidden;}
+.hand-card::after{content:attr(data-corner);position:absolute;top:3px;left:5px;font-size:10px;font-weight:800;opacity:.85;}
+.hand-card.c-red{background:var(--red);color:#fff;}
+.hand-card.c-green{background:var(--green);color:#fff;}
+.hand-card.c-blue{background:var(--blue);color:#fff;}
+.hand-card.c-yellow{background:var(--yellow);color:var(--ink);}
+.hand-card.c-wild{background:linear-gradient(135deg,var(--red) 0%,var(--yellow) 33%,var(--green) 66%,var(--blue) 100%);color:#fff;}
+.hand-card.playable{border-color:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.6),0 4px 12px rgba(0,0,0,.3);}
+.hand-card.playable:active{transform:translateY(-8px) scale(1.05);}
+.hand-card.playable:hover{transform:translateY(-4px);}
+.hand-card.not-playable{opacity:.38;pointer-events:none;}
+.hand-card.not-my-turn{opacity:.55;pointer-events:none;}
+
+/* Action row */
+.action-row{display:flex;gap:8px;margin-top:10px;}
+.action-row .btn{margin-top:0;flex:1;padding:12px 0;font-size:16px;}
+
+/* Score table */
+.score-table{width:100%;margin-top:10px;border-collapse:collapse;}
+.score-table td{padding:8px;font-weight:700;font-size:15px;border-bottom:1.5px dashed rgba(58,42,24,.2);}
+.score-table td:last-child{text-align:right;font-weight:800;}
+.score-table tr.winner-row td{color:var(--green);font-weight:800;}
+
+/* Color picker overlay */
+.color-overlay{position:fixed;inset:0;background:rgba(40,28,10,.92);z-index:200;display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px;}
+.color-overlay.show{display:flex;animation:fadein .2s ease;}
+.color-box{background:var(--paper);border-radius:16px;padding:28px 24px;width:100%;max-width:340px;text-align:center;box-shadow:0 16px 0 var(--shadow),0 24px 56px rgba(0,0,0,.45);}
+.color-box h2{font-size:22px;font-weight:800;margin-bottom:18px;}
+.color-circles{display:flex;justify-content:center;gap:16px;}
+.color-circle{width:64px;height:64px;border-radius:50%;cursor:pointer;border:4px solid rgba(255,255,255,.4);box-shadow:0 4px 12px rgba(0,0,0,.25);transition:transform .1s,box-shadow .1s;display:flex;align-items:center;justify-content:center;font-size:28px;}
+.color-circle:active{transform:scale(.88);}
+.color-circle.cc-red{background:var(--red);}
+.color-circle.cc-green{background:var(--green);}
+.color-circle.cc-blue{background:var(--blue);}
+.color-circle.cc-yellow{background:var(--yellow);}
+
+/* Winner screen */
+.winner-box{text-align:center;padding:20px 0;}
+.winner-av{font-size:72px;line-height:1;}
+.winner-name{font-size:28px;font-weight:800;margin-top:8px;}
+.winner-sub{font-family:'Catamaran';font-size:13px;font-weight:800;letter-spacing:2px;text-transform:uppercase;opacity:.65;margin-top:4px;}
+</style>
+</head>
+<body>
+<div id="conn-banner" style="display:none;position:fixed;top:0;left:0;right:0;background:#e74c3c;color:#fff;text-align:center;font-size:13px;font-weight:800;padding:7px;z-index:500;letter-spacing:.5px;">&#x26A1; Connection lost &mdash; reconnecting&hellip;</div>
+
+<!-- HOME -->
+<div class="screen active" id="scr-home">
+  <div style="text-align:center;font-size:44px;margin-top:8px;">&#x1F0CF;</div>
+  <h1>UNO</h1>
+  <div class="sub">Online Multiplayer</div>
+  <div class="panel">
+    <label>Your name</label>
+    <input type="text" id="myname" maxlength="12" placeholder="Name" autocomplete="off">
+    <label>Pick your avatar</label>
+    <div class="avatar-grid" id="avatar-grid"></div>
+    <button class="btn" onclick="createRoom()">&#x2795; Create room</button>
+    <label style="margin-top:18px;">Join with room code</label>
+    <input type="text" class="code" id="joincode" maxlength="4" placeholder="ABCD" autocomplete="off"
+      autocapitalize="characters" autocorrect="off" spellcheck="false"
+      oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,'')">
+    <button class="btn green" onclick="joinRoom()">&#x1F6AA; Join room</button>
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(58,42,24,.18);">
+      <label style="margin-top:0;">&#x1F4E1; ntfy server URL</label>
+      <input type="text" id="ntfy-url" placeholder="https://ntfy.sh" autocomplete="off" style="font-size:15px;letter-spacing:.5px;">
+      <div style="font-family:'Catamaran';font-size:11px;font-weight:600;opacity:.65;margin-top:4px;line-height:1.5;">All players must use the same ntfy server URL</div>
+    </div>
+    <div class="err" id="home-err"></div>
+  </div>
+  <p class="hint"><span class="conn-dot" id="conn-dot"></span><span id="conn-txt">Checking ntfy.sh&hellip;</span></p>
+  <p class="hint" style="margin-top:8px;"><a href="index.html" style="color:var(--red);font-weight:800;">&#x2190; Back to games</a></p>
+</div>
+
+<!-- LOBBY -->
+<div class="screen" id="scr-lobby">
+  <div class="tagwrap"><span class="roundtag">Lobby &mdash; UNO</span></div>
+  <div class="panel">
+    <div class="centertext">Room code &mdash; share with friends:</div>
+    <div class="roomcode" id="lobby-code"></div>
+    <button class="btn ghost" id="copy-code-btn" onclick="copyCode()" style="margin-top:8px;padding:8px 0;font-size:14px;">&#x1F4CB; Copy code</button>
+    <div id="lobby-host-settings">
+      <label>Number of players</label>
+      <div class="np-picker" id="np-picker">
+        <button class="np-btn" onclick="setNumPlayers(2)">2</button>
+        <button class="np-btn" onclick="setNumPlayers(3)">3</button>
+        <button class="np-btn active" onclick="setNumPlayers(4)">4</button>
+        <button class="np-btn" onclick="setNumPlayers(5)">5</button>
+        <button class="np-btn" onclick="setNumPlayers(6)">6</button>
+      </div>
+    </div>
+    <div class="player-list" id="lobby-players"></div>
+    <button class="btn" id="lobby-start" onclick="hostStart()" style="display:none;" disabled>Waiting&hellip;</button>
+    <div class="waiting" id="lobby-wait"><span class="dotpulse"></span><span class="dotpulse"></span><span class="dotpulse"></span><span style="margin-left:4px;font-size:13px;">Waiting for players&hellip;</span></div>
+  </div>
+</div>
+
+<!-- GAME -->
+<div class="screen" id="scr-game">
+  <div class="tagwrap"><span class="roundtag">UNO</span></div>
+  <div id="game-wrap"></div>
+</div>
+
+<!-- OVER -->
+<div class="screen" id="scr-over">
+  <div class="tagwrap"><span class="roundtag">Game Over &mdash; UNO</span></div>
+  <div class="panel" id="over-panel"></div>
+</div>
+
+<!-- COLOR PICKER OVERLAY -->
+<div class="color-overlay" id="color-overlay">
+  <div class="color-box">
+    <h2>Choose a color</h2>
+    <div class="color-circles">
+      <div class="color-circle cc-red" onclick="chooseColor('red')">&#x1F534;</div>
+      <div class="color-circle cc-green" onclick="chooseColor('green')">&#x1F7E2;</div>
+      <div class="color-circle cc-blue" onclick="chooseColor('blue')">&#x1F535;</div>
+      <div class="color-circle cc-yellow" onclick="chooseColor('yellow')">&#x1F7E1;</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Constants ──────────────────────────────────────────────────────────
+const AVATARS=['🐯','🦁','🐻','🐼','🐨','🦊','🐸','🐙','🦄','🐲','🦋','⭐'];
+const COLORS=['red','green','blue','yellow'];
+const COLOR_VALUES=['0','1','1','2','2','3','3','4','4','5','5','6','6','7','7','8','8','9','9','skip','skip','rev','rev','draw2','draw2'];
+const cardColor=i=>i>=100?'wild':COLORS[Math.floor(i/25)];
+const cardValue=i=>i>=104?'wild4':i>=100?'wild':COLOR_VALUES[i%25];
+const cardPoints=i=>{const v=cardValue(i);return(v==='wild'||v==='wild4')?50:(v==='skip'||v==='rev'||v==='draw2')?20:parseInt(v)||0;};
+const cardLabel=i=>{const v=cardValue(i);return v==='wild'?'🌈':v==='wild4'?'+4':v==='skip'?'⊘':v==='rev'?'↺':v==='draw2'?'+2':v;};
+
+function canPlay(i,top,activeColor,pendingDraw){
+  const v=cardValue(i),tv=cardValue(top),c=cardColor(i);
+  if(pendingDraw>0){if(tv==='draw2')return v==='draw2';if(tv==='wild4')return v==='wild4';}
+  if(c==='wild')return true;
+  if(c===activeColor)return true;
+  if(v===tv)return true;
+  return false;
+}
+
+// ── Persistence & ID ──────────────────────────────────────────────────
+let myId=localStorage.getItem('uno-pid');
+if(!myId){myId='p'+Math.random().toString(36).slice(2,10);localStorage.setItem('uno-pid',myId);}
+
+let myName=localStorage.getItem('uno-name')||'';
+let myAvatar=localStorage.getItem('uno-avatar')||AVATARS[0];
+
+// ── ntfy ──────────────────────────────────────────────────────────────
+function normalizeNtfy(raw){
+  let v=(raw||'https://ntfy.sh').trim();
+  try{v=new URL(v).origin;}catch{}
+  return v.replace(/\/+$/,'')||'https://ntfy.sh';
+}
+let NTFY=normalizeNtfy(
+  localStorage.getItem('uno-ntfy-url')||
+  localStorage.getItem('su-ntfy-url')||
+  localStorage.getItem('bl-ntfy-url')||
+  localStorage.getItem('rr-ntfy-url')||
+  'https://ntfy.sh'
+);
+
+// ── State ─────────────────────────────────────────────────────────────
+let state=null;
+let lastVer=0;
+let roomCode='';
+let roomEs=null;
+let busy=false;
+let myAvSel=myAvatar;
+
+// ── Utils ─────────────────────────────────────────────────────────────
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const deepCopy=o=>JSON.parse(JSON.stringify(o));
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));$(id).classList.add('active');}
+function isHost(){return state&&state.players[0]&&state.players[0].id===myId;}
+function myIndex(){return state?state.players.findIndex(p=>p.id===myId):-1;}
+function isMyTurn(){return state&&state.players[state.currentPlayer]&&state.players[state.currentPlayer].id===myId;}
+
+function onConnLost(){$('conn-banner').style.display='block';}
+function onConnBack(){$('conn-banner').style.display='none';}
+
+// ── ntfy write / subscribe ────────────────────────────────────────────
+function writeRoom(s){
+  s.version=(s.version||0)+1;
+  s.ts=Date.now();
+  fetch(NTFY+'/un-'+roomCode+'-s',{method:'POST',body:JSON.stringify(s)}).catch(()=>onConnLost());
+  state=s;
+  lastVer=s.version;
+  render();
+}
+
+function subscribeRoom(code){
+  if(roomEs)roomEs.close();
+  const since=Math.floor((Date.now()-5000)/1000);
+  roomEs=new EventSource(NTFY+'/un-'+code+'-s/sse?since='+since);
+  roomEs.onmessage=e=>{
+    let ev;try{ev=JSON.parse(e.data);}catch{return;}
+    if(ev.event!=='message')return;
+    let s;try{s=JSON.parse(ev.message);}catch{return;}
+    if(s.version<=lastVer)return;
+    if((s.kickedIds||[]).includes(myId)){alert('You were removed from the room.');location.reload();return;}
+    lastVer=s.version;
+    state=s;
+    render();
+  };
+  roomEs.onerror=()=>onConnLost();
+  roomEs.onopen=()=>onConnBack();
+}
+
+// ── Room code gen ─────────────────────────────────────────────────────
+function genCode(){
+  const chars='ABCDEFGHJKLMNPQRSTUVWXYZ';
+  let c='';for(let i=0;i<4;i++)c+=chars[Math.floor(Math.random()*chars.length)];
+  return c;
+}
+
+// ── Avatar grid ───────────────────────────────────────────────────────
+function buildAvatarGrid(){
+  const grid=$('avatar-grid');
+  grid.innerHTML='';
+  AVATARS.forEach(av=>{
+    const d=document.createElement('div');
+    d.className='av-opt'+(av===myAvSel?' selected':'');
+    d.textContent=av;
+    d.onclick=()=>{myAvSel=av;buildAvatarGrid();};
+    grid.appendChild(d);
+  });
+}
+
+// ── Home setup ────────────────────────────────────────────────────────
+(function initHome(){
+  buildAvatarGrid();
+  if(myName)$('myname').value=myName;
+
+  // ntfy URL field
+  const el=$('ntfy-url');
+  el.value=NTFY;
+  el.oninput=()=>{NTFY=el.value.trim().replace(/\/+$/,'')||'https://ntfy.sh';};
+  el.onblur=()=>{const v=normalizeNtfy(el.value);NTFY=v;el.value=v;localStorage.setItem('uno-ntfy-url',v);};
+
+  // deep link
+  const urlCode=new URLSearchParams(location.search).get('room');
+  if(urlCode&&urlCode.length===4){$('joincode').value=urlCode.toUpperCase();}
+
+  // connection check
+  const dot=$('conn-dot'),txt=$('conn-txt');
+  fetch(NTFY+'/',{method:'HEAD'})
+    .then(()=>{dot.className='conn-dot ok';txt.textContent='Connected to ntfy';})
+    .catch(()=>{dot.className='conn-dot err';txt.textContent='Cannot reach ntfy server';});
+})();
+
+function validateHome(){
+  const name=$('myname').value.trim();
+  if(!name){$('home-err').textContent='Enter your name.';return null;}
+  $('home-err').textContent='';
+  localStorage.setItem('uno-name',name);
+  localStorage.setItem('uno-avatar',myAvSel);
+  myName=name;myAvatar=myAvSel;
+  return name;
+}
+
+function createRoom(){
+  const name=validateHome();if(!name)return;
+  roomCode=genCode();
+  const s={
+    code:roomCode,version:0,ts:Date.now(),
+    phase:'lobby',numPlayers:4,kickedIds:[],
+    players:[{id:myId,name,avatar:myAvSel}],
+    hands:{},deck:[],pile:[],
+    currentPlayer:0,direction:1,currentColor:'red',
+    pendingDraw:0,pendingColorPick:false,winner:null,lastAction:''
+  };
+  roomCode=s.code;
+  writeRoom(s);
+  subscribeRoom(roomCode);
+  renderLobby(s);
+  show('scr-lobby');
+}
+
+function joinRoom(){
+  const name=validateHome();if(!name)return;
+  const code=$('joincode').value.trim().toUpperCase();
+  if(code.length!==4){$('home-err').textContent='Enter 4-letter room code.';return;}
+  roomCode=code;
+  // Poll for current state then join
+  fetch(NTFY+'/un-'+code+'-s/json?poll=1&since=all')
+    .then(r=>{
+      // ntfy returns one JSON object per line; take last
+      return r.text();
+    })
+    .then(text=>{
+      const lines=text.trim().split('\n').filter(Boolean);
+      if(!lines.length){$('home-err').textContent='Room not found. Create it first.';return;}
+      let s=null;
+      for(const ln of lines){try{const o=JSON.parse(ln);if(o.message){const m=JSON.parse(o.message);if(!s||m.version>s.version)s=m;}}catch{}}
+      if(!s){$('home-err').textContent='Room not found.';return;}
+      if(s.phase!=='lobby'){$('home-err').textContent='Game already started.';return;}
+      if(s.players.find(p=>p.id===myId)){
+        // rejoin
+        lastVer=s.version;state=s;
+        subscribeRoom(roomCode);renderLobby(s);show('scr-lobby');return;
+      }
+      if(s.players.length>=s.numPlayers){$('home-err').textContent='Room is full.';return;}
+      const s2=deepCopy(s);
+      s2.players.push({id:myId,name,avatar:myAvSel});
+      lastVer=s2.version;
+      writeRoom(s2);
+      subscribeRoom(roomCode);
+      renderLobby(s2);
+      show('scr-lobby');
+    })
+    .catch(()=>{$('home-err').textContent='Could not connect to ntfy.';});
+}
+
+// ── Lobby ─────────────────────────────────────────────────────────────
+function setNumPlayers(n){
+  if(!isHost())return;
+  const s=deepCopy(state);s.numPlayers=n;writeRoom(s);
+}
+
+function copyCode(){
+  navigator.clipboard&&navigator.clipboard.writeText(roomCode).catch(()=>{});
+  const btn=$('copy-code-btn');btn.textContent='✅ Copied!';setTimeout(()=>{btn.textContent='📋 Copy code';},1500);
+}
+
+function kickPlayer(pid){
+  if(!isHost())return;
+  const s=deepCopy(state);
+  s.kickedIds=s.kickedIds||[];
+  s.kickedIds.push(pid);
+  s.players=s.players.filter(p=>p.id!==pid);
+  writeRoom(s);
+}
+
+function hostStart(){
+  if(!isHost())return;
+  if(state.players.length<2){alert('Need at least 2 players.');return;}
+  const s=deepCopy(state);
+  dealGame(s);
+  writeRoom(s);
+}
+
+function renderLobby(s){
+  $('lobby-code').textContent=s.code;
+  const isH=s.players[0]&&s.players[0].id===myId;
+  $('lobby-host-settings').style.display=isH?'block':'none';
+  $('lobby-start').style.display=isH?'block':'none';
+  $('lobby-wait').style.display=isH?'none':'flex';
+
+  if(isH){
+    // update np-picker active state
+    const btns=$('np-picker').querySelectorAll('.np-btn');
+    btns.forEach(b=>b.classList.toggle('active',parseInt(b.textContent)===s.numPlayers));
+    const canStart=s.players.length>=2;
+    $('lobby-start').disabled=!canStart;
+    $('lobby-start').textContent=canStart?'🎮 Start Game ('+s.players.length+'/'+s.numPlayers+')':`Waiting… (${s.players.length}/${s.numPlayers})`;
+  }
+
+  const list=$('lobby-players');
+  list.innerHTML='';
+  for(let i=0;i<s.numPlayers;i++){
+    const p=s.players[i];
+    if(p){
+      const row=document.createElement('div');
+      row.className='pl-row';
+      const isMe=p.id===myId;
+      const isH2=i===0;
+      row.innerHTML=`<span style="font-size:22px;">${esc(p.avatar)}</span><span>${esc(p.name)}</span>
+        ${isH2?'<span class="tag">HOST</span>':''}
+        ${isMe?'<span class="tag" style="background:#2980b9;">YOU</span>':''}
+        ${isH&&!isMe?`<button class="kick-btn" onclick="kickPlayer('${esc(p.id)}')">✕</button>`:''}`;
+      list.appendChild(row);
+    } else {
+      const row=document.createElement('div');
+      row.className='pl-row empty';
+      row.innerHTML='<span style="font-size:18px;">···</span><span>Waiting for player…</span>';
+      list.appendChild(row);
+    }
+  }
+}
+
+// ── Deck / shuffle helpers ────────────────────────────────────────────
+function shuffle(arr){
+  for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}
+  return arr;
+}
+
+function fullDeck(){
+  const d=[];for(let i=0;i<108;i++)d.push(i);return shuffle(d);
+}
+
+function reshuffleDeck(s){
+  if(s.pile.length<2)return;
+  const top=s.pile[s.pile.length-1];
+  const rest=s.pile.slice(0,s.pile.length-1);
+  s.deck=s.deck.concat(shuffle(rest));
+  s.pile=[top];
+}
+
+function drawCards(s,pid,count){
+  for(let i=0;i<count;i++){
+    if(s.deck.length===0)reshuffleDeck(s);
+    if(s.deck.length===0)break;
+    s.hands[pid].push(s.deck.pop());
+  }
+}
+
+// ── Deal ──────────────────────────────────────────────────────────────
+function dealGame(s){
+  const deck=fullDeck();
+  s.deck=deck;
+  s.hands={};
+  s.players.forEach(p=>{s.hands[p.id]=[];});
+
+  // deal 7 each
+  for(let i=0;i<7;i++){
+    s.players.forEach(p=>{s.hands[p.id].push(s.deck.pop());});
+  }
+
+  // start pile — reject wild4
+  let startCard;
+  while(true){
+    startCard=s.deck.pop();
+    if(cardValue(startCard)!=='wild4')break;
+    s.deck.unshift(startCard); // put back at bottom
+  }
+  s.pile=[startCard];
+
+  // update handCounts
+  s.players.forEach(p=>{p.handCount=s.hands[p.id].length;p.saidUno=false;});
+
+  s.direction=1;
+  s.currentPlayer=0;
+  s.pendingDraw=0;
+  s.pendingColorPick=false;
+  s.winner=null;
+  s.phase='play';
+
+  // handle starting card effects
+  const sv=cardValue(startCard),sc=cardColor(startCard);
+  s.currentColor=sc==='wild'?'red':sc;
+  if(sv==='skip'){
+    s.currentPlayer=1%s.players.length;
+    s.lastAction=`First card skip — ${s.players[0].name} skipped!`;
+  } else if(sv==='rev'){
+    s.direction=-1;
+    s.currentPlayer=(s.players.length-1)%s.players.length;
+    s.lastAction='First card reverse!';
+  } else if(sv==='draw2'){
+    drawCards(s,s.players[0].id,2);
+    s.players[0].handCount=s.hands[s.players[0].id].length;
+    s.currentPlayer=1%s.players.length;
+    s.lastAction=`First card +2 — ${s.players[0].name} draws 2!`;
+  } else if(sv==='wild'){
+    s.currentColor='red';
+    s.lastAction='First card Wild — color set to Red';
+  } else {
+    s.lastAction='Game started!';
+  }
+}
+
+// ── Turn advance ──────────────────────────────────────────────────────
+function advanceTurn(s,steps){
+  const n=s.players.length;
+  s.currentPlayer=((s.currentPlayer+s.direction*steps)%n+n)%n;
+}
+
+// ── Play card ─────────────────────────────────────────────────────────
+function playCard(cardIdx){
+  if(busy)return;
+  if(!isMyTurn())return;
+  if(state.pendingColorPick)return;
+  const hand=state.hands[myId]||[];
+  if(!hand.includes(cardIdx))return;
+  const top=state.pile[state.pile.length-1];
+  if(!canPlay(cardIdx,top,state.currentColor,state.pendingDraw))return;
+
+  busy=true;
+  const s=deepCopy(state);
+  // remove from hand
+  const hi=s.hands[myId].indexOf(cardIdx);
+  s.hands[myId].splice(hi,1);
+  s.pile.push(cardIdx);
+  const idx=s.players.findIndex(p=>p.id===myId);
+  s.players[idx].handCount=s.hands[myId].length;
+  s.players[idx].saidUno=false;
+
+  const v=cardValue(cardIdx);
+  const c=cardColor(cardIdx);
+  const n=s.players.length;
+
+  // check win
+  if(s.hands[myId].length===0){
+    s.winner=myId;
+    s.phase='over';
+    s.lastAction=`${s.players[idx].name} played their last card and wins! 🎉`;
+    writeRoom(s);
+    busy=false;
+    return;
+  }
+
+  if(v==='wild'||v==='wild4'){
+    if(v==='wild4')s.pendingDraw+=4;
+    s.pendingColorPick=true;
+    s.lastAction=`${s.players[idx].name} played ${v==='wild4'?'Wild +4':'Wild'}`;
+    // don't advance yet — wait for color pick
+    writeRoom(s);
+    busy=false;
+    return;
+  }
+
+  s.currentColor=c;
+
+  if(v==='draw2'){
+    s.pendingDraw+=2;
+    s.lastAction=`${s.players[idx].name} played +2`;
+    advanceTurn(s,1);
+  } else if(v==='skip'){
+    s.pendingDraw=0;
+    s.lastAction=`${s.players[idx].name} played Skip`;
+    advanceTurn(s,2);
+  } else if(v==='rev'){
+    s.direction*=-1;
+    s.pendingDraw=0;
+    s.lastAction=`${s.players[idx].name} played Reverse`;
+    advanceTurn(s,n===2?2:1);
+  } else {
+    s.pendingDraw=0;
+    s.lastAction=`${s.players[idx].name} played ${v}`;
+    advanceTurn(s,1);
+  }
+
+  writeRoom(s);
+  busy=false;
+}
+
+// ── Choose color ──────────────────────────────────────────────────────
+function chooseColor(color){
+  if(!state.pendingColorPick)return;
+  if(!isMyTurn())return;
+  const s=deepCopy(state);
+  s.currentColor=color;
+  s.pendingColorPick=false;
+  const idx=s.players.findIndex(p=>p.id===myId);
+  s.lastAction=`${s.players[idx].name} chose ${color}`;
+  advanceTurn(s,1);
+  $('color-overlay').classList.remove('show');
+  writeRoom(s);
+}
+
+// ── Draw card ─────────────────────────────────────────────────────────
+function drawCard(){
+  if(busy)return;
+  if(!isMyTurn())return;
+  if(state.pendingColorPick)return;
+  busy=true;
+  const s=deepCopy(state);
+  const idx=s.players.findIndex(p=>p.id===myId);
+  if(s.pendingDraw>0){
+    drawCards(s,myId,s.pendingDraw);
+    s.lastAction=`${s.players[idx].name} draws ${s.pendingDraw}`;
+    s.pendingDraw=0;
+  } else {
+    drawCards(s,myId,1);
+    s.lastAction=`${s.players[idx].name} draws a card`;
+  }
+  s.players[idx].handCount=s.hands[myId].length;
+  advanceTurn(s,1);
+  writeRoom(s);
+  busy=false;
+}
+
+// ── Say UNO ───────────────────────────────────────────────────────────
+function sayUno(){
+  const idx=myIndex();
+  if(idx<0)return;
+  if(!state.hands[myId]||state.hands[myId].length!==1)return;
+  if(state.players[idx].saidUno)return;
+  const s=deepCopy(state);
+  s.players[idx].saidUno=true;
+  s.lastAction=`${s.players[idx].name} says UNO!`;
+  writeRoom(s);
+}
+
+// ── Catch UNO ────────────────────────────────────────────────────────
+function catchUno(pid){
+  if(busy)return;
+  const target=state.players.find(p=>p.id===pid);
+  if(!target)return;
+  const hand=state.hands[pid]||[];
+  if(hand.length!==1||target.saidUno)return;
+  busy=true;
+  const s=deepCopy(state);
+  const ti=s.players.findIndex(p=>p.id===pid);
+  drawCards(s,pid,2);
+  s.players[ti].handCount=s.hands[pid].length;
+  const mi=s.players.findIndex(p=>p.id===myId);
+  s.lastAction=`${s.players[mi]?s.players[mi].name:'Someone'} caught ${target.name}'s UNO! +2 penalty`;
+  writeRoom(s);
+  busy=false;
+}
+
+// ── Rematch ───────────────────────────────────────────────────────────
+function rematch(){
+  if(!isHost())return;
+  const s=deepCopy(state);
+  s.phase='lobby';
+  s.hands={};s.deck=[];s.pile=[];
+  s.currentPlayer=0;s.direction=1;s.currentColor='red';
+  s.pendingDraw=0;s.pendingColorPick=false;s.winner=null;s.lastAction='';
+  s.players.forEach(p=>{p.handCount=0;p.saidUno=false;});
+  writeRoom(s);
+}
+
+// ── Render ────────────────────────────────────────────────────────────
+function render(){
+  if(!state)return;
+  const s=state;
+  if(s.phase==='lobby'){
+    renderLobby(s);
+    if(!['scr-lobby','scr-home'].includes(currentScreen()))show('scr-lobby');
+    else if(currentScreen()==='scr-home'){}
+    else show('scr-lobby');
+  } else if(s.phase==='play'){
+    const wasOver=(currentScreen()==='scr-over');
+    show('scr-game');
+    renderGame(s,wasOver);
+  } else if(s.phase==='over'){
+    show('scr-over');
+    renderOver(s);
+  }
+}
+
+function currentScreen(){
+  const a=document.querySelector('.screen.active');
+  return a?a.id:'';
+}
+
+// ── Render Game ───────────────────────────────────────────────────────
+function renderGame(s){
+  const myIdx=s.players.findIndex(p=>p.id===myId);
+  const isMT=isMyTurn();
+  const myHand=s.hands[myId]||[];
+  const topCard=s.pile[s.pile.length-1];
+  const tc=cardColor(topCard);
+  const tv=cardLabel(topCard);
+  const activeColor=s.currentColor;
+  const dir=s.direction===1?'↻ CW':'↺ CCW';
+
+  // opponents = everyone except me
+  const opponents=s.players.filter(p=>p.id!==myId);
+
+  let oppsHTML='';
+  opponents.forEach(p=>{
+    const isActive=s.players[s.currentPlayer]&&s.players[s.currentPlayer].id===p.id;
+    const canCatch=(s.hands[p.id]||[]).length===1&&!p.saidUno;
+    oppsHTML+=`<div class="opp-card${isActive?' active-opp':''}">
+      <div class="opp-av">${esc(p.avatar)}</div>
+      <div class="opp-name">${esc(p.name)}</div>
+      <div class="opp-count">🃏 ${p.handCount}</div>
+      ${p.saidUno?'<div class="opp-uno-badge">UNO!</div>':''}
+      ${canCatch?`<button class="catch-uno-btn" onclick="catchUno('${esc(p.id)}')">Catch!</button>`:''}
+    </div>`;
+  });
+
+  // pile card
+  const topColorClass='c-'+tc;
+  const drawBtnLabel=s.pendingDraw>0?`Draw ${s.pendingDraw}`:'Draw';
+
+  // active color dot
+  const acLabel=s.currentColor.charAt(0).toUpperCase()+s.currentColor.slice(1);
+
+  // turn banner
+  let turnHTML='';
+  if(isMT&&s.pendingColorPick){
+    turnHTML=`<div class="turn-banner my-turn">Your turn — pick a color!</div>`;
+  } else if(isMT){
+    turnHTML=`<div class="turn-banner my-turn">Your turn!</div>`;
+  } else {
+    const cp=s.players[s.currentPlayer];
+    turnHTML=`<div class="turn-banner">${cp?esc(cp.avatar)+' '+esc(cp.name)+"'s turn":''}</div>`;
+  }
+
+  // hand cards
+  let handHTML='';
+  myHand.forEach(ci=>{
+    const cc=cardColor(ci);
+    const cl=cardLabel(ci);
+    const cv=cardValue(ci);
+    const colorClass='c-'+cc;
+    const playable=isMT&&!s.pendingColorPick&&canPlay(ci,topCard,activeColor,s.pendingDraw);
+    const cls=[colorClass, !isMT?'not-my-turn':playable?'playable':'not-playable'].join(' ');
+    handHTML+=`<div class="hand-card ${cls}" data-corner="${esc(cv==='wild'?'W':cv==='wild4'?'+4':cc[0].toUpperCase())}" onclick="playCard(${ci})">${esc(cl)}</div>`;
+  });
+
+  // uno button
+  const myPlayer=s.players[myIdx];
+  const saidUno=myPlayer&&myPlayer.saidUno;
+  const canSayUno=myHand.length===1&&!saidUno;
+  const unoDisabled=!canSayUno?'disabled':'';
+
+  $('game-wrap').innerHTML=`
+    ${turnHTML}
+    <div class="dir-row">
+      <span>${dir}</span>
+      <span class="last-action">${esc(s.lastAction)}</span>
+    </div>
+    <div class="opponents-grid">${oppsHTML||'<div style="opacity:.5;font-size:13px;padding:8px;">No opponents yet</div>'}</div>
+    <div class="pile-area">
+      <div class="color-bar ${activeColor}"></div>
+      <div class="pile-card ${topColorClass}" data-corner="${esc(cardValue(topCard)==='wild'?'W':cardValue(topCard)==='wild4'?'+4':tc[0].toUpperCase())}">${esc(tv)}</div>
+      <div class="pile-info">
+        <div class="active-color-label">Active color</div>
+        <div class="active-color-val"><div class="active-color-dot ${activeColor}"></div>${esc(acLabel)}</div>
+        ${s.pendingDraw>0?`<div class="pending-warn">⚠️ +${s.pendingDraw} pending!</div>`:''}
+        <div style="font-family:'Catamaran';font-size:11px;font-weight:800;opacity:.5;margin-top:6px;">Pile: ${s.pile.length}</div>
+      </div>
+      <div class="deck-pile" onclick="drawCard()" title="Draw card">
+        <div class="deck-icon">🂠</div>
+        <div class="deck-num">${s.deck.length}</div>
+      </div>
+    </div>
+    <div class="hand-section">
+      <div class="hand-label-row">
+        <span>Your hand (${myHand.length})</span>
+        ${myPlayer&&myPlayer.saidUno?'<span style="color:var(--red);font-weight:800;font-size:13px;">UNO!</span>':''}
+      </div>
+      <div class="hand-scroll">${handHTML||'<div style="opacity:.5;padding:10px;font-size:13px;">No cards</div>'}</div>
+    </div>
+    <div class="action-row">
+      <button class="btn ghost" onclick="drawCard()"${!isMT||s.pendingColorPick?'disabled':''} style="font-size:15px;">${drawBtnLabel}</button>
+      <button class="btn gold" onclick="sayUno()" ${unoDisabled} style="font-size:17px;flex:0 0 90px;">UNO!</button>
+    </div>`;
+
+  // color overlay
+  const overlay=$('color-overlay');
+  if(s.pendingColorPick&&isMT){
+    overlay.classList.add('show');
+  } else {
+    overlay.classList.remove('show');
+  }
+}
+
+// ── Render Over ───────────────────────────────────────────────────────
+function renderOver(s){
+  const winner=s.players.find(p=>p.id===s.winner);
+  const isH=isHost();
+
+  let rows='';
+  s.players.forEach(p=>{
+    const hand=s.hands[p.id]||[];
+    const pts=hand.reduce((a,c)=>a+cardPoints(c),0);
+    const isW=p.id===s.winner;
+    rows+=`<tr class="${isW?'winner-row':''}">
+      <td>${esc(p.avatar)} ${esc(p.name)}${isW?' 🏆':''}</td>
+      <td style="text-align:center;">${hand.length} cards</td>
+      <td style="color:${isW?'var(--green)':'var(--red)'};">${isW?'Winner!':pts+' pts'}</td>
+    </tr>`;
+  });
+
+  $('over-panel').innerHTML=`
+    <div class="winner-box">
+      <div class="winner-av">${winner?esc(winner.avatar):'🏆'}</div>
+      <div class="winner-name">${winner?esc(winner.name):'Unknown'}</div>
+      <div class="winner-sub">Wins the round!</div>
+    </div>
+    <table class="score-table">
+      <thead><tr>
+        <td><b>Player</b></td>
+        <td style="text-align:center;"><b>Hand</b></td>
+        <td style="text-align:right;"><b>Points</b></td>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    ${isH?'<button class="btn green" onclick="rematch()" style="margin-top:20px;">🔄 Rematch</button>':'<div class="waiting" style="margin-top:18px;"><span class="dotpulse"></span><span class="dotpulse"></span><span class="dotpulse"></span><span style="margin-left:6px;font-size:13px;">Waiting for host to rematch…</span></div>'}
+    <p class="hint" style="margin-top:16px;"><a href="index.html" style="color:var(--red);font-weight:800;">← Back to games</a></p>`;
+}
+</script>
+</body>
+</html>
