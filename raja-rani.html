@@ -128,6 +128,7 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
 </style>
 </head>
 <body>
+<div id="conn-banner" style="display:none;position:fixed;top:0;left:0;right:0;background:var(--red);color:#fff;text-align:center;font-size:13px;font-weight:800;padding:7px;z-index:500;letter-spacing:.5px;">&#x26A1; Connection lost &mdash; reconnecting&hellip;</div>
 
 <!-- HOME -->
 <div class="screen active" id="scr-home">
@@ -142,7 +143,8 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
     <button class="btn" onclick="createRoom()">&#x2795; Create room</button>
     <label style="margin-top:18px;">Room code join பண்ண</label>
     <input type="text" class="code" id="joincode" maxlength="4" placeholder="ABCD" autocomplete="off"
-      oninput="this.value=this.value.toUpperCase()">
+      autocapitalize="characters" autocorrect="off" spellcheck="false"
+      oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,'')">
     <button class="btn green" onclick="joinRoom()">&#x1F6AA; Join room</button>
     <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(58,42,24,.18);">
       <label style="margin-top:0;">&#x1F4E1; ntfy server URL</label>
@@ -428,6 +430,9 @@ localStorage.setItem('rr-ntfy-url',NTFY);
 let myId='p'+Math.random().toString(36).slice(2,10),myName='',roomCode=null,me=-1;
 let state=null,lastVer=-1,busy=false,mycardTimer=null,renderedPhase=null;
 let chatCollapsed=true,unreadCount=0;
+let connLost=false;
+function onConnLost(){if(connLost)return;connLost=true;const b=$('conn-banner');if(b)b.style.display='block';}
+function onConnBack(){connLost=false;const b=$('conn-banner');if(b)b.style.display='none';}
 let chainTimerInterval=null,heartbeatInterval=null;
 let roomEs=null,logEs=null,presEs=null,chatEs=null;
 const seenMsgs=new Set();
@@ -439,7 +444,7 @@ const show=id=>{document.querySelectorAll('.screen').forEach(s=>s.classList.remo
 const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
 const deepCopy=o=>JSON.parse(JSON.stringify(o));
 const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-const av=p=>(p&&p.avatar)||'🎮';
+const av=p=>{const a=(p&&p.avatar)||'🎮';return AVATARS.includes(a)||a==='🎮'?a:'🎮';};
 
 // ── ntfy.sh room helpers ───────────────────────────────────────────────
 async function readRoom(code){
@@ -466,7 +471,7 @@ async function readRoom(code){
 }
 function writeRoom(s){
   s.version=(s.version||0)+1;s.ts=Date.now();
-  fetch(NTFY+'/rr-'+roomCode+'-s',{method:'POST',body:JSON.stringify(s)});
+  fetch(NTFY+'/rr-'+roomCode+'-s',{method:'POST',body:JSON.stringify(s)}).catch(()=>onConnLost());
   state=s;lastVer=s.version;render();
 }
 function subscribeRoom(code){
@@ -482,6 +487,8 @@ function subscribeRoom(code){
       lastVer=s.version;state=s;me=s.players.findIndex(p=>p.id===myId);render();
     }catch{}
   };
+  roomEs.onerror=()=>onConnLost();
+  roomEs.onopen=()=>onConnBack();
 }
 function subscribeAll(code){subscribeRoom(code);subscribeLog(code);subscribePresence(code);subscribeChat(code);subscribeReactions(code);}
 
@@ -902,7 +909,7 @@ function renderLobby(s){
     if(s.players[i]){
       const p=s.players[i];
       d.className='pl-row';
-      let inner='<span style="font-size:22px;">'+av(p)+'</span> '+esc(p.name);
+      let inner='<span style="font-size:22px;">'+esc(av(p))+'</span> '+esc(p.name);
       if(i===0)inner+=' <span class="tag">HOST</span>';
       if(p.id===myId)inner+=' <small style="opacity:.5;">(you)</small>';
       if(isHost()&&i!==0&&p.id!==myId)
@@ -981,7 +988,7 @@ function renderChain(s){
     const p=s.players[pi];const ro=ROLE_DEFS[s.playerRoles[pi]];
     const d=document.createElement('div');
     d.className='candidate revealed';
-    d.innerHTML='<span class="cface">'+av(p)+'</span><span class="cname">'+esc(p.name)+'</span><span class="crole">'+ro.emoji+' '+ro.ta+' ✓</span>';
+    d.innerHTML='<span class="cface">'+esc(av(p))+'</span><span class="cname">'+esc(p.name)+'</span><span class="crole">'+ro.emoji+' '+ro.ta+' ✓</span>';
     area.appendChild(d);
   });
   for(let pi=0;pi<s.numPlayers;pi++){
@@ -991,7 +998,7 @@ function renderChain(s){
     const offBadge=isOffline(p.id)?'<span class="offline-badge">offline</span>':'';
     const d=document.createElement('div');
     d.className='candidate'+(isMyTurn?'':' passive');
-    d.innerHTML='<span class="cface">'+av(p)+'</span><span class="cname">'+esc(p.name)+offBadge+'</span><span class="cq">?</span>';
+    d.innerHTML='<span class="cface">'+esc(av(p))+'</span><span class="cname">'+esc(p.name)+offBadge+'</span><span class="cq">?</span>';
     if(isMyTurn)d.onclick=()=>guessPlayer(pi);
     area.appendChild(d);
   }
@@ -1057,7 +1064,7 @@ function renderTable(id,s){
   const t=$(id);
   const sorted=s.players.map((p,i)=>({...p,i})).sort((a,b)=>b.score-a.score);
   t.innerHTML=sorted.map((p,idx)=>
-    '<tr class="'+(idx===0?'leader':'')+'"><td>'+(idx===0?'👑 ':'')+av(p)+' '+esc(p.name)+(p.id===myId?' <small style="opacity:.5;">(you)</small>':'')+'</td><td>'+p.score+'</td></tr>'
+    '<tr class="'+(idx===0?'leader':'')+'"><td>'+(idx===0?'👑 ':'')+esc(av(p))+' '+esc(p.name)+(p.id===myId?' <small style="opacity:.5;">(you)</small>':'')+'</td><td>'+p.score+'</td></tr>'
   ).join('');
 }
 

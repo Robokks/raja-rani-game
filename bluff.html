@@ -70,7 +70,9 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
 .hand-label{display:flex;justify-content:space-between;align-items:center;margin-top:14px;margin-bottom:6px;}
 .hand-label span{font-family:'Catamaran';font-size:12px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;opacity:.65;}
 .hand-label .sel-info{color:var(--gold);opacity:1;letter-spacing:.5px;}
-.hand-scroll{display:flex;flex-wrap:wrap;gap:7px;padding:6px 0 10px;}
+.hand-scroll{display:flex;gap:7px;padding:6px 0 14px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin;}
+.hand-scroll::-webkit-scrollbar{height:3px;}
+.hand-scroll::-webkit-scrollbar-thumb{background:rgba(58,42,24,.28);border-radius:2px;}
 .card-tile{width:46px;height:66px;border-radius:7px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:800;cursor:pointer;border:2.5px solid rgba(58,42,24,.18);transition:transform .1s,border-color .1s,box-shadow .1s;flex-shrink:0;gap:1px;background:#fff;}
 .card-tile .cr{font-size:14px;line-height:1.1;}
 .card-tile .cs{font-size:17px;line-height:1;}
@@ -106,6 +108,7 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
 </style>
 </head>
 <body>
+<div id="conn-banner" style="display:none;position:fixed;top:0;left:0;right:0;background:var(--red);color:#fff;text-align:center;font-size:13px;font-weight:800;padding:7px;z-index:500;letter-spacing:.5px;">&#x26A1; Connection lost &mdash; reconnecting&hellip;</div>
 
 <!-- HOME -->
 <div class="screen active" id="scr-home">
@@ -120,7 +123,8 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
     <button class="btn" onclick="createRoom()">&#x2795; Create room</button>
     <label style="margin-top:18px;">Join with room code</label>
     <input type="text" class="code" id="joincode" maxlength="4" placeholder="ABCD" autocomplete="off"
-      oninput="this.value=this.value.toUpperCase()">
+      autocapitalize="characters" autocorrect="off" spellcheck="false"
+      oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,'')">
     <button class="btn green" onclick="joinRoom()">&#x1F6AA; Join room</button>
     <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(58,42,24,.18);">
       <label style="margin-top:0;">&#x1F4E1; ntfy server URL</label>
@@ -254,7 +258,7 @@ const $=id=>document.getElementById(id);
 const deepCopy=o=>JSON.parse(JSON.stringify(o));
 const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
-const av=p=>(p&&p.avatar)||'\u{1F0CF}';
+const av=p=>{const a=(p&&p.avatar)||'\u{1F0CF}';return AVATARS.includes(a)||a==='\u{1F0CF}'?a:'\u{1F0CF}';};
 const show=id=>{document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));$(id).classList.add('active');window.scrollTo(0,0);};
 
 const RAND_NAMES=['Arjun','Priya','கார்த்திக்','Meena','Vijay','தீபா','Ravi','லட்சுமி','Muthu','Selvi','Bala','Kavya','அன்பு','Surya','Tamil','Vel','நிலா','Deepak','Kiran','Sandy','பிரியா','Siva','மீனா','Rocky'];
@@ -313,6 +317,9 @@ let roomEs=null,presEs=null,rxnEs=null;
 let bluffTimerInterval=null,heartbeatInterval=null;
 const lastSeenMap={};
 let selectedCards=new Set();
+let connLost=false;
+function onConnLost(){if(connLost)return;connLost=true;const b=$('conn-banner');if(b)b.style.display='block';}
+function onConnBack(){connLost=false;const b=$('conn-banner');if(b)b.style.display='none';}
 
 async function readRoom(code){
   for(let a=0;a<3;a++){
@@ -332,7 +339,7 @@ async function readRoom(code){
 }
 function writeRoom(s){
   s.version=(s.version||0)+1;s.ts=Date.now();
-  fetch(NTFY+'/bl-'+roomCode+'-s',{method:'POST',body:JSON.stringify(s)});
+  fetch(NTFY+'/bl-'+roomCode+'-s',{method:'POST',body:JSON.stringify(s)}).catch(()=>onConnLost());
   state=s;lastVer=s.version;render();
 }
 function subscribeRoom(code){
@@ -348,6 +355,8 @@ function subscribeRoom(code){
       lastVer=s.version;state=s;me=s.players.findIndex(p=>p.id===myId);render();
     }catch{}
   };
+  roomEs.onerror=()=>onConnLost();
+  roomEs.onopen=()=>onConnBack();
 }
 function subscribePresence(code){
   if(presEs)presEs.close();
@@ -652,7 +661,7 @@ function renderGame(s,phaseChanged){
     const row=document.createElement('div');
     row.className='ps-row'+(i===s.currentPlayer&&!hasBluffWin?' active-player':'');
     const hSize=(s.hands[i]||[]).length;
-    row.innerHTML=av(p)+' <b>'+esc(p.name)+'</b>'+(p.id===myId?' <small style="opacity:.45;">(you)</small>':'')+(i===s.currentPlayer&&!hasBluffWin?' 🎯':'')+'<span class="card-count">'+hSize+' 🃏</span>';
+    row.innerHTML=esc(av(p))+' <b>'+esc(p.name)+'</b>'+(p.id===myId?' <small style="opacity:.45;">(you)</small>':'')+(i===s.currentPlayer&&!hasBluffWin?' 🎯':'')+'<span class="card-count">'+hSize+' 🃏</span>';
     summary.appendChild(row);
   });
 
@@ -665,7 +674,7 @@ function updatePlayControls(s){
   const hasBluffWin=!!(s.lastPlay&&s.bluffDeadline);
   const isMyTurn=me===s.currentPlayer&&!hasBluffWin;
   const sel=selectedCards.size;
-  scroll=$('hand-scroll');
+  const scroll=$('hand-scroll');
   scroll.querySelectorAll('.card-tile').forEach((t,i)=>t.classList.toggle('selected',selectedCards.has(i)));
   $('sel-info').textContent=sel>0?sel+' selected':'';
   if(isMyTurn){
@@ -716,7 +725,7 @@ function renderOver(s){
   $('over-name').textContent=av(w)+' '+w.name;
   const t=$('over-table');
   const rows=s.players.map((p,i)=>({...p,i,hSize:(s.hands[i]||[]).length})).sort((a,b)=>a.hSize-b.hSize);
-  t.innerHTML=rows.map((p,idx)=>'<tr class="'+(idx===0?'leader':'')+'"><td>'+(idx===0?'🏆 ':'')+av(p)+' '+esc(p.name)+(p.id===myId?' <small style="opacity:.5;">(you)</small>':'')+'</td><td>'+p.hSize+' cards left</td></tr>').join('');
+  t.innerHTML=rows.map((p,idx)=>'<tr class="'+(idx===0?'leader':'')+'"><td>'+(idx===0?'🏆 ':'')+esc(av(p))+' '+esc(p.name)+(p.id===myId?' <small style="opacity:.5;">(you)</small>':'')+'</td><td>'+p.hSize+' cards left</td></tr>').join('');
   $('over-rematch').style.display=isHost()?'block':'none';
   show('scr-over');
   launchConfetti();
