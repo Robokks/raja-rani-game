@@ -401,21 +401,26 @@ const av=p=>(p&&p.avatar)||'🎮';
 
 // ── ntfy.sh room helpers ───────────────────────────────────────────────
 async function readRoom(code){
-  try{
-    const res=await fetch(NTFY+'/rr-'+code+'-s/json?poll=1&since=all');
-    const text=await res.text();
-    let latest=null;
-    for(const line of text.trim().split('\n').filter(Boolean)){
-      try{
-        const ev=JSON.parse(line);
-        if(ev.event==='message'&&ev.message){
-          const s=JSON.parse(ev.message);
-          if(!latest||(s.version||0)>(latest.version||0))latest=s;
-        }
-      }catch{}
-    }
-    return latest;
-  }catch{return null;}
+  for(let attempt=0;attempt<3;attempt++){
+    if(attempt>0)await new Promise(r=>setTimeout(r,1500));
+    try{
+      const res=await fetch(NTFY+'/rr-'+code+'-s/json?poll=1&since=all');
+      if(!res.ok)continue;
+      const text=await res.text();
+      let latest=null;
+      for(const line of text.trim().split('\n').filter(Boolean)){
+        try{
+          const ev=JSON.parse(line);
+          if(ev.event==='message'&&ev.message){
+            const s=JSON.parse(ev.message);
+            if(!latest||(s.version||0)>(latest.version||0))latest=s;
+          }
+        }catch{}
+      }
+      if(latest)return latest;
+    }catch{}
+  }
+  return null;
 }
 function writeRoom(s){
   s.version=(s.version||0)+1;s.ts=Date.now();
@@ -560,7 +565,7 @@ async function joinRoom(){
   if(code.length!==4){$('home-err').textContent='4-letter code enter பண்ணுங்க.';return;}
   busy=true;$('home-err').textContent='Joining…';
   const s=await readRoom(code);
-  if(!s){$('home-err').textContent='Room இல்லை! Code சரியா இருக்கா?';busy=false;return;}
+  if(!s){$('home-err').textContent='Room இல்லை! Code சரியா இருக்கா? (ntfy: '+NTFY+')';busy=false;return;}
   if(s.phase!=='lobby'){$('home-err').textContent='Game already started.';busy=false;return;}
   if(s.players.length>=s.numPlayers){$('home-err').textContent='Room full ('+s.numPlayers+'/'+s.numPlayers+').';busy=false;return;}
   if(!s.players.some(p=>p.id===myId)){
