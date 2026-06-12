@@ -358,15 +358,19 @@ function playSound(type){
 }
 
 // ── ntfy server URL (user-configurable) ───────────────────────────────
-let NTFY=(localStorage.getItem('rr-ntfy-url')||'https://ntfy.sh').replace(/\/+$/,'');
+function normalizeNtfy(raw){
+  let v=(raw||'https://ntfy.sh').trim();
+  try{v=new URL(v).origin;}catch{}
+  return v.replace(/\/+$/,'')||'https://ntfy.sh';
+}
+let NTFY=normalizeNtfy(localStorage.getItem('rr-ntfy-url'));
+localStorage.setItem('rr-ntfy-url',NTFY);
 (function(){
   const el=$('ntfy-url');
   el.value=NTFY;
   el.oninput=()=>{
-    let v=el.value.trim();
-    try{v=new URL(v).origin;}catch{}
-    v=v.replace(/\/+$/,'');
-    if(v){NTFY=v;localStorage.setItem('rr-ntfy-url',v);}
+    const v=normalizeNtfy(el.value);
+    NTFY=v;el.value=v;localStorage.setItem('rr-ntfy-url',v);
   };
 })();
 
