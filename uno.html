@@ -886,6 +886,8 @@ function renderOver(s){
     ${isH?'<button class="btn green" onclick="rematch()" style="margin-top:20px;">🔄 Rematch</button>':'<div class="waiting" style="margin-top:18px;"><span class="dotpulse"></span><span class="dotpulse"></span><span class="dotpulse"></span><span style="margin-left:6px;font-size:13px;">Waiting for host to rematch…</span></div>'}
     <p class="hint" style="margin-top:16px;"><a href="index.html" style="color:var(--red);font-weight:800;">← Back to games</a></p>`;
 }
+
+window.addEventListener('beforeunload',e=>{if(roomCode){e.preventDefault();e.returnValue='';}});
 </script>
 </body>
 </html>

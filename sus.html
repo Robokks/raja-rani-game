@@ -764,6 +764,8 @@ function renderOver(s){
   show('scr-over');
   if(crewWin)launchConfetti();
 }
+
+window.addEventListener('beforeunload',e=>{if(roomCode){e.preventDefault();e.returnValue='';}});
 </script>
 </body>
 </html>

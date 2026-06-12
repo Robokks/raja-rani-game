@@ -1177,8 +1177,7 @@ window.addEventListener('resize', () => {
   if (state && state.phase === 'play') renderGame();
 });
 
-// ─── Initial render call after dom ready ─────────────────────────────────────
-// (render is called on every writeRoom/subscribeRoom update automatically)
+window.addEventListener('beforeunload',e=>{if(roomCode){e.preventDefault();e.returnValue='';}});
 </script>
 </body>
 </html>
