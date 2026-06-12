@@ -120,6 +120,11 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
 .log-entry{padding:3px 0;border-bottom:1px solid rgba(58,42,24,.1);line-height:1.5;}
 .log-entry:last-child{border-bottom:none;}
 .log-time{opacity:.45;font-size:10px;margin-right:4px;}
+.rxn-bar{position:fixed;bottom:54px;left:0;right:0;max-width:430px;margin:0 auto;display:none;justify-content:center;gap:6px;padding:5px 10px;background:rgba(253,246,227,.88);backdrop-filter:blur(6px);border-top:1px solid rgba(58,42,24,.1);border-radius:12px 12px 0 0;z-index:95;}
+.rxn-btn{font-size:24px;background:none;border:none;cursor:pointer;padding:3px 5px;border-radius:8px;transition:transform .1s;}
+.rxn-btn:active{transform:scale(1.5);}
+.rxn-float{position:fixed;font-size:34px;pointer-events:none;z-index:200;animation:rxnRise 2s ease-out forwards;}
+@keyframes rxnRise{0%{opacity:1;transform:translateY(0) scale(1);}60%{opacity:1;transform:translateY(-80px) scale(1.2);}100%{opacity:0;transform:translateY(-140px) scale(.8);}}
 </style>
 </head>
 <body>
@@ -155,12 +160,20 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
   <div class="panel">
     <div class="centertext">Room code &mdash; நண்பர்களுக்கு சொல்லுங்க:</div>
     <div class="roomcode" id="lobby-code"></div>
+    <button class="btn ghost" id="copy-code-btn" onclick="copyCode()" style="margin-top:8px;padding:8px 0;font-size:14px;">&#x1F4CB; Copy code</button>
     <div id="lobby-host-settings">
       <label>Number of players / வீரர்கள் எத்தனை</label>
       <div class="np-picker" id="np-picker">
         <button class="np-btn active" onclick="setNumPlayers(4)">4</button>
         <button class="np-btn" onclick="setNumPlayers(5)">5</button>
         <button class="np-btn" onclick="setNumPlayers(6)">6</button>
+      </div>
+      <label>Total rounds / மொத்த சுற்று</label>
+      <div class="np-picker" id="rounds-picker">
+        <button class="np-btn" onclick="setRounds(3)">3</button>
+        <button class="np-btn active" onclick="setRounds(5)">5</button>
+        <button class="np-btn" onclick="setRounds(7)">7</button>
+        <button class="np-btn" onclick="setRounds(10)">10</button>
       </div>
       <label>Guess timer / நேரம்</label>
       <div class="np-picker" id="timer-picker">
@@ -255,7 +268,16 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
   <button class="btn ghost" onclick="location.reload()" style="margin-top:12px;">Leave game</button>
 </div>
 
-<div class="mychit" id="mychit" style="display:none;"></div>
+<canvas id="confetti-canvas" style="display:none;position:fixed;inset:0;pointer-events:none;z-index:300;"></canvas>
+<div class="mychit" id="mychit" style="display:none;bottom:108px;"></div>
+<div class="rxn-bar" id="rxn-bar">
+  <button class="rxn-btn" onclick="sendReaction('😂')">😂</button>
+  <button class="rxn-btn" onclick="sendReaction('❤️')">❤️</button>
+  <button class="rxn-btn" onclick="sendReaction('😱')">😱</button>
+  <button class="rxn-btn" onclick="sendReaction('🔥')">🔥</button>
+  <button class="rxn-btn" onclick="sendReaction('👏')">👏</button>
+  <button class="rxn-btn" onclick="sendReaction('🤣')">🤣</button>
+</div>
 
 <div class="chat-panel collapsed" id="chat-panel">
   <div class="chat-header" onclick="toggleChat()">
@@ -452,7 +474,7 @@ function subscribeRoom(code){
     }catch{}
   };
 }
-function subscribeAll(code){subscribeRoom(code);subscribeLog(code);subscribePresence(code);subscribeChat(code);}
+function subscribeAll(code){subscribeRoom(code);subscribeLog(code);subscribePresence(code);subscribeChat(code);subscribeReactions(code);}
 
 // ── Game log ───────────────────────────────────────────────────────────
 function postLog(text){
@@ -544,6 +566,73 @@ function toggleChat(){
 }
 function submitChat(){const i=$('chat-input');sendChat(i.value);i.value='';}
 
+// ── Reactions ──────────────────────────────────────────────────────────
+let rxnEs=null;
+function sendReaction(emoji){
+  if(!roomCode)return;
+  showReactionFloat(emoji);
+  fetch(NTFY+'/rr-'+roomCode+'-rxn',{method:'POST',body:JSON.stringify({emoji,pid:myId,t:Date.now()})});
+}
+function subscribeReactions(code){
+  if(rxnEs)rxnEs.close();
+  const since=Math.floor((Date.now()-3000)/1000);
+  rxnEs=new EventSource(NTFY+'/rr-'+code+'-rxn/sse?since='+since);
+  rxnEs.onmessage=e=>{
+    try{
+      const ev=JSON.parse(e.data);if(ev.event!=='message')return;
+      const d=JSON.parse(ev.message);
+      if(d.pid!==myId)showReactionFloat(d.emoji);
+    }catch{}
+  };
+}
+function showReactionFloat(emoji){
+  const el=document.createElement('div');
+  el.className='rxn-float';el.textContent=emoji;
+  el.style.cssText='left:'+(15+Math.random()*70)+'%;bottom:100px;';
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(),2100);
+}
+
+// ── Confetti ───────────────────────────────────────────────────────────
+function launchConfetti(){
+  const canvas=$('confetti-canvas');
+  canvas.width=window.innerWidth;canvas.height=window.innerHeight;
+  canvas.style.display='block';
+  const ctx=canvas.getContext('2d');
+  const colors=['#d49a2a','#b3322b','#2e6e4e','#f5d76e','#fff','#e8a0a0'];
+  const pieces=Array.from({length:140},()=>({
+    x:Math.random()*canvas.width,y:Math.random()*canvas.height-canvas.height,
+    w:7+Math.random()*9,h:4+Math.random()*5,
+    color:colors[Math.floor(Math.random()*colors.length)],
+    rot:Math.random()*Math.PI*2,
+    vx:(Math.random()-.5)*4,vy:2.5+Math.random()*3,vr:(Math.random()-.5)*.15,
+  }));
+  let frame,done=false;
+  function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    pieces.forEach(p=>{
+      p.x+=p.vx;p.y+=p.vy;p.rot+=p.vr;
+      ctx.save();ctx.translate(p.x+p.w/2,p.y+p.h/2);ctx.rotate(p.rot);
+      ctx.fillStyle=p.color;ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);ctx.restore();
+    });
+    if(!done&&pieces.some(p=>p.y<canvas.height+20))frame=requestAnimationFrame(draw);
+    else{canvas.style.display='none';}
+  }
+  draw();
+  setTimeout(()=>{done=true;canvas.style.display='none';cancelAnimationFrame(frame);},5000);
+}
+
+// ── Copy room code ─────────────────────────────────────────────────────
+function copyCode(){
+  if(!roomCode)return;
+  navigator.clipboard.writeText(roomCode).then(()=>{
+    const btn=$('copy-code-btn');btn.textContent='✓ Copied!';
+    setTimeout(()=>{btn.innerHTML='&#x1F4CB; Copy code';},2000);
+  }).catch(()=>{
+    prompt('Copy this code:',roomCode);
+  });
+}
+
 // ── Room management ────────────────────────────────────────────────────
 function getName(){
   myName=$('myname').value.trim();
@@ -606,6 +695,10 @@ function setNumPlayers(n){
 function setTimer(n){
   if(!isHost()||!state||state.phase!=='lobby')return;
   const s=deepCopy(state);s.chainTimerSecs=n;writeRoom(s);
+}
+function setRounds(n){
+  if(!isHost()||!state||state.phase!=='lobby')return;
+  const s=deepCopy(state);s.totalRounds=n;writeRoom(s);
 }
 function hostKick(playerId){
   if(!isHost()||!state||state.phase!=='lobby')return;
@@ -756,6 +849,8 @@ function render(){
   const s=state;if(!s)return;
   const chatPhases=['declare','chain','result','over'];
   $('chat-panel').style.display=chatPhases.includes(s.phase)?'block':'none';
+  const rxnPhases=['dice','mycard','declare','chain','result'];
+  $('rxn-bar').style.display=rxnPhases.includes(s.phase)?'flex':'none';
   $('mychit').style.display='none';
   if(s.phase!=='chain')clearInterval(chainTimerInterval);
   const phaseChanged=s.phase!==renderedPhase;
@@ -780,6 +875,9 @@ function renderLobby(s){
       const n=parseInt(btn.textContent);
       btn.classList.toggle('active',n===s.numPlayers);
       btn.disabled=s.players.length>n;
+    });
+    $('rounds-picker').querySelectorAll('.np-btn').forEach(btn=>{
+      btn.classList.toggle('active',parseInt(btn.textContent)===(s.totalRounds||5));
     });
     $('timer-picker').querySelectorAll('.np-btn').forEach(btn=>{
       btn.classList.toggle('active',parseInt(btn.textContent)===(s.chainTimerSecs||30));
@@ -930,6 +1028,7 @@ function renderOver(s){
   renderTable('w-table',s);
   $('w-rematch').style.display=isHost()?'block':'none';
   show('scr-winner');
+  launchConfetti();
 }
 
 function showBadge(s){
