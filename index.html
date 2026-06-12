@@ -290,6 +290,16 @@ function chainTarget(s){return getRoles(s.numPlayers)[s.chainStep+1].key;}
 
 const $=id=>document.getElementById(id);
 
+// ── Random names ──────────────────────────────────────────────────────
+const RAND_NAMES=['ராஜா','ராணி','அர்ஜுன்','பிரியா','கார்த்திக்','மீனா','விஜய்','தீபா','ரவி','லட்சுமி','முத்து','செல்வி','பாலா','காவ்யா','அன்பு','சூர்யா','கவிதா','தமிழ்','வேல்','நிலா'];
+(function(){
+  const saved=localStorage.getItem('rr-name');
+  const el=$('myname');
+  if(saved)el.value=saved;
+  else el.value=RAND_NAMES[Math.floor(Math.random()*RAND_NAMES.length)];
+  el.oninput=()=>localStorage.setItem('rr-name',el.value.trim());
+})();
+
 // ── Avatar picker ──────────────────────────────────────────────────────
 const AVATARS=['🐯','🦁','🐻','🐼','🐨','🦊','🐸','🐙','🦄','🐲','🦋','⭐'];
 let myAvatar=localStorage.getItem('rr-avatar')||'🐯';
@@ -537,7 +547,10 @@ function submitChat(){const i=$('chat-input');sendChat(i.value);i.value='';}
 // ── Room management ────────────────────────────────────────────────────
 function getName(){
   myName=$('myname').value.trim();
-  if(!myName){$('home-err').textContent='பெயர் போடுங்க! Enter your name.';return false;}
+  if(!myName){
+    myName=RAND_NAMES[Math.floor(Math.random()*RAND_NAMES.length)];
+    $('myname').value=myName;localStorage.setItem('rr-name',myName);
+  }
   return true;
 }
 async function createRoom(){
