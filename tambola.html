@@ -129,6 +129,14 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
     <label>Players</label>
     <div class="player-list" id="lobby-players"></div>
     <div id="lobby-host-opts" style="display:none;">
+      <label>Max Players</label>
+      <div class="np-picker" id="tb-np-picker">
+        <button class="np-btn" onclick="setNumPlayers(2)">2</button>
+        <button class="np-btn" onclick="setNumPlayers(3)">3</button>
+        <button class="np-btn" onclick="setNumPlayers(4)">4</button>
+        <button class="np-btn" onclick="setNumPlayers(6)">6</button>
+        <button class="np-btn active" onclick="setNumPlayers(8)">8</button>
+      </div>
       <label>Auto-call speed</label>
       <div class="np-picker" id="speed-picker">
         <button class="np-btn active" onclick="setAutoCall(0)">Manual</button>
@@ -413,7 +421,7 @@ async function createRoom(){
   $('home-name').value=myName; localStorage.setItem('tb-name',myName);
   const code=randCode();
   const s={code,version:0,ts:Date.now(),phase:'lobby',
-    players:[{id:myId,name:myName}],hostId:myId,
+    players:[{id:myId,name:myName}],hostId:myId,numPlayers:8,
     calledNumbers:[],tickets:{},
     wins:{earlyFive:null,topRow:null,middleRow:null,bottomRow:null,fullHouse:null},
     autoCallSecs:0,lastCallTs:0};
@@ -429,7 +437,7 @@ async function joinRoom(){
   const existing=await readRoom(code);
   if(!existing){ $('home-err').textContent='Room not found. Check the code.'; return; }
   if(existing.phase!=='lobby'){ $('home-err').textContent='Game already in progress.'; return; }
-  if(existing.players.length>=8){ $('home-err').textContent='Room is full (max 8 players).'; return; }
+  if(existing.players.length>=(existing.numPlayers||8)){ $('home-err').textContent='Room is full (max '+(existing.numPlayers||8)+' players).'; return; }
   if(existing.players.find(p=>p.id===myId)){
     roomCode=code; state=existing; lastVer=existing.version;
     subscribeRoom(code); subscribeChat(code); showScreen('scr-lobby'); render(); return;
@@ -453,6 +461,15 @@ function leaveRoom(){
   state=null; roomCode=''; lastVer=0;
   const cp=$('chat-panel'); if(cp){cp.style.display='none';chatCollapsed=true;cp.classList.add('collapsed');}
   showScreen('scr-home');
+}
+
+function setNumPlayers(n){
+  if(!isHost()||!state) return;
+  const s=deepCopy(state); s.numPlayers=n; writeRoom(s);
+}
+function updateNpPicker(n){
+  const btns=document.querySelectorAll('#tb-np-picker .np-btn');
+  [2,3,4,6,8].forEach((v,i)=>{ if(btns[i]) btns[i].classList.toggle('active',v===n); });
 }
 
 function setAutoCall(n){
@@ -517,6 +534,7 @@ function renderLobby(s){
   const hOpts=$('lobby-host-opts'), mon=$('lobby-monitor');
   if(isHost()){
     hOpts.style.display='block';
+    updateNpPicker(s.numPlayers||8);
     updateSpeedPicker(s.autoCallSecs||0);
     const link=NTFY+'/tb-'+s.code+'-s';
     mon.style.display='block';

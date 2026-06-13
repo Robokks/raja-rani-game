@@ -125,7 +125,15 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
     <label>Room Code</label>
     <div class="roomcode" id="lobby-code">----</div>
     <button class="btn ghost" onclick="copyCode()" style="margin-top:10px;">Copy Code</button>
-    <label>Players (2–4)</label>
+    <div id="sl-host-opts" style="display:none;">
+      <label>Max Players</label>
+      <div class="np-picker" id="sl-np-picker">
+        <button class="np-btn" onclick="setNumPlayers(2)">2</button>
+        <button class="np-btn" onclick="setNumPlayers(3)">3</button>
+        <button class="np-btn active" onclick="setNumPlayers(4)">4</button>
+      </div>
+    </div>
+    <label>Players</label>
     <div class="player-list" id="lobby-players"></div>
     <div id="lobby-monitor" style="display:none;margin-top:10px;font-family:'Catamaran';font-size:12px;opacity:.7;text-align:center;word-break:break-all;"></div>
     <button class="btn green" id="lobby-start" style="display:none;" onclick="hostStart()">Start Game</button>
@@ -303,6 +311,14 @@ function onConnBack(){ $('conn-banner').style.display='none'; }
 
 function showScreen(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); $(id).classList.add('active'); }
 function isHost(){ return state&&state.players[0]&&state.players[0].id===myId; }
+function setNumPlayers(n){
+  if(!isHost()||!state) return;
+  const s=deepCopy(state); s.numPlayers=n; writeRoom(s);
+}
+function updateNpPicker(n){
+  const btns=document.querySelectorAll('#sl-np-picker .np-btn');
+  [2,3,4].forEach((v,i)=>{ if(btns[i]) btns[i].classList.toggle('active',v===n); });
+}
 function isMyTurn(){ return state&&state.players[state.currentTurnIdx]&&state.players[state.currentTurnIdx].id===myId; }
 
 async function createRoom(){
@@ -311,7 +327,7 @@ async function createRoom(){
   const code=randCode();
   const s={code,version:0,ts:Date.now(),phase:'lobby',
     players:[{id:myId,name:myName,pos:0,colorIdx:0}],
-    hostId:myId,currentTurnIdx:0,diceValue:null,lastMove:null,winner:null};
+    hostId:myId,numPlayers:4,currentTurnIdx:0,diceValue:null,lastMove:null,winner:null};
   roomCode=code; writeRoom(s); subscribeRoom(code); subscribeChat(code); showScreen('scr-lobby');
 }
 
@@ -324,7 +340,7 @@ async function joinRoom(){
   const existing=await readRoom(code);
   if(!existing){ $('home-err').textContent='Room not found. Check the code.'; return; }
   if(existing.phase!=='lobby'){ $('home-err').textContent='Game already in progress.'; return; }
-  if(existing.players.length>=4){ $('home-err').textContent='Room is full (max 4 players).'; return; }
+  if(existing.players.length>=(existing.numPlayers||4)){ $('home-err').textContent='Room is full (max '+(existing.numPlayers||4)+' players).'; return; }
   if(existing.players.find(p=>p.id===myId)){
     roomCode=code; state=existing; lastVer=existing.version;
     subscribeRoom(code); subscribeChat(code); showScreen('scr-lobby'); render(); return;
@@ -463,12 +479,14 @@ function renderLobby(s){
     if(i===0){ const t=document.createElement('span'); t.className='pl-tag'; t.textContent='HOST'; row.appendChild(t); }
     lp.appendChild(row);
   });
-  const mon=$('lobby-monitor');
+  const hostOpts=$('sl-host-opts'), mon=$('lobby-monitor');
   if(isHost()){
+    hostOpts.style.display='block';
+    updateNpPicker(s.numPlayers||4);
     const link=NTFY+'/sl-'+s.code+'-s';
     mon.style.display='block';
     mon.innerHTML='Monitor: <a href="'+link+'" target="_blank" style="color:var(--blue);">'+link+'</a>';
-  } else { mon.style.display='none'; }
+  } else { hostOpts.style.display='none'; mon.style.display='none'; }
   $('lobby-start').style.display=(isHost()&&s.players.length>=2)?'block':'none';
   $('lobby-wait').style.display=isHost()?'none':'flex';
   $('lobby-err').textContent='';
