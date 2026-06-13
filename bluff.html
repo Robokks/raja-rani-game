@@ -283,6 +283,13 @@ let myAvatar=localStorage.getItem('bl-avatar')||'\u{1F0CF}';
   });
 })();
 
+// ── Obfuscation helpers ───────────────────────────────────────────────
+const _K=[114,103,103,97,109,101];
+function _enc(str){const b=new TextEncoder().encode(str);let s='';for(let i=0;i<b.length;i++)s+=String.fromCharCode(b[i]^_K[i%6]);return btoa(s);}
+function _dec(b64){const s=atob(b64);const b=new Uint8Array(s.length);for(let i=0;i<s.length;i++)b[i]=s.charCodeAt(i)^_K[i%6];return new TextDecoder().decode(b);}
+function _encState(s){const o=Object.assign({},s);if(o.hands)o.hands=_enc(JSON.stringify(o.hands));return JSON.stringify(o);}
+function _decState(s){if(!s)return s;if(typeof s.hands==='string')try{s.hands=JSON.parse(_dec(s.hands));}catch{}return s;}
+
 function normalizeNtfy(raw){
   let v=(raw||'https://ntfy.sh').trim();
   try{v=new URL(v).origin;}catch{}
@@ -330,7 +337,7 @@ async function readRoom(code){
       const text=await res.text();
       let latest=null;
       for(const line of text.trim().split('\n').filter(Boolean)){
-        try{const ev=JSON.parse(line);if(ev.event==='message'&&ev.message){const s=JSON.parse(ev.message);if(!latest||(s.version||0)>(latest.version||0))latest=s;}}catch{}
+        try{const ev=JSON.parse(line);if(ev.event==='message'&&ev.message){const s=_decState(JSON.parse(ev.message));if(!latest||(s.version||0)>(latest.version||0))latest=s;}}catch{}
       }
       if(latest)return latest;
     }catch{}
@@ -339,7 +346,7 @@ async function readRoom(code){
 }
 function writeRoom(s){
   s.version=(s.version||0)+1;s.ts=Date.now();
-  fetch(NTFY+'/bl-'+roomCode+'-s',{method:'POST',body:JSON.stringify(s)}).catch(()=>onConnLost());
+  fetch(NTFY+'/bl-'+roomCode+'-s',{method:'POST',body:_encState(s)}).catch(()=>onConnLost());
   state=s;lastVer=s.version;render();
 }
 function subscribeRoom(code){
@@ -349,7 +356,7 @@ function subscribeRoom(code){
   roomEs.onmessage=e=>{
     try{
       const ev=JSON.parse(e.data);if(ev.event!=='message')return;
-      const s=JSON.parse(ev.message);
+      const s=_decState(JSON.parse(ev.message));
       if(s.version<=lastVer)return;
       if((s.kickedIds||[]).includes(myId)){alert('You were removed.');location.reload();return;}
       lastVer=s.version;state=s;me=s.players.findIndex(p=>p.id===myId);render();
