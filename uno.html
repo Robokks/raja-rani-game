@@ -150,6 +150,11 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
 .winner-av{font-size:72px;line-height:1;}
 .winner-name{font-size:28px;font-weight:800;margin-top:8px;}
 .winner-sub{font-family:'Catamaran';font-size:13px;font-weight:800;letter-spacing:2px;text-transform:uppercase;opacity:.65;margin-top:4px;}
+/* Swap overlay player buttons */
+.swap-player-btn{display:flex;align-items:center;gap:10px;width:100%;padding:12px 16px;font-family:'Baloo Thambi 2';font-size:16px;font-weight:800;background:#fffdf6;border:2px solid rgba(58,42,24,.2);border-radius:10px;cursor:pointer;transition:background .1s;}
+.swap-player-btn:active{background:#fce8e7;border-color:var(--red);}
+.swap-player-btn .swap-av{font-size:24px;}
+.swap-player-btn .swap-count{margin-left:auto;font-family:'Catamaran';font-size:13px;font-weight:800;opacity:.65;}
 </style>
 </head>
 <body>
@@ -215,6 +220,14 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
 <div class="screen" id="scr-over">
   <div class="tagwrap"><span class="roundtag">Game Over &mdash; UNO</span></div>
   <div class="panel" id="over-panel"></div>
+</div>
+
+<!-- SWAP HANDS OVERLAY -->
+<div class="color-overlay" id="swap-overlay">
+  <div class="color-box">
+    <h2>🔀 Swap hands with…</h2>
+    <div id="swap-players" style="display:flex;flex-direction:column;gap:10px;margin-top:14px;"></div>
+  </div>
 </div>
 
 <!-- COLOR PICKER OVERLAY -->
@@ -380,7 +393,7 @@ function createRoom(){
     players:[{id:myId,name,avatar:myAvSel}],
     hands:{},deck:[],pile:[],
     currentPlayer:0,direction:1,currentColor:'red',
-    pendingDraw:0,pendingColorPick:false,winner:null,lastAction:''
+    pendingDraw:0,pendingColorPick:false,pendingSwapFrom:null,winner:null,lastAction:''
   };
   roomCode=s.code;
   writeRoom(s);
@@ -545,6 +558,7 @@ function dealGame(s){
   s.currentPlayer=0;
   s.pendingDraw=0;
   s.pendingColorPick=false;
+  s.pendingSwapFrom=null;
   s.winner=null;
   s.phase='play';
 
@@ -611,6 +625,31 @@ function playCard(cardIdx){
     return;
   }
 
+  // 7-0 swap rule
+  if(v==='7'&&s.pendingDraw===0){
+    s.pendingSwapFrom=myId;
+    s.currentColor=c;
+    s.lastAction=`${s.players[idx].name} played 7 — swapping hands!`;
+    writeRoom(s);busy=false;return;
+  }
+  if(v==='0'&&s.pendingDraw===0){
+    // Rotate all hands in direction of play
+    const pids=s.players.map(p=>p.id);
+    const n=pids.length;
+    const dir=s.direction;
+    const tempHands={};
+    pids.forEach(pid=>{tempHands[pid]=[...s.hands[pid]];});
+    pids.forEach((pid,i)=>{
+      const fromIdx=((i-dir)+n)%n;
+      s.hands[pid]=tempHands[pids[fromIdx]];
+      s.players[i].handCount=s.hands[pid].length;
+    });
+    s.currentColor=c;
+    s.lastAction=`${s.players[idx].name} played 0 — hands rotated!`;
+    advanceTurn(s,1);
+    writeRoom(s);busy=false;return;
+  }
+
   if(v==='wild'||v==='wild4'){
     if(v==='wild4')s.pendingDraw+=4;
     s.pendingColorPick=true;
@@ -657,6 +696,25 @@ function chooseColor(color){
   s.lastAction=`${s.players[idx].name} chose ${color}`;
   advanceTurn(s,1);
   $('color-overlay').classList.remove('show');
+  writeRoom(s);
+}
+
+// ── Choose swap ───────────────────────────────────────────────────────
+function chooseSwap(targetId){
+  if(!state.pendingSwapFrom||state.pendingSwapFrom!==myId)return;
+  const s=deepCopy(state);
+  const myHand=[...s.hands[myId]];
+  const theirHand=[...s.hands[targetId]];
+  s.hands[myId]=theirHand;
+  s.hands[targetId]=myHand;
+  const mi=s.players.findIndex(p=>p.id===myId);
+  const ti=s.players.findIndex(p=>p.id===targetId);
+  s.players[mi].handCount=theirHand.length;
+  s.players[ti].handCount=myHand.length;
+  s.pendingSwapFrom=null;
+  s.lastAction=`${s.players[mi].name} swapped hands with ${s.players[ti].name}!`;
+  advanceTurn(s,1);
+  $('swap-overlay').classList.remove('show');
   writeRoom(s);
 }
 
@@ -719,7 +777,7 @@ function rematch(){
   s.phase='lobby';
   s.hands={};s.deck=[];s.pile=[];
   s.currentPlayer=0;s.direction=1;s.currentColor='red';
-  s.pendingDraw=0;s.pendingColorPick=false;s.winner=null;s.lastAction='';
+  s.pendingDraw=0;s.pendingColorPick=false;s.pendingSwapFrom=null;s.winner=null;s.lastAction='';
   s.players.forEach(p=>{p.handCount=0;p.saidUno=false;});
   writeRoom(s);
 }
@@ -850,6 +908,23 @@ function renderGame(s){
     overlay.classList.add('show');
   } else {
     overlay.classList.remove('show');
+  }
+
+  // swap overlay
+  const swapOverlay=$('swap-overlay');
+  if(s.pendingSwapFrom&&s.pendingSwapFrom===myId){
+    const sp=$('swap-players');
+    sp.innerHTML='';
+    s.players.filter(p=>p.id!==myId).forEach(p=>{
+      const btn=document.createElement('button');
+      btn.className='swap-player-btn';
+      btn.innerHTML=`<span class="swap-av">${esc(p.avatar)}</span><span>${esc(p.name)}</span><span class="swap-count">🃏 ${(s.hands[p.id]||[]).length}</span>`;
+      btn.onclick=()=>chooseSwap(p.id);
+      sp.appendChild(btn);
+    });
+    swapOverlay.classList.add('show');
+  } else {
+    swapOverlay.classList.remove('show');
   }
 }
 
