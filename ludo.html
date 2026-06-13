@@ -290,6 +290,9 @@ let roomEs  = null;
 let busy    = false;
 let chatEs   = null;
 let rxnEs    = null;
+let presEs   = null;
+let heartbeatInterval = null;
+const lastSeenMap = {};
 let chatCollapsed = true;
 let unreadCount   = 0;
 const seenMsgs    = new Set();
@@ -394,6 +397,30 @@ function showRxnFloat(emoji) {
   el.style.bottom = '80px';
   document.body.appendChild(el);
   setTimeout(() => el.remove(), 2100);
+}
+
+function subscribePresence(code) {
+  if (presEs) presEs.close();
+  presEs = new EventSource(NTFY + '/lu-' + code + '-pres/sse?since=' + Math.floor((Date.now()-25000)/1000));
+  presEs.onmessage = e => {
+    try {
+      const ev = JSON.parse(e.data); if (ev.event !== 'message') return;
+      const d = JSON.parse(ev.message);
+      if (d.id && d.ts) lastSeenMap[d.id] = { ts: Date.now(), ping: Math.max(0, Date.now() - d.ts) };
+    } catch {}
+  };
+}
+function pingPresence() {
+  if (!roomCode) return;
+  fetch(NTFY + '/lu-' + roomCode + '-pres', { method: 'POST', body: JSON.stringify({ id: myId, name: myName, ts: Date.now() }) }).catch(() => {});
+}
+function pingBadge(pid) {
+  if (pid === myId) return '';
+  const p = lastSeenMap[pid];
+  if (!p || Date.now() - p.ts > 25000) return '<span style="color:#888;font-size:12px;">⚫</span>';
+  const ms = p.ping, col = ms < 400 ? '#27ae60' : ms < 1000 ? '#d49a2a' : '#e74c3c';
+  const lbl = ms < 1000 ? ms + 'ms' : (ms/1000).toFixed(1) + 's';
+  return '<span style="color:'+col+';font-size:11px;font-family:Catamaran;font-weight:700;">● '+lbl+'</span>';
 }
 
 function animateDice(targetValue, onDone) {
@@ -572,6 +599,10 @@ async function createRoom() {
   subscribeRoom(code);
   subscribeChat(code);
   subscribeReactions(code);
+  subscribePresence(code);
+  clearInterval(heartbeatInterval);
+  pingPresence();
+  heartbeatInterval = setInterval(pingPresence, 15000);
   showScreen('scr-lobby');
   $('btn-create').disabled = false;
 }
@@ -595,6 +626,10 @@ async function joinRoom() {
     subscribeRoom(code);
     subscribeChat(code);
     subscribeReactions(code);
+    subscribePresence(code);
+    clearInterval(heartbeatInterval);
+    pingPresence();
+    heartbeatInterval = setInterval(pingPresence, 15000);
     showScreen('scr-lobby');
     render();
     return;
@@ -609,6 +644,10 @@ async function joinRoom() {
   subscribeRoom(code);
   subscribeChat(code);
   subscribeReactions(code);
+  subscribePresence(code);
+  clearInterval(heartbeatInterval);
+  pingPresence();
+  heartbeatInterval = setInterval(pingPresence, 15000);
   showScreen('scr-lobby');
 }
 
@@ -624,6 +663,8 @@ function leaveRoom() {
   if (roomEs) { roomEs.close(); roomEs = null; }
   if (chatEs) { chatEs.close(); chatEs = null; }
   if (rxnEs)  { rxnEs.close();  rxnEs  = null; }
+  if (presEs) { presEs.close(); presEs = null; }
+  clearInterval(heartbeatInterval); heartbeatInterval = null;
   state = null;
   roomCode = '';
   lastVer = 0;
@@ -904,6 +945,8 @@ function renderLobby() {
         <span>${p.name}${isMe ? ' (you)' : ''}</span>
         <span class="tag ${colorClasses[i]}">${colorNames[i]}</span>
       `;
+      const pingHTML = pingBadge(p.id);
+      if (pingHTML) { const pb = document.createElement('span'); pb.innerHTML = pingHTML; row.appendChild(pb); }
       if (isH && p.id !== myId) {
         const kb = document.createElement('button');
         kb.className = 'kick-btn';

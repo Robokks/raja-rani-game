@@ -299,6 +299,9 @@ let state=null;
 let lastVer=0;
 let roomCode='';
 let roomEs=null;
+let presEs=null;
+let heartbeatInterval=null;
+const lastSeenMap={};
 let busy=false;
 let myAvSel=myAvatar;
 
@@ -340,6 +343,25 @@ function subscribeRoom(code){
   };
   roomEs.onerror=()=>onConnLost();
   roomEs.onopen=()=>onConnBack();
+}
+function subscribePresence(code){
+  if(presEs)presEs.close();
+  presEs=new EventSource(NTFY+'/un-'+code+'-pres/sse?since='+Math.floor((Date.now()-25000)/1000));
+  presEs.onmessage=e=>{
+    try{const ev=JSON.parse(e.data);if(ev.event!=='message')return;const d=JSON.parse(ev.message);if(d.id&&d.ts)lastSeenMap[d.id]={ts:Date.now(),ping:Math.max(0,Date.now()-d.ts)};}catch{}
+  };
+}
+function pingPresence(){
+  if(!roomCode)return;
+  fetch(NTFY+'/un-'+roomCode+'-pres',{method:'POST',body:JSON.stringify({id:myId,name:myName,ts:Date.now()})}).catch(()=>{});
+}
+function pingBadge(pid){
+  if(pid===myId)return '';
+  const p=lastSeenMap[pid];
+  if(!p||Date.now()-p.ts>25000)return '<span style="color:#888;font-size:12px;">⚫</span>';
+  const ms=p.ping,col=ms<400?'#27ae60':ms<1000?'#d49a2a':'#e74c3c';
+  const lbl=ms<1000?ms+'ms':(ms/1000).toFixed(1)+'s';
+  return '<span style="color:'+col+';font-size:11px;font-family:Catamaran;font-weight:700;margin-left:auto;">● '+lbl+'</span>';
 }
 
 // ── Room code gen ─────────────────────────────────────────────────────
@@ -409,6 +431,8 @@ function createRoom(){
   roomCode=s.code;
   writeRoom(s);
   subscribeRoom(roomCode);
+  subscribePresence(roomCode);
+  clearInterval(heartbeatInterval);pingPresence();heartbeatInterval=setInterval(pingPresence,15000);
   renderLobby(s);
   show('scr-lobby');
 }
@@ -434,7 +458,10 @@ function joinRoom(){
       if(s.players.find(p=>p.id===myId)){
         // rejoin
         lastVer=s.version;state=s;
-        subscribeRoom(roomCode);renderLobby(s);show('scr-lobby');return;
+        subscribeRoom(roomCode);
+        subscribePresence(roomCode);
+        clearInterval(heartbeatInterval);pingPresence();heartbeatInterval=setInterval(pingPresence,15000);
+        renderLobby(s);show('scr-lobby');return;
       }
       if(s.players.length>=s.numPlayers){$('home-err').textContent='Room is full.';return;}
       const s2=deepCopy(s);
@@ -442,6 +469,8 @@ function joinRoom(){
       lastVer=s2.version;
       writeRoom(s2);
       subscribeRoom(roomCode);
+      subscribePresence(roomCode);
+      clearInterval(heartbeatInterval);pingPresence();heartbeatInterval=setInterval(pingPresence,15000);
       renderLobby(s2);
       show('scr-lobby');
     })
@@ -509,6 +538,7 @@ function renderLobby(s){
       row.innerHTML=`<span style="font-size:22px;">${esc(p.avatar)}</span><span>${esc(p.name)}</span>
         ${isH2?'<span class="tag">HOST</span>':''}
         ${isMe?'<span class="tag" style="background:#2980b9;">YOU</span>':''}
+        ${pingBadge(p.id)}
         ${isH&&!isMe?`<button class="kick-btn" onclick="kickPlayer('${esc(p.id)}')">✕</button>`:''}`;
       list.appendChild(row);
     } else {

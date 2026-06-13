@@ -370,7 +370,7 @@ function subscribePresence(code){
   const since=Math.floor((Date.now()-25000)/1000);
   presEs=new EventSource(NTFY+'/bl-'+code+'-p/sse?since='+since);
   presEs.onmessage=e=>{
-    try{const ev=JSON.parse(e.data);if(ev.event!=='message')return;const d=JSON.parse(ev.message);if(d.pid&&d.t)lastSeenMap[d.pid]=d.t;}catch{}
+    try{const ev=JSON.parse(e.data);if(ev.event!=='message')return;const d=JSON.parse(ev.message);if(d.pid&&d.t)lastSeenMap[d.pid]={ts:Date.now(),ping:Math.max(0,Date.now()-d.t)};}catch{}
   };
 }
 function subscribeReactions(code){
@@ -384,6 +384,14 @@ function subscribeReactions(code){
 function subscribeAll(code){subscribeRoom(code);subscribePresence(code);subscribeReactions(code);}
 function pingPresence(){if(!roomCode)return;fetch(NTFY+'/bl-'+roomCode+'-p',{method:'POST',body:JSON.stringify({pid:myId,t:Date.now()})});}
 function startHeartbeat(){clearInterval(heartbeatInterval);pingPresence();heartbeatInterval=setInterval(pingPresence,8000);}
+function pingBadge(pid){
+  if(pid===myId)return '';
+  const p=lastSeenMap[pid];
+  if(!p||Date.now()-p.ts>25000)return '<span style="color:#888;font-size:12px;margin-left:auto;">⚫</span>';
+  const ms=p.ping,col=ms<400?'#27ae60':ms<1000?'#d49a2a':'#e74c3c';
+  const lbl=ms<1000?ms+'ms':(ms/1000).toFixed(1)+'s';
+  return '<span style="color:'+col+';font-size:11px;font-family:Catamaran;font-weight:700;margin-left:auto;">● '+lbl+'</span>';
+}
 function sendReaction(emoji){if(!roomCode)return;showRxnFloat(emoji);fetch(NTFY+'/bl-'+roomCode+'-rxn',{method:'POST',body:JSON.stringify({emoji,pid:myId,t:Date.now()})});}
 function showRxnFloat(emoji){const el=document.createElement('div');el.className='rxn-float';el.textContent=emoji;el.style.cssText='left:'+(15+Math.random()*70)+'%;bottom:70px;';document.body.appendChild(el);setTimeout(()=>el.remove(),2100);}
 
@@ -602,6 +610,7 @@ function renderLobby(s){
       let inner='<span style="font-size:22px;">'+av(p)+'</span> '+esc(p.name);
       if(i===0)inner+=' <span class="tag">HOST</span>';
       if(p.id===myId)inner+=' <small style="opacity:.5;">(you)</small>';
+      inner+=pingBadge(p.id);
       if(isHost()&&i!==0&&p.id!==myId)inner+='<button class="kick-btn" onclick="hostKick(\''+p.id+'\')" title="Remove">✕</button>';
       d.innerHTML=inner;
     }else{d.className='pl-row empty';d.textContent='Waiting…';}

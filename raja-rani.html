@@ -539,12 +539,20 @@ function subscribePresence(code){
   presEs.onmessage=e=>{
     try{
       const ev=JSON.parse(e.data);if(ev.event!=='message')return;
-      const d=JSON.parse(ev.message);if(d.pid&&d.t)lastSeenMap[d.pid]=d.t;
+      const d=JSON.parse(ev.message);if(d.pid&&d.t)lastSeenMap[d.pid]={ts:Date.now(),ping:Math.max(0,Date.now()-d.t)};
     }catch{}
   };
 }
 function isOffline(pid){
-  const t=lastSeenMap[pid];return !!(t&&Date.now()-t>20000);
+  const e=lastSeenMap[pid];return !!(e&&Date.now()-e.ts>20000);
+}
+function pingBadge(pid){
+  if(pid===myId)return '';
+  const p=lastSeenMap[pid];
+  if(!p||Date.now()-p.ts>25000)return '<span style="color:#888;font-size:12px;margin-left:auto;">⚫</span>';
+  const ms=p.ping,col=ms<400?'#27ae60':ms<1000?'#d49a2a':'#e74c3c';
+  const lbl=ms<1000?ms+'ms':(ms/1000).toFixed(1)+'s';
+  return '<span style="color:'+col+';font-size:11px;font-family:Catamaran;font-weight:700;margin-left:auto;">● '+lbl+'</span>';
 }
 function startHeartbeat(){
   clearInterval(heartbeatInterval);pingPresence();
@@ -919,6 +927,7 @@ function renderLobby(s){
       let inner='<span style="font-size:22px;">'+esc(av(p))+'</span> '+esc(p.name);
       if(i===0)inner+=' <span class="tag">HOST</span>';
       if(p.id===myId)inner+=' <small style="opacity:.5;">(you)</small>';
+      inner+=pingBadge(p.id);
       if(isHost()&&i!==0&&p.id!==myId)
         inner+='<button class="kick-btn" onclick="hostKick(\''+p.id+'\')" title="Remove">✕</button>';
       d.innerHTML=inner;

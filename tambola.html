@@ -216,6 +216,8 @@ let myId   = localStorage.getItem('tb-pid') || uid();
 let myName = localStorage.getItem('tb-name') || '';
 let roomCode='', state=null, lastVer=0, roomEs=null, chatEs=null;
 let busy=false, autoCallTimer=null, countdownTick=null;
+let presEs=null, heartbeatInterval=null;
+const lastSeenMap={};
 let chatCollapsed=true, unreadCount=0;
 const seenMsgs=new Set();
 localStorage.setItem('tb-pid',myId);
@@ -264,6 +266,30 @@ function subscribeRoom(code){
   };
   roomEs.onerror=()=>onConnLost();
   roomEs.onopen=()=>onConnBack();
+}
+
+function subscribePresence(code){
+  if(presEs) presEs.close();
+  presEs=new EventSource(NTFY+'/tb-'+code+'-pres/sse?since='+Math.floor((Date.now()-25000)/1000));
+  presEs.onmessage=e=>{
+    try{
+      const ev=JSON.parse(e.data); if(ev.event!=='message') return;
+      const d=JSON.parse(ev.message);
+      if(d.id&&d.ts) lastSeenMap[d.id]={ts:Date.now(),ping:Math.max(0,Date.now()-d.ts)};
+    }catch{}
+  };
+}
+function pingPresence(){
+  if(!roomCode) return;
+  fetch(NTFY+'/tb-'+roomCode+'-pres',{method:'POST',body:JSON.stringify({id:myId,name:myName,ts:Date.now()})}).catch(()=>{});
+}
+function pingBadge(pid){
+  if(pid===myId) return '<span style="font-family:Catamaran;font-size:11px;opacity:.45;margin-left:auto;">you</span>';
+  const p=lastSeenMap[pid];
+  if(!p||Date.now()-p.ts>25000) return '<span style="color:#888;font-size:13px;margin-left:auto;">⚫</span>';
+  const ms=p.ping, col=ms<400?'#27ae60':ms<1000?'#d49a2a':'#e74c3c';
+  const lbl=ms<1000?ms+'ms':(ms/1000).toFixed(1)+'s';
+  return '<span style="color:'+col+';font-size:11px;font-family:Catamaran;font-weight:700;margin-left:auto;">● '+lbl+'</span>';
 }
 
 function subscribeChat(code){
@@ -425,7 +451,9 @@ async function createRoom(){
     calledNumbers:[],tickets:{},
     wins:{earlyFive:null,topRow:null,middleRow:null,bottomRow:null,fullHouse:null},
     autoCallSecs:0,lastCallTs:0};
-  roomCode=code; writeRoom(s); subscribeRoom(code); subscribeChat(code); showScreen('scr-lobby');
+  roomCode=code; writeRoom(s); subscribeRoom(code); subscribeChat(code);
+  subscribePresence(code); clearInterval(heartbeatInterval); pingPresence(); heartbeatInterval=setInterval(pingPresence,15000);
+  showScreen('scr-lobby');
 }
 
 async function joinRoom(){
@@ -440,12 +468,16 @@ async function joinRoom(){
   if(existing.players.length>=(existing.numPlayers||8)){ $('home-err').textContent='Room is full (max '+(existing.numPlayers||8)+' players).'; return; }
   if(existing.players.find(p=>p.id===myId)){
     roomCode=code; state=existing; lastVer=existing.version;
-    subscribeRoom(code); subscribeChat(code); showScreen('scr-lobby'); render(); return;
+    subscribeRoom(code); subscribeChat(code);
+    subscribePresence(code); clearInterval(heartbeatInterval); pingPresence(); heartbeatInterval=setInterval(pingPresence,15000);
+    showScreen('scr-lobby'); render(); return;
   }
   const s=deepCopy(existing);
   s.players.push({id:myId,name:myName});
   roomCode=code; lastVer=existing.version;
-  writeRoom(s); subscribeRoom(code); subscribeChat(code); showScreen('scr-lobby');
+  writeRoom(s); subscribeRoom(code); subscribeChat(code);
+  subscribePresence(code); clearInterval(heartbeatInterval); pingPresence(); heartbeatInterval=setInterval(pingPresence,15000);
+  showScreen('scr-lobby');
 }
 
 function copyCode(){
@@ -456,6 +488,7 @@ function copyCode(){
 
 function leaveRoom(){
   if(roomEs){roomEs.close();roomEs=null;} if(chatEs){chatEs.close();chatEs=null;}
+  if(presEs){presEs.close();presEs=null;} clearInterval(heartbeatInterval); heartbeatInterval=null;
   clearTimeout(autoCallTimer); autoCallTimer=null;
   clearInterval(countdownTick); countdownTick=null;
   state=null; roomCode=''; lastVer=0;
@@ -527,8 +560,9 @@ function renderLobby(s){
   const lp=$('lobby-players'); lp.innerHTML='';
   s.players.forEach((p,i)=>{
     const row=document.createElement('div'); row.className='pl-row';
-    const nm=document.createElement('span'); nm.textContent=p.name+(p.id===myId?' (you)':''); row.appendChild(nm);
+    const nm=document.createElement('span'); nm.textContent=p.name; row.appendChild(nm);
     if(i===0){ const t=document.createElement('span'); t.className='pl-tag'; t.textContent='HOST'; row.appendChild(t); }
+    const pb=document.createElement('span'); pb.innerHTML=pingBadge(p.id); row.appendChild(pb);
     lp.appendChild(row);
   });
   const hOpts=$('lobby-host-opts'), mon=$('lobby-monitor');

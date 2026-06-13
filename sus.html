@@ -365,6 +365,7 @@ let myId=localStorage.getItem('su-pid');if(!myId){myId='p'+Math.random().toStrin
 let myName='',roomCode=null,me=-1;
 let state=null,lastVer=-1,busy=false,renderedPhase=null;
 let roomEs=null,presEs=null,rxnEs=null,chatEs=null;
+let heartbeatInterval=null;
 let gameTimerInterval=null,roleRevealTimer=null,elimTimer=null;
 let myVote=null;
 let chatCollapsed=true,unreadCount=0;
@@ -427,7 +428,26 @@ function subscribeReactions(code){
     try{const ev=JSON.parse(e.data);if(ev.event!=='message')return;const d=JSON.parse(ev.message);if(d.pid!==myId)showRxnFloat(d.emoji);}catch{}
   };
 }
-function subscribeAll(code){subscribeRoom(code);subscribeChat(code);subscribeReactions(code);}
+function subscribePresence(code){
+  if(presEs)presEs.close();
+  presEs=new EventSource(NTFY+'/su-'+code+'-pres/sse?since='+Math.floor((Date.now()-25000)/1000));
+  presEs.onmessage=e=>{
+    try{const ev=JSON.parse(e.data);if(ev.event!=='message')return;const d=JSON.parse(ev.message);if(d.id&&d.ts)lastSeenMap[d.id]={ts:Date.now(),ping:Math.max(0,Date.now()-d.ts)};}catch{}
+  };
+}
+function pingPresence(){
+  if(!roomCode)return;
+  fetch(NTFY+'/su-'+roomCode+'-pres',{method:'POST',body:JSON.stringify({id:myId,name:myName,ts:Date.now()})}).catch(()=>{});
+}
+function pingBadge(pid){
+  if(pid===myId)return '';
+  const p=lastSeenMap[pid];
+  if(!p||Date.now()-p.ts>25000)return '<span style="color:#888;font-size:12px;margin-left:auto;">⚫</span>';
+  const ms=p.ping,col=ms<400?'#27ae60':ms<1000?'#d49a2a':'#e74c3c';
+  const lbl=ms<1000?ms+'ms':(ms/1000).toFixed(1)+'s';
+  return '<span style="color:'+col+';font-size:11px;font-family:Catamaran;font-weight:700;margin-left:auto;">● '+lbl+'</span>';
+}
+function subscribeAll(code){subscribeRoom(code);subscribeChat(code);subscribeReactions(code);subscribePresence(code);}
 
 function sendChat(txt){if(!txt.trim()||!roomCode)return;fetch(NTFY+'/su-'+roomCode+'-c',{method:'POST',body:JSON.stringify({pid:myId,name:myName,msg:txt.trim().slice(0,100),t:Date.now()})});}
 function appendMsg(d){
@@ -476,7 +496,7 @@ async function createRoom(){
       kickedIds:[],players:[{id:myId,name:myName,avatar:myAvatar,alive:true}],
       roles:{},votes:{},eliminated:null,round:1,winner:null,
       discussDeadline:null,voteDeadline:null};
-    writeRoom(s);subscribeAll(code);history.replaceState(null,'','sus.html?room='+code);show('scr-lobby');
+    writeRoom(s);subscribeAll(code);clearInterval(heartbeatInterval);pingPresence();heartbeatInterval=setInterval(pingPresence,15000);history.replaceState(null,'','sus.html?room='+code);show('scr-lobby');
   }catch(e){$('home-err').textContent='Error — check internet.';console.error(e);}
   busy=false;
 }
@@ -497,7 +517,7 @@ async function joinRoom(){
     s.players.push({id:myId,name,avatar:myAvatar,alive:true});myName=name;
   }
   roomCode=code;me=s.players.findIndex(p=>p.id===myId);
-  $('home-err').textContent='';writeRoom(s);subscribeAll(code);history.replaceState(null,'','sus.html?room='+code);show('scr-lobby');busy=false;
+  $('home-err').textContent='';writeRoom(s);subscribeAll(code);clearInterval(heartbeatInterval);pingPresence();heartbeatInterval=setInterval(pingPresence,15000);history.replaceState(null,'','sus.html?room='+code);show('scr-lobby');busy=false;
 }
 const isHost=()=>!!(state&&state.players.length&&state.players[0].id===myId);
 const myPlayer=()=>state&&state.players.find(p=>p.id===myId);
@@ -651,7 +671,7 @@ function renderLobby(s){
   const box=$('lobby-players');box.innerHTML='';
   for(let i=0;i<s.numPlayers;i++){
     const d=document.createElement('div');
-    if(s.players[i]){const p=s.players[i];d.className='pl-row';let inner='<span style="font-size:22px;">'+esc(av(p))+'</span> '+esc(p.name);if(i===0)inner+=' <span class="tag">HOST</span>';if(p.id===myId)inner+=' <small style="opacity:.5;">(you)</small>';if(isHost()&&i!==0&&p.id!==myId)inner+='<button class="kick-btn" onclick="hostKick(\''+p.id+'\')" title="Remove">✕</button>';d.innerHTML=inner;}
+    if(s.players[i]){const p=s.players[i];d.className='pl-row';let inner='<span style="font-size:22px;">'+esc(av(p))+'</span> '+esc(p.name);if(i===0)inner+=' <span class="tag">HOST</span>';if(p.id===myId)inner+=' <small style="opacity:.5;">(you)</small>';inner+=pingBadge(p.id);if(isHost()&&i!==0&&p.id!==myId)inner+='<button class="kick-btn" onclick="hostKick(\''+p.id+'\')" title="Remove">✕</button>';d.innerHTML=inner;}
     else{d.className='pl-row empty';d.textContent='Waiting…';}
     box.appendChild(d);
   }
