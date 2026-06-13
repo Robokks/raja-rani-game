@@ -242,7 +242,8 @@ const cardLabel=i=>{const v=cardValue(i);return v==='wild'?'🌈':v==='wild4'?'+
 
 function canPlay(i,top,activeColor,pendingDraw){
   const v=cardValue(i),tv=cardValue(top),c=cardColor(i);
-  if(pendingDraw>0){if(tv==='draw2')return v==='draw2';if(tv==='wild4')return v==='wild4';}
+  // No Mercy: any draw card can stack on any pending draw
+  if(pendingDraw>0) return v==='draw2'||v==='wild4';
   if(c==='wild')return true;
   if(c===activeColor)return true;
   if(v===tv)return true;
@@ -823,7 +824,7 @@ function renderGame(s){
       <div class="pile-info">
         <div class="active-color-label">Active color</div>
         <div class="active-color-val"><div class="active-color-dot ${activeColor}"></div>${esc(acLabel)}</div>
-        ${s.pendingDraw>0?`<div class="pending-warn">⚠️ +${s.pendingDraw} pending!</div>`:''}
+        ${s.pendingDraw>0?`<div class="pending-warn">🔥 +${s.pendingDraw} No Mercy — stack or draw!</div>`:''}
         <div style="font-family:'Catamaran';font-size:11px;font-weight:800;opacity:.5;margin-top:6px;">Pile: ${s.pile.length}</div>
       </div>
       <div class="deck-pile" onclick="drawCard()" title="Draw card">
