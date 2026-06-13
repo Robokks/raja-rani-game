@@ -145,6 +145,7 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
         <button class="np-btn" onclick="setAutoCall(15)">15s</button>
       </div>
     </div>
+    <div id="lobby-maxplayers" style="display:none;font-family:'Catamaran';font-size:13px;opacity:.6;margin:8px 0 0;"></div>
     <div id="lobby-monitor" style="display:none;margin-top:10px;font-family:'Catamaran';font-size:12px;opacity:.7;text-align:center;word-break:break-all;"></div>
     <button class="btn green" id="lobby-start" style="display:none;" onclick="hostStart()">Deal Tickets &amp; Start</button>
     <div class="waiting" id="lobby-wait" style="display:none;">
@@ -565,15 +566,18 @@ function renderLobby(s){
     const pb=document.createElement('span'); pb.innerHTML=pingBadge(p.id); row.appendChild(pb);
     lp.appendChild(row);
   });
-  const hOpts=$('lobby-host-opts'), mon=$('lobby-monitor');
+  const hOpts=$('lobby-host-opts'), mon=$('lobby-monitor'), mp=$('lobby-maxplayers');
   if(isHost()){
-    hOpts.style.display='block';
+    hOpts.style.display='block'; mp.style.display='none';
     updateNpPicker(s.numPlayers||8);
     updateSpeedPicker(s.autoCallSecs||0);
     const link=NTFY+'/tb-'+s.code+'-s';
     mon.style.display='block';
     mon.innerHTML='Monitor: <a href="'+link+'" target="_blank" style="color:var(--blue);">'+link+'</a>';
-  } else { hOpts.style.display='none'; mon.style.display='none'; }
+  } else {
+    hOpts.style.display='none'; mon.style.display='none';
+    mp.style.display='block'; mp.textContent='Max players: '+(s.numPlayers||8);
+  }
   $('lobby-start').style.display=(isHost()&&s.players.length>=2)?'block':'none';
   $('lobby-wait').style.display=isHost()?'none':'flex';
   $('lobby-err').textContent='';
