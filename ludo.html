@@ -231,6 +231,9 @@ const PNAMES  = ['Red','Yellow','Green','Blue'];
 const STARTS  = [0, 13, 26, 39];
 const SAFE    = new Set([0,8,13,21,26,34,39,47]);
 
+const RNAMES=['SwiftTiger','BoldLion','BravePanda','CleverFox','LuckyDragon','WildNinja','EpicShark','SneakyOwl','MightyWolf','RoyalEagle','CoolBear','DarkPhoenix'];
+function randomName(){return RNAMES[Math.floor(Math.random()*RNAMES.length)];}
+
 const CSS_COLORS = {
   red:    {fill:'#e74c3c', dark:'#c0392b', light:'#fadbd8'},
   yellow: {fill:'#f0b429', dark:'#d68910', light:'#fef9e7'},
@@ -521,6 +524,7 @@ buildAvatarGrid();
 // Pre-fill name
 (function() {
   const inp = $('home-name');
+  if (!myName) { myName = randomName(); localStorage.setItem('lu-name', myName); }
   inp.value = myName;
   inp.addEventListener('input', () => { myName = inp.value.trim(); localStorage.setItem('lu-name', myName); });
 })();
@@ -542,7 +546,7 @@ function myColorIdx() {
 // ─── Room create/join ────────────────────────────────────────────────────────
 async function createRoom() {
   myName = $('home-name').value.trim();
-  if (!myName) { $('home-err').textContent = 'Enter your name first.'; return; }
+  if (!myName) { myName = randomName(); $('home-name').value = myName; }
   localStorage.setItem('lu-name', myName);
   $('btn-create').disabled = true;
   $('home-err').textContent = '';
@@ -574,7 +578,7 @@ async function createRoom() {
 
 async function joinRoom() {
   myName = $('home-name').value.trim();
-  if (!myName) { $('home-err').textContent = 'Enter your name first.'; return; }
+  if (!myName) { myName = randomName(); $('home-name').value = myName; }
   localStorage.setItem('lu-name', myName);
   const code = $('home-code').value.trim().toUpperCase().slice(0,4);
   if (code.length < 4) { $('home-err').textContent = 'Enter a 4-letter room code.'; return; }
@@ -876,7 +880,13 @@ function renderLobby() {
 
   const isH = isHost();
   $('lobby-host-settings').style.display = isH ? 'block' : 'none';
-  if (isH) buildNpPicker();
+  if (isH) {
+    buildNpPicker();
+    let monEl = $('lobby-monitor');
+    if (!monEl) { monEl = document.createElement('div'); monEl.id = 'lobby-monitor'; $('lobby-host-settings').appendChild(monEl); }
+    const murl = NTFY + '/lu-' + state.code + '-s';
+    monEl.innerHTML = `<div style="margin-top:10px;padding:8px 10px;background:rgba(58,42,24,.07);border-radius:6px;font-family:'Catamaran',sans-serif;font-size:11px;font-weight:700;word-break:break-all;">📡 ntfy monitor:<br><a href="${murl}" target="_blank" style="color:var(--red);opacity:.8;">${murl}</a></div>`;
+  }
 
   // Player list
   const list = $('lobby-players');
