@@ -46,15 +46,10 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
 .back-link:hover{opacity:.9;}
 #conn-banner{display:none;position:fixed;top:0;left:0;right:0;background:var(--red);color:#fff;font-family:'Baloo Thambi 2';font-size:14px;font-weight:700;text-align:center;padding:8px;z-index:9999;}
 /* Board */
-#sl-board{display:grid;grid-template-columns:repeat(10,1fr);grid-template-rows:repeat(10,1fr);width:100%;aspect-ratio:1;border:2.5px solid var(--ink);border-radius:6px;overflow:hidden;background:#fffdf6;margin-top:10px;}
-.sl-cell{border-right:1px solid rgba(58,42,24,.16);border-bottom:1px solid rgba(58,42,24,.16);display:flex;flex-direction:column;align-items:center;padding:1px;position:relative;overflow:hidden;}
-.sl-cell.snake-h{background:#fce8e7;}
-.sl-cell.ladder-b{background:#d5f5e3;}
-.sl-cell.sq100{background:#fef3cd;}
-.cell-num{font-size:7px;font-weight:800;opacity:.5;align-self:flex-start;line-height:1.2;flex-shrink:0;}
-.cell-icon{font-size:9px;line-height:1;}
+#sl-board{display:grid;grid-template-columns:repeat(10,1fr);grid-template-rows:repeat(10,1fr);width:100%;aspect-ratio:1;border:2.5px solid var(--ink);border-radius:6px;overflow:hidden;background:#fffdf6;margin-top:10px;position:relative;}
+.sl-cell{border-right:1px solid rgba(58,42,24,.22);border-bottom:1px solid rgba(58,42,24,.22);display:flex;flex-direction:column;align-items:center;padding:1px;position:relative;}
+.cell-num{font-size:7px;font-weight:800;opacity:.75;align-self:flex-start;line-height:1.2;flex-shrink:0;color:rgba(58,42,24,.7);}
 .cell-tokens{display:flex;flex-wrap:wrap;gap:1px;justify-content:center;margin-top:auto;}
-.cell-token{width:10px;height:10px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:5px;font-weight:800;color:#fff;flex-shrink:0;}
 /* Game UI */
 .game-panel{background:var(--paper);border-radius:6px;box-shadow:0 4px 0 var(--shadow);padding:12px 16px;margin-top:8px;width:100%;max-width:480px;}
 .dice-row{display:flex;align-items:center;justify-content:center;gap:14px;}
@@ -469,6 +464,72 @@ function sq2grid(n){
   return{gridRow:10-rfb, gridCol:(rfb%2===0?pir:9-pir)+1};
 }
 
+const CELL_COLORS=['#ffd6e7','#ffeaa7','#d4f5d4','#a8d8ea','#e8c0f5','#ffd4a3'];
+const SNAKE_COLORS=['#e74c3c','#e67e22','#27ae60','#8e44ad','#2980b9','#d35400','#16a085','#c0392b'];
+
+function getCellPos(n){
+  const {gridRow,gridCol}=sq2grid(n);
+  return{x:(gridCol-0.5)*10, y:(gridRow-0.5)*10};
+}
+function svgEl(tag,attrs){
+  const el=document.createElementNS('http://www.w3.org/2000/svg',tag);
+  Object.entries(attrs).forEach(([k,v])=>el.setAttribute(k,v));
+  return el;
+}
+function svgLine(svg,x1,y1,x2,y2,color,w){
+  svg.appendChild(svgEl('line',{x1,y1,x2,y2,stroke:color,'stroke-width':w,'stroke-linecap':'round'}));
+}
+function svgCircle(parent,cx,cy,r,fill,stroke,sw){
+  const attrs={cx,cy,r,fill};
+  if(stroke){attrs.stroke=stroke;attrs['stroke-width']=sw||0.5;}
+  parent.appendChild(svgEl('circle',attrs));
+}
+
+function drawLadder(svg,from,to){
+  const b=getCellPos(from),t=getCellPos(to);
+  const dx=t.x-b.x,dy=t.y-b.y,len=Math.sqrt(dx*dx+dy*dy);
+  const nx=-dy/len*1.5,ny=dx/len*1.5;
+  svgLine(svg,b.x-nx,b.y-ny,t.x-nx,t.y-ny,'#8B4513',1.1);
+  svgLine(svg,b.x+nx,b.y+ny,t.x+nx,t.y+ny,'#8B4513',1.1);
+  for(let frac=0.12;frac<0.92;frac+=0.14){
+    const rx=b.x+dx*frac,ry=b.y+dy*frac;
+    svgLine(svg,rx-nx,ry-ny,rx+nx,ry+ny,'#D2691E',1.0);
+  }
+}
+
+function drawSnake(svg,head,tail,color){
+  const h=getCellPos(head),t=getCellPos(tail);
+  const dx=t.x-h.x,dy=t.y-h.y,len=Math.sqrt(dx*dx+dy*dy);
+  const nx=-dy/len,ny=dx/len;
+  const off=Math.min(len*0.45,20);
+  const c1={x:h.x+dx*0.3+nx*off,y:h.y+dy*0.3+ny*off};
+  const c2={x:h.x+dx*0.7-nx*off,y:h.y+dy*0.7-ny*off};
+  // Outline (slightly wider, darker)
+  svg.appendChild(svgEl('path',{d:`M${h.x},${h.y} C${c1.x},${c1.y} ${c2.x},${c2.y} ${t.x},${t.y}`,
+    stroke:'rgba(0,0,0,.25)','stroke-width':'5','fill':'none','stroke-linecap':'round'}));
+  // Body
+  svg.appendChild(svgEl('path',{d:`M${h.x},${h.y} C${c1.x},${c1.y} ${c2.x},${c2.y} ${t.x},${t.y}`,
+    stroke:color,'stroke-width':'3.8','fill':'none','stroke-linecap':'round'}));
+  // Head circle
+  svgCircle(svg,h.x,h.y,3.2,color,'rgba(0,0,0,.3)',0.5);
+  // Eyes (offset perpendicular to body direction)
+  const ex=-dx/len*0.8,ey=-dy/len*0.8;
+  svgCircle(svg,h.x+nx*1.3+ex,h.y+ny*1.3+ey,0.75,'white');
+  svgCircle(svg,h.x-nx*1.3+ex,h.y-ny*1.3+ey,0.75,'white');
+  // Tail dot
+  svgCircle(svg,t.x,t.y,1.3,color,'white',0.4);
+}
+
+function drawSnakesLadders(){
+  const board=$('sl-board');
+  const old=board.querySelector('svg.sl-overlay'); if(old) old.remove();
+  const svg=svgEl('svg',{class:'sl-overlay',viewBox:'0 0 100 100',preserveAspectRatio:'none'});
+  svg.style.cssText='position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;';
+  Object.entries(LADDERS).forEach(([from,to])=>drawLadder(svg,+from,+to));
+  Object.entries(SNAKES).forEach(([head,tail],i)=>drawSnake(svg,+head,+tail,SNAKE_COLORS[i%SNAKE_COLORS.length]));
+  board.appendChild(svg);
+}
+
 function buildBoard(){
   const board=$('sl-board'); board.innerHTML='';
   for(let n=1;n<=100;n++){
@@ -477,28 +538,31 @@ function buildBoard(){
     cell.className='sl-cell';
     cell.id='sq'+n;
     cell.style.gridRow=gridRow; cell.style.gridColumn=gridCol;
-    if(SNAKES[n]!==undefined) cell.classList.add('snake-h');
-    else if(LADDERS[n]!==undefined) cell.classList.add('ladder-b');
-    else if(n===100) cell.classList.add('sq100');
+    cell.style.background = n===100 ? '#fef3cd' : CELL_COLORS[(n-1)%6];
     const num=document.createElement('div'); num.className='cell-num'; num.textContent=n; cell.appendChild(num);
-    if(SNAKES[n]!==undefined){ const ic=document.createElement('div'); ic.className='cell-icon'; ic.textContent='🐍'; cell.appendChild(ic); }
-    else if(LADDERS[n]!==undefined){ const ic=document.createElement('div'); ic.className='cell-icon'; ic.textContent='🪜'; cell.appendChild(ic); }
-    else if(n===100){ const ic=document.createElement('div'); ic.className='cell-icon'; ic.textContent='🏆'; cell.appendChild(ic); }
+    if(n===100){ const ic=document.createElement('div'); ic.style.cssText='font-size:11px;line-height:1;'; ic.textContent='🏆'; cell.appendChild(ic); }
     const toks=document.createElement('div'); toks.className='cell-tokens'; toks.id='toks'+n; cell.appendChild(toks);
     board.appendChild(cell);
   }
+  drawSnakesLadders();
 }
 buildBoard();
 
 function renderBoard(s){
-  for(let n=1;n<=100;n++){ const t=$('toks'+n); if(t) t.innerHTML=''; }
+  const svg=$('sl-board').querySelector('svg.sl-overlay'); if(!svg) return;
+  svg.querySelectorAll('.sl-token').forEach(e=>e.remove());
   s.players.forEach((p,i)=>{
     if(p.pos<1||p.pos>100) return;
-    const t=$('toks'+p.pos); if(!t) return;
-    const tok=document.createElement('div');
-    tok.className='cell-token'; tok.style.background=PCOLORS[p.colorIdx]||PCOLORS[i%4];
-    tok.title=p.name; tok.textContent=(p.name||'?')[0].toUpperCase();
-    t.appendChild(tok);
+    const {x,y}=getCellPos(p.pos);
+    const color=PCOLORS[p.colorIdx]||PCOLORS[i%4];
+    const samePos=s.players.filter(pp=>pp.pos===p.pos);
+    const idx=samePos.findIndex(pp=>pp.id===p.id);
+    const ox=(idx-(samePos.length-1)/2)*3.0;
+    const g=svgEl('g',{class:'sl-token'});
+    svgCircle(g,x+ox,y,3.8,color,'white',0.9);
+    const txt=svgEl('text',{x:x+ox,y:y+1.4,'text-anchor':'middle','font-size':'4','font-weight':'800',fill:'white'});
+    txt.textContent=(p.name||'?')[0].toUpperCase();
+    g.appendChild(txt); svg.appendChild(g);
   });
 }
 
