@@ -433,6 +433,7 @@ function createRoom(){
   subscribeRoom(roomCode);
   subscribePresence(roomCode);
   clearInterval(heartbeatInterval);pingPresence();heartbeatInterval=setInterval(pingPresence,15000);
+  sessionStorage.setItem('un-room',roomCode);
   renderLobby(s);
   show('scr-lobby');
 }
@@ -461,6 +462,7 @@ function joinRoom(){
         subscribeRoom(roomCode);
         subscribePresence(roomCode);
         clearInterval(heartbeatInterval);pingPresence();heartbeatInterval=setInterval(pingPresence,15000);
+        sessionStorage.setItem('un-room',roomCode);
         renderLobby(s);show('scr-lobby');return;
       }
       if(s.players.length>=s.numPlayers){$('home-err').textContent='Room is full.';return;}
@@ -471,6 +473,7 @@ function joinRoom(){
       subscribeRoom(roomCode);
       subscribePresence(roomCode);
       clearInterval(heartbeatInterval);pingPresence();heartbeatInterval=setInterval(pingPresence,15000);
+      sessionStorage.setItem('un-room',roomCode);
       renderLobby(s2);
       show('scr-lobby');
     })
@@ -1010,6 +1013,22 @@ function renderOver(s){
 }
 
 window.addEventListener('beforeunload',e=>{if(roomCode){e.preventDefault();e.returnValue='';}});
+
+(async function(){
+  const saved=sessionStorage.getItem('un-room'); if(!saved) return;
+  let s=null;
+  try{
+    const text=await fetch(NTFY+'/un-'+saved+'-s/json?poll=1&since=all').then(r=>r.text());
+    for(const ln of text.trim().split('\n').filter(Boolean)){
+      try{const o=JSON.parse(ln);if(o.message){const m=_decState(JSON.parse(o.message));if(!s||m.version>s.version)s=m;}}catch{}
+    }
+  }catch{}
+  if(!s||!s.players||!s.players.find(p=>p.id===myId)){sessionStorage.removeItem('un-room');return;}
+  roomCode=saved; state=s; lastVer=s.version||0;
+  subscribeRoom(saved); subscribePresence(saved);
+  clearInterval(heartbeatInterval); pingPresence(); heartbeatInterval=setInterval(pingPresence,15000);
+  render();
+})();
 </script>
 </body>
 </html>

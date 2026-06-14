@@ -354,6 +354,7 @@ async function createRoom(){
     hostId:myId,numPlayers:4,currentTurnIdx:0,diceValue:null,lastMove:null,winner:null};
   roomCode=code; writeRoom(s); subscribeRoom(code); subscribeChat(code);
   subscribePresence(code); clearInterval(heartbeatInterval); pingPresence(); heartbeatInterval=setInterval(pingPresence,15000);
+  sessionStorage.setItem('sl-room',code);
   showScreen('scr-lobby');
 }
 
@@ -371,6 +372,7 @@ async function joinRoom(){
     roomCode=code; state=existing; lastVer=existing.version;
     subscribeRoom(code); subscribeChat(code);
     subscribePresence(code); clearInterval(heartbeatInterval); pingPresence(); heartbeatInterval=setInterval(pingPresence,15000);
+    sessionStorage.setItem('sl-room',code);
     showScreen('scr-lobby'); render(); return;
   }
   const s=deepCopy(existing);
@@ -378,6 +380,7 @@ async function joinRoom(){
   roomCode=code; lastVer=existing.version;
   writeRoom(s); subscribeRoom(code); subscribeChat(code);
   subscribePresence(code); clearInterval(heartbeatInterval); pingPresence(); heartbeatInterval=setInterval(pingPresence,15000);
+  sessionStorage.setItem('sl-room',code);
   showScreen('scr-lobby');
 }
 
@@ -391,6 +394,7 @@ function leaveRoom(){
   if(roomEs){roomEs.close();roomEs=null;} if(chatEs){chatEs.close();chatEs=null;}
   if(presEs){presEs.close();presEs=null;} clearInterval(heartbeatInterval); heartbeatInterval=null;
   state=null; roomCode=''; lastVer=0;
+  sessionStorage.removeItem('sl-room');
   const cp=$('chat-panel'); if(cp){cp.style.display='none';chatCollapsed=true;cp.classList.add('collapsed');}
   showScreen('scr-home');
 }
@@ -661,6 +665,16 @@ function render(){
   else if(state.phase==='play'){ showScreen('scr-game'); renderGame(state); }
   else if(state.phase==='over'){ showScreen('scr-over'); renderOver(state); }
 }
+
+(async function(){
+  const saved=sessionStorage.getItem('sl-room'); if(!saved) return;
+  const existing=await readRoom(saved);
+  if(!existing||!existing.players||!existing.players.find(p=>p.id===myId)){sessionStorage.removeItem('sl-room');return;}
+  roomCode=saved; state=existing; lastVer=existing.version||0;
+  subscribeRoom(saved); subscribeChat(saved); subscribePresence(saved);
+  clearInterval(heartbeatInterval); pingPresence(); heartbeatInterval=setInterval(pingPresence,15000);
+  render();
+})();
 </script>
 </body>
 </html>

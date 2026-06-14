@@ -496,7 +496,7 @@ async function createRoom(){
       kickedIds:[],players:[{id:myId,name:myName,avatar:myAvatar,alive:true}],
       roles:{},votes:{},eliminated:null,round:1,winner:null,
       discussDeadline:null,voteDeadline:null};
-    writeRoom(s);subscribeAll(code);clearInterval(heartbeatInterval);pingPresence();heartbeatInterval=setInterval(pingPresence,15000);history.replaceState(null,'','sus.html?room='+code);show('scr-lobby');
+    writeRoom(s);subscribeAll(code);clearInterval(heartbeatInterval);pingPresence();heartbeatInterval=setInterval(pingPresence,15000);history.replaceState(null,'','sus.html?room='+code);sessionStorage.setItem('su-room',code);show('scr-lobby');
   }catch(e){$('home-err').textContent='Error — check internet.';console.error(e);}
   busy=false;
 }
@@ -517,7 +517,7 @@ async function joinRoom(){
     s.players.push({id:myId,name,avatar:myAvatar,alive:true});myName=name;
   }
   roomCode=code;me=s.players.findIndex(p=>p.id===myId);
-  $('home-err').textContent='';writeRoom(s);subscribeAll(code);clearInterval(heartbeatInterval);pingPresence();heartbeatInterval=setInterval(pingPresence,15000);history.replaceState(null,'','sus.html?room='+code);show('scr-lobby');busy=false;
+  $('home-err').textContent='';writeRoom(s);subscribeAll(code);clearInterval(heartbeatInterval);pingPresence();heartbeatInterval=setInterval(pingPresence,15000);history.replaceState(null,'','sus.html?room='+code);sessionStorage.setItem('su-room',code);show('scr-lobby');busy=false;
 }
 const isHost=()=>!!(state&&state.players.length&&state.players[0].id===myId);
 const myPlayer=()=>state&&state.players.find(p=>p.id===myId);
@@ -805,6 +805,17 @@ function renderOver(s){
 }
 
 window.addEventListener('beforeunload',e=>{if(roomCode){e.preventDefault();e.returnValue='';}});
+
+(async function(){
+  const saved=sessionStorage.getItem('su-room'); if(!saved) return;
+  const existing=await readRoom(saved);
+  if(!existing||!existing.players||!existing.players.find(p=>p.id===myId)){sessionStorage.removeItem('su-room');return;}
+  roomCode=saved; state=existing; lastVer=existing.version||0;
+  me=existing.players.findIndex(p=>p.id===myId);
+  subscribeAll(saved);
+  clearInterval(heartbeatInterval); pingPresence(); heartbeatInterval=setInterval(pingPresence,15000);
+  render();
+})();
 </script>
 </body>
 </html>

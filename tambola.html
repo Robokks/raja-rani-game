@@ -454,6 +454,7 @@ async function createRoom(){
     autoCallSecs:0,lastCallTs:0};
   roomCode=code; writeRoom(s); subscribeRoom(code); subscribeChat(code);
   subscribePresence(code); clearInterval(heartbeatInterval); pingPresence(); heartbeatInterval=setInterval(pingPresence,15000);
+  sessionStorage.setItem('tb-room',code);
   showScreen('scr-lobby');
 }
 
@@ -471,6 +472,7 @@ async function joinRoom(){
     roomCode=code; state=existing; lastVer=existing.version;
     subscribeRoom(code); subscribeChat(code);
     subscribePresence(code); clearInterval(heartbeatInterval); pingPresence(); heartbeatInterval=setInterval(pingPresence,15000);
+    sessionStorage.setItem('tb-room',code);
     showScreen('scr-lobby'); render(); return;
   }
   const s=deepCopy(existing);
@@ -478,6 +480,7 @@ async function joinRoom(){
   roomCode=code; lastVer=existing.version;
   writeRoom(s); subscribeRoom(code); subscribeChat(code);
   subscribePresence(code); clearInterval(heartbeatInterval); pingPresence(); heartbeatInterval=setInterval(pingPresence,15000);
+  sessionStorage.setItem('tb-room',code);
   showScreen('scr-lobby');
 }
 
@@ -493,6 +496,7 @@ function leaveRoom(){
   clearTimeout(autoCallTimer); autoCallTimer=null;
   clearInterval(countdownTick); countdownTick=null;
   state=null; roomCode=''; lastVer=0;
+  sessionStorage.removeItem('tb-room');
   const cp=$('chat-panel'); if(cp){cp.style.display='none';chatCollapsed=true;cp.classList.add('collapsed');}
   showScreen('scr-home');
 }
@@ -661,6 +665,16 @@ function render(){
   else if(state.phase==='play'){ showScreen('scr-game'); renderGame(state); }
   else if(state.phase==='over'){ showScreen('scr-over'); renderOver(state); }
 }
+
+(async function(){
+  const saved=sessionStorage.getItem('tb-room'); if(!saved) return;
+  const existing=await readRoom(saved);
+  if(!existing||!existing.players||!existing.players.find(p=>p.id===myId)){sessionStorage.removeItem('tb-room');return;}
+  roomCode=saved; state=existing; lastVer=existing.version||0;
+  subscribeRoom(saved); subscribeChat(saved); subscribePresence(saved);
+  clearInterval(heartbeatInterval); pingPresence(); heartbeatInterval=setInterval(pingPresence,15000);
+  render();
+})();
 </script>
 </body>
 </html>

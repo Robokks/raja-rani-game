@@ -693,6 +693,7 @@ async function createRoom(){
       foundPlayers:[],roundPoints:{},lastResult:null};
     writeRoom(s);subscribeAll(code);startHeartbeat();
     history.replaceState(null,'','raja-rani.html?room='+code);
+    sessionStorage.setItem('rr-room',code);
     show('scr-lobby');
   }catch(e){$('home-err').textContent='Error — check internet.';console.error(e);}
   busy=false;
@@ -716,6 +717,7 @@ async function joinRoom(){
   roomCode=code;me=s.players.findIndex(p=>p.id===myId);
   $('home-err').textContent='';writeRoom(s);subscribeAll(code);startHeartbeat();
   history.replaceState(null,'','raja-rani.html?room='+code);
+  sessionStorage.setItem('rr-room',code);
   show('scr-lobby');busy=false;
 }
 
@@ -1085,6 +1087,16 @@ function renderTable(id,s){
 }
 
 window.addEventListener('beforeunload',e=>{if(roomCode){e.preventDefault();e.returnValue='';}});
+
+(async function(){
+  const saved=sessionStorage.getItem('rr-room'); if(!saved) return;
+  const existing=await readRoom(saved);
+  if(!existing||!existing.players||!existing.players.find(p=>p.id===myId)){sessionStorage.removeItem('rr-room');return;}
+  roomCode=saved; state=existing; lastVer=existing.version||0;
+  me=existing.players.findIndex(p=>p.id===myId);
+  subscribeAll(saved); startHeartbeat();
+  render();
+})();
 </script>
 </body>
 </html>

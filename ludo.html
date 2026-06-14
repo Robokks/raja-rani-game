@@ -603,6 +603,7 @@ async function createRoom() {
   clearInterval(heartbeatInterval);
   pingPresence();
   heartbeatInterval = setInterval(pingPresence, 15000);
+  sessionStorage.setItem('lu-room', code);
   showScreen('scr-lobby');
   $('btn-create').disabled = false;
 }
@@ -630,6 +631,7 @@ async function joinRoom() {
     clearInterval(heartbeatInterval);
     pingPresence();
     heartbeatInterval = setInterval(pingPresence, 15000);
+    sessionStorage.setItem('lu-room', code);
     showScreen('scr-lobby');
     render();
     return;
@@ -648,6 +650,7 @@ async function joinRoom() {
   clearInterval(heartbeatInterval);
   pingPresence();
   heartbeatInterval = setInterval(pingPresence, 15000);
+  sessionStorage.setItem('lu-room', code);
   showScreen('scr-lobby');
 }
 
@@ -668,6 +671,7 @@ function leaveRoom() {
   state = null;
   roomCode = '';
   lastVer = 0;
+  sessionStorage.removeItem('lu-room');
   const chatPanel = $('chat-panel');
   const rxnBar = $('rxn-bar');
   if (chatPanel) { chatPanel.style.display = 'none'; chatCollapsed = true; chatPanel.classList.add('collapsed'); }
@@ -1424,6 +1428,16 @@ window.addEventListener('resize', () => {
 });
 
 window.addEventListener('beforeunload',e=>{if(roomCode){e.preventDefault();e.returnValue='';}});
+
+(async function(){
+  const saved=sessionStorage.getItem('lu-room'); if(!saved) return;
+  const existing=await readRoom(saved);
+  if(!existing||!existing.players||!existing.players.find(p=>p.id===myId)){sessionStorage.removeItem('lu-room');return;}
+  roomCode=saved; state=existing; lastVer=existing.version||0;
+  subscribeRoom(saved); subscribeChat(saved); subscribeReactions(saved); subscribePresence(saved);
+  clearInterval(heartbeatInterval); pingPresence(); heartbeatInterval=setInterval(pingPresence,15000);
+  render();
+})();
 </script>
 </body>
 </html>
