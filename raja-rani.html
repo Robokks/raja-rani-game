@@ -799,7 +799,6 @@ function declareRaja(){
   busy=true;
   const s=deepCopy(state);
   s.chainFinder=me;s.declaredRajaIdx=me;s.phase='chain';
-  postLog('👑 '+myName+' declared as Raja!');
   writeRoom(s);busy=false;
 }
 
@@ -814,7 +813,7 @@ function guessPlayer(targetIdx){
   if(s.playerRoles[targetIdx]===target){
     playSound('correct');
     const ro=ROLE_DEFS[target];
-    postLog('✅ '+gName+' found '+tName+' as '+ro.emoji+' '+ro.en);
+    postLog('✅ '+tName+' ▸ '+ro.emoji+' '+ro.ta+'!');
     const pts=ROLE_DEFS[s.playerRoles[s.chainFinder]].pts;
     s.roundPoints[s.chainFinder]=(s.roundPoints[s.chainFinder]||0)+pts;
     s.foundPlayers=[...(s.foundPlayers||[]),targetIdx];
@@ -823,7 +822,7 @@ function guessPlayer(targetIdx){
     else writeRoom(s);
   }else{
     playSound('wrong');
-    postLog('🔀 '+gName+' guessed '+tName+' — wrong! Cards swapped');
+    postLog('🔀 Wrong guess — cards swapped!');
     const tmp=s.playerRoles[s.chainFinder];
     s.playerRoles[s.chainFinder]=s.playerRoles[targetIdx];
     s.playerRoles[targetIdx]=tmp;
@@ -999,7 +998,7 @@ function renderChain(s){
   const finderName=(s.players[s.chainFinder]||{name:'?'}).name;
   $('chain-finder-label').innerHTML=isMyTurn
     ?'<b>உங்க முறை!</b> Find <span style="color:var(--red);">'+tro.emoji+' '+tro.ta+'</span>'
-    :'👀 <b>'+esc(finderName)+'</b> is guessing…';
+    :'👀 <b>Someone</b> is choosing…';
   const area=$('chain-candidates');area.innerHTML='';
   (s.foundPlayers||[]).forEach(pi=>{
     if(pi==null)return;
