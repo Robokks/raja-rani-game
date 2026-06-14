@@ -267,7 +267,7 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
     <table class="score-table" id="w-table"></table>
   </div>
   <button class="btn green" id="w-rematch" style="display:none;" onclick="hostRematch()">மறுபடியும்! Rematch</button>
-  <button class="btn ghost" onclick="location.reload()" style="margin-top:12px;">Leave game</button>
+  <button class="btn ghost" onclick="sessionStorage.removeItem('rr-room');location.reload()" style="margin-top:12px;">Leave game</button>
 </div>
 
 <canvas id="confetti-canvas" style="display:none;position:fixed;inset:0;pointer-events:none;z-index:300;"></canvas>
@@ -434,7 +434,9 @@ localStorage.setItem('rr-ntfy-url',NTFY);
 })();
 
 // ── Module state ───────────────────────────────────────────────────────
-let myId='p'+Math.random().toString(36).slice(2,10),myName='',roomCode=null,me=-1;
+let myId=localStorage.getItem('rr-pid');
+if(!myId){myId='p'+Math.random().toString(36).slice(2,10);localStorage.setItem('rr-pid',myId);}
+let myName='',roomCode=null,me=-1;
 let state=null,lastVer=-1,busy=false,mycardTimer=null,renderedPhase=null;
 let chatCollapsed=true,unreadCount=0;
 let connLost=false;
@@ -705,20 +707,33 @@ async function joinRoom(){
   busy=true;
   NTFY=normalizeNtfy($('ntfy-url').value);localStorage.setItem('rr-ntfy-url',NTFY);$('ntfy-url').value=NTFY;
   $('home-err').textContent='Joining…';
-  const s=await readRoom(code);
-  if(!s){$('home-err').textContent='Room இல்லை! Code சரியா இருக்கா? (ntfy: '+NTFY+')';busy=false;return;}
-  if(s.phase!=='lobby'){$('home-err').textContent='Game already started.';busy=false;return;}
-  if(s.players.length>=s.numPlayers){$('home-err').textContent='Room full ('+s.numPlayers+'/'+s.numPlayers+').';busy=false;return;}
-  if(!s.players.some(p=>p.id===myId)){
-    let name=myName,suffix=2;
-    while(s.players.some(p=>p.name.toLowerCase()===name.toLowerCase()))name=myName+(suffix++);
-    s.players.push({id:myId,name,score:0,avatar:myAvatar});myName=name;
-  }
-  roomCode=code;me=s.players.findIndex(p=>p.id===myId);
-  $('home-err').textContent='';writeRoom(s);subscribeAll(code);startHeartbeat();
-  history.replaceState(null,'','raja-rani.html?room='+code);
-  sessionStorage.setItem('rr-room',code);
-  show('scr-lobby');busy=false;
+  try{
+    const s=await readRoom(code);
+    if(!s){$('home-err').textContent='Room இல்லை! Code சரியா இருக்கா? (ntfy: '+NTFY+')';busy=false;return;}
+    // Allow re-entry if already in room (even if game started)
+    const alreadyIn=s.players.some(p=>p.id===myId);
+    if(s.phase!=='lobby'&&!alreadyIn){$('home-err').textContent='Game already started.';busy=false;return;}
+    if(!alreadyIn){
+      if(s.players.length>=s.numPlayers){$('home-err').textContent='Room full ('+s.numPlayers+'/'+s.numPlayers+').';busy=false;return;}
+      let name=myName,suffix=2;
+      while(s.players.some(p=>p.name.toLowerCase()===name.toLowerCase()))name=myName+(suffix++);
+      s.players.push({id:myId,name,score:0,avatar:myAvatar});myName=name;
+      // Write and verify — retry up to 2x to handle simultaneous joins
+      for(let attempt=0;attempt<3;attempt++){
+        writeRoom(s);
+        await new Promise(r=>setTimeout(r,400+attempt*300));
+        const verify=await readRoom(code);
+        if(verify&&verify.players.some(p=>p.id===myId))break;
+        if(attempt===2){$('home-err').textContent='Join failed — try again.';busy=false;return;}
+      }
+    }
+    roomCode=code;me=s.players.findIndex(p=>p.id===myId);
+    $('home-err').textContent='';subscribeAll(code);startHeartbeat();
+    history.replaceState(null,'','raja-rani.html?room='+code);
+    sessionStorage.setItem('rr-room',code);
+    if(s.phase==='lobby')show('scr-lobby');else render();
+  }catch(e){$('home-err').textContent='Error — check internet.';console.error(e);}
+  busy=false;
 }
 
 const isHost=()=>me===0;
