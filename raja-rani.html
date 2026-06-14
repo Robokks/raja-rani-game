@@ -818,7 +818,7 @@ function guessPlayer(targetIdx){
     else writeRoom(s);
   }else{
     playSound('wrong');
-    postLog('🔀 Wrong guess — cards swapped!');
+    postLog('🔀 Cards swapped!');
     const tmp=s.playerRoles[s.chainFinder];
     s.playerRoles[s.chainFinder]=s.playerRoles[targetIdx];
     s.playerRoles[targetIdx]=tmp;
