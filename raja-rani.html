@@ -927,7 +927,9 @@ function renderDice(s){
 }
 
 function renderMycard(s,phaseChanged){
+  if(me<0||!s.playerRoles){show('scr-home');return;}
   const ro=ROLE_DEFS[s.playerRoles[me]];
+  if(!ro){show('scr-home');return;}
   $('mc-round').textContent='Round '+s.round+' / '+s.totalRounds;
   $('mc-emoji').textContent=ro.emoji;
   $('mc-ta').textContent=ro.ta;
@@ -960,6 +962,7 @@ function renderDeclare(s){
 }
 
 function renderChain(s){
+  if(!s.playerRoles||me<0){show('scr-home');return;}
   $('chain-round').textContent='Round '+s.round+' / '+s.totalRounds;
   renderChainProgress(s);
   const isMyTurn=me===s.chainFinder;
@@ -972,7 +975,8 @@ function renderChain(s){
   const area=$('chain-candidates');area.innerHTML='';
   (s.foundPlayers||[]).forEach(pi=>{
     if(pi==null)return;
-    const p=s.players[pi];const ro=ROLE_DEFS[s.playerRoles[pi]];
+    const p=s.players[pi];if(!p)return;
+    const ro=ROLE_DEFS[s.playerRoles[pi]];if(!ro)return;
     const d=document.createElement('div');
     d.className='candidate revealed';
     d.innerHTML='<span class="cface">'+esc(av(p))+'</span><span class="cname">'+esc(p.name)+'</span><span class="crole">'+ro.emoji+' '+ro.ta+' ✓</span>';
@@ -981,7 +985,7 @@ function renderChain(s){
   for(let pi=0;pi<s.numPlayers;pi++){
     if((s.foundPlayers||[]).includes(pi))continue;
     if(pi===s.chainFinder)continue;
-    const p=s.players[pi];
+    const p=s.players[pi];if(!p)continue;
     const offBadge=isOffline(p.id)?'<span class="offline-badge">offline</span>':'';
     const d=document.createElement('div');
     d.className='candidate'+(isMyTurn?'':' passive');
@@ -1013,7 +1017,7 @@ function renderResult(s){
   $('res-banner').textContent='✅ Chain complete! Points this round:';
   const list=$('res-roles');list.innerHTML='';
   (s.lastResult||[]).forEach(p=>{
-    const ro=ROLE_DEFS[p.roleKey];
+    const ro=ROLE_DEFS[p.roleKey];if(!ro)return;
     const row=document.createElement('div');
     row.className='role-row';
     row.innerHTML='<span class="em">'+(p.avatar||'🎮')+' '+ro.emoji+'</span>'+esc(p.name)+' <small style="opacity:.55;">('+ro.ta+')</small><span class="pt">+'+p.pts+'</span>';
