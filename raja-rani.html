@@ -52,9 +52,6 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
 .av-opt.selected{border-color:var(--red);background:#fce8e7;transform:scale(1.1);}
 .kick-btn{background:none;border:none;color:var(--red);font-size:17px;font-weight:800;cursor:pointer;padding:2px 6px;margin-left:auto;line-height:1;flex-shrink:0;}
 .offline-badge{font-family:'Catamaran';font-size:10px;font-weight:800;color:#fff;background:#999;padding:1px 6px;border-radius:8px;margin-left:4px;vertical-align:middle;}
-.timer-bar{height:6px;background:rgba(58,42,24,.15);border-radius:3px;margin-top:10px;overflow:hidden;}
-.timer-fill{height:100%;background:var(--green);border-radius:3px;transition:background .4s;}
-.timer-num{text-align:center;font-size:20px;font-weight:800;margin-top:4px;}
 .dice-wrap{display:flex;flex-direction:column;align-items:center;margin-top:24px;}
 .dice{width:110px;height:110px;background:var(--paper);border-radius:20px;box-shadow:0 8px 0 var(--shadow),0 12px 24px rgba(0,0,0,.2);display:flex;align-items:center;justify-content:center;font-size:68px;cursor:pointer;transition:transform .08s;line-height:1;}
 .dice:active{transform:scale(.92);}
@@ -177,12 +174,6 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
         <button class="np-btn" onclick="setRounds(7)">7</button>
         <button class="np-btn" onclick="setRounds(10)">10</button>
       </div>
-      <label>Guess timer / நேரம்</label>
-      <div class="np-picker" id="timer-picker">
-        <button class="np-btn" onclick="setTimer(15)">15s</button>
-        <button class="np-btn active" onclick="setTimer(30)">30s</button>
-        <button class="np-btn" onclick="setTimer(60)">60s</button>
-      </div>
     </div>
     <div class="player-list" id="lobby-players"></div>
     <button class="btn" id="lobby-start" onclick="hostStart()" style="display:none;" disabled>Waiting&hellip;</button>
@@ -234,8 +225,6 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
 <!-- CHAIN -->
 <div class="screen" id="scr-chain">
   <div class="tagwrap"><span class="roundtag" id="chain-round"></span></div>
-  <div class="timer-bar"><div class="timer-fill" id="chain-timer-fill" style="width:100%;"></div></div>
-  <div class="timer-num" id="chain-timer-num">30s</div>
   <div class="chain-progress" id="chain-progress"></div>
   <div id="chain-finder-label" class="centertext" style="margin-top:10px;font-size:15px;"></div>
   <div class="candidates" id="chain-candidates"></div>
@@ -442,7 +431,7 @@ let chatCollapsed=true,unreadCount=0;
 let connLost=false;
 function onConnLost(){if(connLost)return;connLost=true;const b=$('conn-banner');if(b)b.style.display='block';}
 function onConnBack(){connLost=false;const b=$('conn-banner');if(b)b.style.display='none';}
-let chainTimerInterval=null,heartbeatInterval=null;
+let heartbeatInterval=null;
 let roomEs=null,logEs=null,presEs=null,chatEs=null;
 const seenMsgs=new Set();
 const seenLogs=new Set();
@@ -688,7 +677,7 @@ async function createRoom(){
     }
     roomCode=code;me=0;$('home-err').textContent='';
     const s={code,version:0,phase:'lobby',round:1,totalRounds:5,numPlayers:4,
-      chainTimerSecs:30,kickedIds:[],
+      kickedIds:[],
       players:[{id:myId,name:myName,score:0,avatar:myAvatar}],
       playerRoles:null,diceRoller:0,diceValue:null,
       chainStep:0,chainFinder:null,declaredRajaIdx:null,
@@ -739,10 +728,6 @@ function setNumPlayers(n){
   if(!isHost()||!state||state.phase!=='lobby')return;
   if(state.players.length>n)return;
   const s=deepCopy(state);s.numPlayers=n;writeRoom(s);
-}
-function setTimer(n){
-  if(!isHost()||!state||state.phase!=='lobby')return;
-  const s=deepCopy(state);s.chainTimerSecs=n;writeRoom(s);
 }
 function setRounds(n){
   if(!isHost()||!state||state.phase!=='lobby')return;
@@ -853,28 +838,6 @@ function finalizeRound(s){
   s.phase='result';writeRoom(s);
 }
 
-// ── Chain timer ────────────────────────────────────────────────────────
-function startChainTimer(s){
-  clearInterval(chainTimerInterval);
-  const total=s.chainTimerSecs||30;
-  const deadline=s.ts+total*1000;
-  chainTimerInterval=setInterval(()=>{
-    if(!state||state.phase!=='chain'){clearInterval(chainTimerInterval);return;}
-    const rem=Math.max(0,Math.ceil((deadline-Date.now())/1000));
-    const pct=rem/total*100;
-    const numEl=$('chain-timer-num'),fillEl=$('chain-timer-fill');
-    if(numEl)numEl.textContent=rem+'s';
-    if(fillEl){fillEl.style.width=pct+'%';fillEl.style.background=rem<=10?'var(--red)':'var(--green)';}
-    if(rem===0){
-      clearInterval(chainTimerInterval);
-      if(state&&state.phase==='chain'&&state.chainFinder===me){
-        const pool=[...Array(state.numPlayers).keys()]
-          .filter(i=>i!==me&&!(state.foundPlayers||[]).includes(i));
-        if(pool.length)guessPlayer(pool[Math.floor(Math.random()*pool.length)]);
-      }
-    }
-  },250);
-}
 
 // ── Round flow ─────────────────────────────────────────────────────────
 async function hostNextRound(){
@@ -899,7 +862,6 @@ function render(){
   const rxnPhases=['dice','mycard','declare','chain','result'];
   $('rxn-bar').style.display=rxnPhases.includes(s.phase)?'flex':'none';
   $('mychit').style.display='none';
-  if(s.phase!=='chain')clearInterval(chainTimerInterval);
   const phaseChanged=s.phase!==renderedPhase;
   renderedPhase=s.phase;
   switch(s.phase){
@@ -925,9 +887,6 @@ function renderLobby(s){
     });
     $('rounds-picker').querySelectorAll('.np-btn').forEach(btn=>{
       btn.classList.toggle('active',parseInt(btn.textContent)===(s.totalRounds||5));
-    });
-    $('timer-picker').querySelectorAll('.np-btn').forEach(btn=>{
-      btn.classList.toggle('active',parseInt(btn.textContent)===(s.chainTimerSecs||30));
     });
   }else{hostSec.style.display='none';}
   const box=$('lobby-players');box.innerHTML='';
@@ -1030,7 +989,6 @@ function renderChain(s){
     if(isMyTurn)d.onclick=()=>guessPlayer(pi);
     area.appendChild(d);
   }
-  startChainTimer(s);
   renderLog();
   showBadge(s);show('scr-chain');
 }
