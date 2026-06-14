@@ -710,7 +710,6 @@ async function joinRoom(){
   try{
     const s=await readRoom(code);
     if(!s){$('home-err').textContent='Room இல்லை! Code சரியா இருக்கா? (ntfy: '+NTFY+')';busy=false;return;}
-    // Allow re-entry if already in room (even if game started)
     const alreadyIn=s.players.some(p=>p.id===myId);
     if(s.phase!=='lobby'&&!alreadyIn){$('home-err').textContent='Game already started.';busy=false;return;}
     if(!alreadyIn){
@@ -718,20 +717,17 @@ async function joinRoom(){
       let name=myName,suffix=2;
       while(s.players.some(p=>p.name.toLowerCase()===name.toLowerCase()))name=myName+(suffix++);
       s.players.push({id:myId,name,score:0,avatar:myAvatar});myName=name;
-      // Write and verify — retry up to 2x to handle simultaneous joins
-      for(let attempt=0;attempt<3;attempt++){
-        writeRoom(s);
-        await new Promise(r=>setTimeout(r,400+attempt*300));
-        const verify=await readRoom(code);
-        if(verify&&verify.players.some(p=>p.id===myId))break;
-        if(attempt===2){$('home-err').textContent='Join failed — try again.';busy=false;return;}
-      }
     }
-    roomCode=code;me=s.players.findIndex(p=>p.id===myId);
-    $('home-err').textContent='';subscribeAll(code);startHeartbeat();
+    // Set roomCode BEFORE writeRoom — writeRoom uses roomCode for the ntfy topic
+    roomCode=code;
+    me=s.players.findIndex(p=>p.id===myId);
+    state=s;lastVer=s.version||0;
+    $('home-err').textContent='';
+    if(!alreadyIn)writeRoom(s);
+    subscribeAll(code);startHeartbeat();
     history.replaceState(null,'','raja-rani.html?room='+code);
     sessionStorage.setItem('rr-room',code);
-    if(s.phase==='lobby')show('scr-lobby');else render();
+    render();
   }catch(e){$('home-err').textContent='Error — check internet.';console.error(e);}
   busy=false;
 }
