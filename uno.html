@@ -460,8 +460,10 @@ function performAutoSkip(){
     s.lastAutoSkippedId=cp.id;
     s.lastAction=`${cp.name} was auto-skipped (disconnected)`;
     s.autoSkipAt=null;
+    const cpId=cp.id;
     checkMercy(s);
-    if(s.phase!=='over')advanceTurn(s,1);
+    const cpElim=s.players.some(p=>p.id===cpId&&p.eliminated);
+    if(s.phase!=='over'&&!cpElim)advanceTurn(s,1);
     return _encState(deepCopy(s));
   });
 }
@@ -736,7 +738,7 @@ function dealGame(s){
   for(let i=0;i<7;i++)s.players.forEach(p=>{s.hands[p.id].push(s.deck.pop());});
   // start pile: reject wild4, wild+4 variants
   let startCard;
-  const wildCards=['wild4','shuffle','wild6','wild10','wildrev4','roulette'];
+  const wildCards=['wild4','shuffle','wild6','wild10','wildrev4','roulette','discardall','draw4c','skipall'];
   while(true){
     startCard=s.deck.pop();
     if(!wildCards.includes(cardValue(startCard)))break;
@@ -1011,7 +1013,7 @@ function drawCard(){
     s.players[idx].handCount=s.hands[myId].length;
     s.lastAction=`${s.players[idx].name} draws ${drew} roulette card${drew!==1?'s':''}`;
     checkMercy(s);
-    if(s.phase!=='over')advanceTurn(s,1);
+    if(s.phase!=='over'&&!s.players[idx].eliminated)advanceTurn(s,1);
     writeRoom(s);busy=false;return;
   }
 
@@ -1022,7 +1024,7 @@ function drawCard(){
     s.pendingDraw=0;
     s.players[idx].handCount=s.hands[myId].length;
     checkMercy(s);
-    if(s.phase!=='over')advanceTurn(s,1);
+    if(s.phase!=='over'&&!s.players[idx].eliminated)advanceTurn(s,1);
     writeRoom(s);busy=false;return;
   }
 
@@ -1042,8 +1044,9 @@ function drawCard(){
     s.lastAction=`${s.players[idx].name} draws ${drew} card${drew!==1?'s':''}`;
     checkMercy(s);
     if(s.phase==='over'){writeRoom(s);busy=false;return;}
-    // If last drawn card is playable, let player choose to play or pass
-    if(lastCard!==undefined&&canPlay(lastCard,top,s.currentColor,0,mode)){
+    if(s.players[idx].eliminated){
+      // checkMercy already advanced turn
+    } else if(lastCard!==undefined&&canPlay(lastCard,top,s.currentColor,0,mode)){
       s.drewThisTurn=myId;
     } else {
       advanceTurn(s,1);
@@ -1291,15 +1294,26 @@ function renderGame(s){
   // Swap overlay
   const swapOverlay=$('swap-overlay');
   if(s.pendingSwapFrom&&s.pendingSwapFrom===myId){
-    const sp=$('swap-players');sp.innerHTML='';
-    s.players.filter(p=>p.id!==myId).forEach(p=>{
-      const btn=document.createElement('button');
-      btn.className='swap-player-btn';
-      btn.innerHTML=`<span class="swap-av">${esc(p.avatar)}</span><span>${esc(p.name)}</span><span class="swap-count">🃏 ${(s.hands[p.id]||[]).length}</span>`;
-      btn.onclick=()=>chooseSwap(p.id);
-      sp.appendChild(btn);
-    });
-    swapOverlay.classList.add('show');
+    const eligibleSwap=s.players.filter(p=>p.id!==myId&&!p.eliminated);
+    if(eligibleSwap.length===0){
+      // No valid targets — auto-cancel swap and advance turn
+      const ns=deepCopy(state);
+      ns.pendingSwapFrom=null;
+      ns.lastAction='Swap cancelled (no eligible targets)';
+      advanceTurn(ns,1);
+      writeRoom(ns);
+      swapOverlay.classList.remove('show');
+    } else {
+      const sp=$('swap-players');sp.innerHTML='';
+      eligibleSwap.forEach(p=>{
+        const btn=document.createElement('button');
+        btn.className='swap-player-btn';
+        btn.innerHTML=`<span class="swap-av">${esc(p.avatar)}</span><span>${esc(p.name)}</span><span class="swap-count">🃏 ${(s.hands[p.id]||[]).length}</span>`;
+        btn.onclick=()=>chooseSwap(p.id);
+        sp.appendChild(btn);
+      });
+      swapOverlay.classList.add('show');
+    }
   } else {
     swapOverlay.classList.remove('show');
   }
