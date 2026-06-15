@@ -52,8 +52,6 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
 .av-opt:active{transform:scale(.88);}
 .av-opt.selected{border-color:var(--red);background:#fce8e7;transform:scale(1.1);}
 .kick-btn{background:none;border:none;color:var(--red);font-size:17px;font-weight:800;cursor:pointer;padding:2px 6px;margin-left:auto;line-height:1;flex-shrink:0;}
-.conn-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;background:#888;vertical-align:middle;}
-.conn-dot.ok{background:#2e6e4e;}.conn-dot.err{background:#b3322b;}
 /* Game-specific */
 .rank-bar{background:var(--ink);color:var(--kraft);border-radius:10px;padding:10px 18px;margin-top:12px;display:flex;align-items:center;justify-content:space-between;}
 .rank-bar .rlabel{font-family:'Catamaran';font-size:11px;font-weight:800;letter-spacing:2px;text-transform:uppercase;opacity:.6;}
@@ -126,14 +124,8 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
       autocapitalize="characters" autocorrect="off" spellcheck="false"
       oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,'')">
     <button class="btn green" onclick="joinRoom()">&#x1F6AA; Join room</button>
-    <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(58,42,24,.18);">
-      <label style="margin-top:0;">&#x1F4E1; ntfy server URL</label>
-      <input type="text" id="ntfy-url" placeholder="https://ntfy.sh" autocomplete="off" style="font-size:15px;letter-spacing:.5px;">
-      <div style="font-family:'Catamaran';font-size:11px;font-weight:600;opacity:.65;margin-top:4px;line-height:1.5;">All players must use the same ntfy server URL</div>
-    </div>
     <div class="err" id="home-err"></div>
   </div>
-  <p class="hint"><span class="conn-dot" id="conn-dot"></span><span id="conn-txt">Checking ntfy.sh&hellip;</span></p>
   <p class="hint" style="margin-top:8px;"><a href="index.html" style="color:var(--red);font-weight:800;">&#x2190; Back to games</a></p>
 </div>
 
@@ -163,6 +155,7 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
     <div class="player-list" id="lobby-players"></div>
     <button class="btn" id="lobby-start" onclick="hostStart()" style="display:none;" disabled>Waiting&hellip;</button>
     <div class="waiting" id="lobby-wait"><span class="dotpulse"></span><span class="dotpulse"></span><span class="dotpulse"></span><span style="margin-left:4px;font-size:13px;">Waiting for players&hellip;</span></div>
+    <button class="btn ghost" onclick="sessionStorage.removeItem(SS_KEY);leaveRoom()" style="margin-top:12px;">← Leave / New game</button>
   </div>
 </div>
 
@@ -246,9 +239,19 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
   <button class="rxn-btn" onclick="sendReaction('&#x1F44F;')">&#x1F44F;</button>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script>
+// ─── Firebase ────────────────────────────────────────────────────────────────
+const _FBCFG={apiKey:"AIzaSyAQ0l788yLKmfWIJ6Ok88k2TcwdD6XA1n4",authDomain:"raja-rani-game-ffecd.firebaseapp.com",databaseURL:"https://raja-rani-game-ffecd-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"raja-rani-game-ffecd"};
+let db,roomRef,presenceRef;
+if(!firebase.apps.length)firebase.initializeApp(_FBCFG);
+db=firebase.database();
+
+// ─── Constants ────────────────────────────────────────────────────────────────
 const RANKS=['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
 const SUITS=['♠','♥','♦','♣'];
+const SS_KEY='bl-room';
 function cardRank(i){return Math.floor(i/4);}
 function cardSuit(i){return i%4;}
 function cardLabel(i){return RANKS[cardRank(i)]+SUITS[cardSuit(i)];}
@@ -261,7 +264,27 @@ const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()
 const av=p=>{const a=(p&&p.avatar)||'\u{1F0CF}';return AVATARS.includes(a)||a==='\u{1F0CF}'?a:'\u{1F0CF}';};
 const show=id=>{document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));$(id).classList.add('active');window.scrollTo(0,0);};
 
+// ─── XOR hand encryption (hands are private) ─────────────────────────────────
+const _K=[114,103,103,97,109,101];
+function _enc(str){const b=new TextEncoder().encode(str);let s='';for(let i=0;i<b.length;i++)s+=String.fromCharCode(b[i]^_K[i%6]);return btoa(s);}
+function _dec(b64){const s=atob(b64);const b=new Uint8Array(s.length);for(let i=0;i<s.length;i++)b[i]=s.charCodeAt(i)^_K[i%6];return new TextDecoder().decode(b);}
+function _encState(s){const o=deepCopy(s);if(o.hands&&Array.isArray(o.hands))o.hands=_enc(JSON.stringify(o.hands));return o;}
+function _decState(s){if(!s)return s;if(typeof s.hands==='string')try{s.hands=JSON.parse(_dec(s.hands));}catch{}return s;}
+
+// ─── State vars ───────────────────────────────────────────────────────────────
 const RAND_NAMES=['Arjun','Priya','கார்த்திக்','Meena','Vijay','தீபா','Ravi','லட்சுமி','Muthu','Selvi','Bala','Kavya','அன்பு','Surya','Tamil','Vel','நிலா','Deepak','Kiran','Sandy','பிரியா','Siva','மீனா','Rocky'];
+const AVATARS=['\u{1F42F}','\u{1F981}','\u{1F43B}','\u{1F43C}','\u{1F428}','\u{1F98A}','\u{1F438}','\u{1F419}','\u{1F984}','\u{1F409}','\u{1F98B}','⭐'];
+
+let myId=localStorage.getItem('bl-pid')||('p'+Math.random().toString(36).slice(2,10));
+localStorage.setItem('bl-pid',myId);
+let myName='',myAvatar=localStorage.getItem('bl-avatar')||'\u{1F0CF}';
+let roomCode=null,me=-1;
+let state=null,lastVer=-1,busy=false,renderedPhase=null;
+let presenceMap={},lastRxnTs=0;
+let bluffTimerInterval=null;
+let selectedCards=new Set();
+
+// ─── Name pre-fill ────────────────────────────────────────────────────────────
 (function(){
   const saved=localStorage.getItem('bl-name');
   const el=$('myname');
@@ -270,8 +293,7 @@ const RAND_NAMES=['Arjun','Priya','கார்த்திக்','Meena','Vija
   el.oninput=()=>localStorage.setItem('bl-name',el.value.trim());
 })();
 
-const AVATARS=['\u{1F42F}','\u{1F981}','\u{1F43B}','\u{1F43C}','\u{1F428}','\u{1F98A}','\u{1F438}','\u{1F419}','\u{1F984}','\u{1F409}','\u{1F98B}','⭐'];
-let myAvatar=localStorage.getItem('bl-avatar')||'\u{1F0CF}';
+// ─── Avatar grid ─────────────────────────────────────────────────────────────
 (function(){
   const grid=$('avatar-grid');
   AVATARS.forEach(em=>{
@@ -283,32 +305,7 @@ let myAvatar=localStorage.getItem('bl-avatar')||'\u{1F0CF}';
   });
 })();
 
-// ── Obfuscation helpers ───────────────────────────────────────────────
-const _K=[114,103,103,97,109,101];
-function _enc(str){const b=new TextEncoder().encode(str);let s='';for(let i=0;i<b.length;i++)s+=String.fromCharCode(b[i]^_K[i%6]);return btoa(s);}
-function _dec(b64){const s=atob(b64);const b=new Uint8Array(s.length);for(let i=0;i<s.length;i++)b[i]=s.charCodeAt(i)^_K[i%6];return new TextDecoder().decode(b);}
-function _encState(s){const o=Object.assign({},s);if(o.hands)o.hands=_enc(JSON.stringify(o.hands));return JSON.stringify(o);}
-function _decState(s){if(!s)return s;if(typeof s.hands==='string')try{s.hands=JSON.parse(_dec(s.hands));}catch{}return s;}
-
-function normalizeNtfy(raw){
-  let v=(raw||'https://ntfy.sh').trim();
-  try{v=new URL(v).origin;}catch{}
-  return v.replace(/\/+$/,'')||'https://ntfy.sh';
-}
-let NTFY=normalizeNtfy(localStorage.getItem('bl-ntfy-url')||localStorage.getItem('rr-ntfy-url'));
-localStorage.setItem('bl-ntfy-url',NTFY);
-(function(){
-  const el=$('ntfy-url');
-  el.value=NTFY;
-  el.oninput=()=>{NTFY=el.value.trim().replace(/\/+$/,'')||'https://ntfy.sh';};
-  el.onblur=()=>{const v=normalizeNtfy(el.value);NTFY=v;el.value=v;localStorage.setItem('bl-ntfy-url',v);};
-})();
-(function(){
-  const dot=$('conn-dot'),txt=$('conn-txt');
-  fetch(NTFY+'/',{method:'HEAD'})
-    .then(()=>{dot.className='conn-dot ok';txt.textContent=NTFY+' ready ✓';})
-    .catch(()=>{dot.className='conn-dot err';txt.textContent='Cannot reach '+NTFY;});
-})();
+// ─── URL param: pre-fill join code ───────────────────────────────────────────
 (function(){
   const code=new URLSearchParams(location.search).get('room');
   if(code&&code.length===4){
@@ -318,83 +315,66 @@ localStorage.setItem('bl-ntfy-url',NTFY);
   }
 })();
 
-let myId='p'+Math.random().toString(36).slice(2,10),myName='',roomCode=null,me=-1;
-let state=null,lastVer=-1,busy=false,renderedPhase=null;
-let roomEs=null,presEs=null,rxnEs=null;
-let bluffTimerInterval=null,heartbeatInterval=null;
-const lastSeenMap={};
-let selectedCards=new Set();
-let connLost=false;
-function onConnLost(){if(connLost)return;connLost=true;const b=$('conn-banner');if(b)b.style.display='block';}
-function onConnBack(){connLost=false;const b=$('conn-banner');if(b)b.style.display='none';}
-
-async function readRoom(code){
-  for(let a=0;a<3;a++){
-    if(a>0)await new Promise(r=>setTimeout(r,1500));
-    try{
-      const res=await fetch(NTFY+'/bl-'+code+'-s/json?poll=1&since=all');
-      if(!res.ok)continue;
-      const text=await res.text();
-      let latest=null;
-      for(const line of text.trim().split('\n').filter(Boolean)){
-        try{const ev=JSON.parse(line);if(ev.event==='message'&&ev.message){const s=_decState(JSON.parse(ev.message));if(!latest||(s.version||0)>(latest.version||0))latest=s;}}catch{}
-      }
-      if(latest)return latest;
-    }catch{}
-  }
-  return null;
-}
+// ─── Firebase room functions ──────────────────────────────────────────────────
 function writeRoom(s){
   s.version=(s.version||0)+1;s.ts=Date.now();
-  fetch(NTFY+'/bl-'+roomCode+'-s',{method:'POST',body:_encState(s)}).catch(()=>onConnLost());
+  db.ref('rooms/BL-'+roomCode+'/state').set(_encState(s));
   state=s;lastVer=s.version;render();
 }
+
 function subscribeRoom(code){
-  if(roomEs)roomEs.close();
-  const since=Math.floor((Date.now()-5000)/1000);
-  roomEs=new EventSource(NTFY+'/bl-'+code+'-s/sse?since='+since);
-  roomEs.onmessage=e=>{
-    try{
-      const ev=JSON.parse(e.data);if(ev.event!=='message')return;
-      const s=_decState(JSON.parse(ev.message));
-      if(s.version<=lastVer)return;
-      if((s.kickedIds||[]).includes(myId)){alert('You were removed.');location.reload();return;}
-      lastVer=s.version;state=s;me=s.players.findIndex(p=>p.id===myId);render();
-    }catch{}
-  };
-  roomEs.onerror=()=>onConnLost();
-  roomEs.onopen=()=>onConnBack();
+  if(roomRef)roomRef.off();
+  roomRef=db.ref('rooms/BL-'+code+'/state');
+  roomRef.on('value',snap=>{
+    const raw=snap.val();if(!raw)return;
+    const s=_decState(deepCopy(raw));if(!s)return;
+    const ver=s.version||0;
+    if(ver<=lastVer)return;
+    if((s.kickedIds||[]).includes(myId)){alert('You were removed.');location.reload();return;}
+    lastVer=ver;state=s;
+    me=s.players.findIndex(p=>p.id===myId);
+    render();
+  });
 }
+
 function subscribePresence(code){
-  if(presEs)presEs.close();
-  const since=Math.floor((Date.now()-25000)/1000);
-  presEs=new EventSource(NTFY+'/bl-'+code+'-p/sse?since='+since);
-  presEs.onmessage=e=>{
-    try{const ev=JSON.parse(e.data);if(ev.event!=='message')return;const d=JSON.parse(ev.message);if(d.pid&&d.t)lastSeenMap[d.pid]={ts:Date.now(),ping:Math.max(0,Date.now()-d.t)};}catch{}
-  };
+  const presRef=db.ref('rooms/BL-'+code+'/presence/'+myId);
+  presRef.set({name:myName,ts:Date.now()});
+  presRef.onDisconnect().remove();
+  if(presenceRef)presenceRef.off();
+  presenceRef=db.ref('rooms/BL-'+code+'/presence');
+  presenceRef.on('value',snap=>{
+    presenceMap=snap.val()||{};
+    if(state&&state.phase==='lobby')renderLobby(state);
+  });
 }
+
 function subscribeReactions(code){
-  if(rxnEs)rxnEs.close();
-  const since=Math.floor((Date.now()-3000)/1000);
-  rxnEs=new EventSource(NTFY+'/bl-'+code+'-rxn/sse?since='+since);
-  rxnEs.onmessage=e=>{
-    try{const ev=JSON.parse(e.data);if(ev.event!=='message')return;const d=JSON.parse(ev.message);if(d.pid!==myId)showRxnFloat(d.emoji);}catch{}
-  };
+  db.ref('rooms/BL-'+code+'/rxn').on('value',snap=>{
+    const r=snap.val();
+    if(!r||!r.ts||r.ts<=lastRxnTs)return;
+    lastRxnTs=r.ts;
+    if(r.senderId!==myId)showRxnFloat(r.emoji);
+  });
 }
+
 function subscribeAll(code){subscribeRoom(code);subscribePresence(code);subscribeReactions(code);}
-function pingPresence(){if(!roomCode)return;fetch(NTFY+'/bl-'+roomCode+'-p',{method:'POST',body:JSON.stringify({pid:myId,t:Date.now()})});}
-function startHeartbeat(){clearInterval(heartbeatInterval);pingPresence();heartbeatInterval=setInterval(pingPresence,8000);}
+
 function pingBadge(pid){
   if(pid===myId)return '';
-  const p=lastSeenMap[pid];
-  if(!p||Date.now()-p.ts>25000)return '<span style="color:#888;font-size:12px;margin-left:auto;">⚫</span>';
-  const ms=p.ping,col=ms<400?'#27ae60':ms<1000?'#d49a2a':'#e74c3c';
-  const lbl=ms<1000?ms+'ms':(ms/1000).toFixed(1)+'s';
-  return '<span style="color:'+col+';font-size:11px;font-family:Catamaran;font-weight:700;margin-left:auto;">● '+lbl+'</span>';
+  return presenceMap[pid]
+    ?'<span style="color:#2e6e4e;font-size:11px;font-family:Catamaran;font-weight:700;margin-left:auto;">● online</span>'
+    :'<span style="color:#888;font-size:11px;margin-left:auto;">⚫</span>';
 }
-function sendReaction(emoji){if(!roomCode)return;showRxnFloat(emoji);fetch(NTFY+'/bl-'+roomCode+'-rxn',{method:'POST',body:JSON.stringify({emoji,pid:myId,t:Date.now()})});}
+
+function sendReaction(emoji){
+  if(!roomCode)return;
+  showRxnFloat(emoji);
+  db.ref('rooms/BL-'+roomCode+'/rxn').set({emoji,senderId:myId,ts:Date.now()});
+}
 function showRxnFloat(emoji){const el=document.createElement('div');el.className='rxn-float';el.textContent=emoji;el.style.cssText='left:'+(15+Math.random()*70)+'%;bottom:70px;';document.body.appendChild(el);setTimeout(()=>el.remove(),2100);}
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 function launchConfetti(){
   const canvas=$('confetti-canvas');
   canvas.width=window.innerWidth;canvas.height=window.innerHeight;canvas.style.display='block';
@@ -415,52 +395,75 @@ function getName(){
   if(!myName){myName=RAND_NAMES[Math.floor(Math.random()*RAND_NAMES.length)];$('myname').value=myName;localStorage.setItem('bl-name',myName);}
   return true;
 }
+
+function leaveRoom(){
+  if(roomRef){roomRef.off();roomRef=null;}
+  if(presenceRef){presenceRef.off();presenceRef=null;}
+  if(roomCode)db.ref('rooms/BL-'+roomCode+'/presence/'+myId).remove();
+  clearInterval(bluffTimerInterval);
+  state=null;roomCode=null;me=-1;lastVer=-1;renderedPhase=null;
+  sessionStorage.removeItem(SS_KEY);
+  show('scr-home');
+}
+
+// ─── Create / Join ────────────────────────────────────────────────────────────
 async function createRoom(){
   if(busy||!getName())return;busy=true;
-  NTFY=normalizeNtfy($('ntfy-url').value);localStorage.setItem('bl-ntfy-url',NTFY);$('ntfy-url').value=NTFY;
   $('home-err').textContent='Creating room…';
   try{
-    let code;const chars='ABCDEFGHJKMNPQRSTUVWXYZ';
-    for(let t=0;t<6;t++){
-      code=Array.from({length:4},()=>chars[Math.floor(Math.random()*chars.length)]).join('');
-      const ex=await readRoom(code);if(!ex||Date.now()-(ex.ts||0)>4*3600*1000)break;
-    }
-    roomCode=code;me=0;$('home-err').textContent='';
-    const s={code,version:0,ts:Date.now(),phase:'lobby',numPlayers:4,bluffWindowSecs:8,
+    const chars='ABCDEFGHJKMNPQRSTUVWXYZ';
+    const code=Array.from({length:4},()=>chars[Math.floor(Math.random()*chars.length)]).join('');
+    roomCode=code;me=0;
+    $('home-err').textContent='';
+    const s={code,version:1,ts:Date.now(),phase:'lobby',numPlayers:4,bluffWindowSecs:8,
       kickedIds:[],players:[{id:myId,name:myName,avatar:myAvatar,wins:0}],
       hands:[],pile:[],pileLog:[],currentPlayer:0,currentRankIdx:0,
       lastPlay:null,bluffDeadline:null,bluffCaller:null,bluffResult:null,winner:null};
-    writeRoom(s);subscribeAll(code);startHeartbeat();
+    await db.ref('rooms/BL-'+code+'/state').set(_encState(s));
+    lastVer=s.version;state=s;
+    sessionStorage.setItem(SS_KEY,JSON.stringify({code,myId}));
     history.replaceState(null,'','bluff.html?room='+code);
-    sessionStorage.setItem('bl-room',code);
+    subscribeAll(code);
     show('scr-lobby');
   }catch(e){$('home-err').textContent='Error — check internet.';console.error(e);}
   busy=false;
 }
+
 async function joinRoom(){
   if(busy||!getName())return;
   const code=$('joincode').value.trim().toUpperCase();
   if(code.length!==4){$('home-err').textContent='Enter 4-letter room code.';return;}
   busy=true;
-  NTFY=normalizeNtfy($('ntfy-url').value);localStorage.setItem('bl-ntfy-url',NTFY);$('ntfy-url').value=NTFY;
   $('home-err').textContent='Joining…';
-  const s=await readRoom(code);
-  if(!s){$('home-err').textContent='Room not found! Check the code. (ntfy: '+NTFY+')';busy=false;return;}
-  if(s.phase!=='lobby'){$('home-err').textContent='Game already started.';busy=false;return;}
-  if(s.players.length>=s.numPlayers){$('home-err').textContent='Room is full ('+s.numPlayers+'/'+s.numPlayers+').';busy=false;return;}
-  if(!s.players.some(p=>p.id===myId)){
-    let name=myName,suffix=2;
-    while(s.players.some(p=>p.name.toLowerCase()===name.toLowerCase()))name=myName+(suffix++);
-    s.players.push({id:myId,name,avatar:myAvatar,wins:0});myName=name;
-  }
-  roomCode=code;me=s.players.findIndex(p=>p.id===myId);
-  $('home-err').textContent='';writeRoom(s);subscribeAll(code);startHeartbeat();
+
+  let finalState=null;
+  await db.ref('rooms/BL-'+code+'/state').transaction(curr=>{
+    if(!curr)return{};
+    const s=_decState(deepCopy(curr));
+    if(!s||s.phase!=='lobby')return;
+    if((s.kickedIds||[]).includes(myId))return;
+    if(s.players.some(p=>p.id===myId)){finalState=s;return curr;}
+    if(s.players.length>=s.numPlayers)return;
+    s.players.push({id:myId,name:myName,avatar:myAvatar,wins:0});
+    s.version=(s.version||0)+1;
+    finalState=s;
+    return _encState(s);
+  });
+
+  if(!finalState){$('home-err').textContent='Room not found, full, or game already started.';busy=false;return;}
+  roomCode=code;me=finalState.players.findIndex(p=>p.id===myId);
+  lastVer=finalState.version||0;state=finalState;
+  $('home-err').textContent='';
+  sessionStorage.setItem(SS_KEY,JSON.stringify({code,myId}));
   history.replaceState(null,'','bluff.html?room='+code);
-  sessionStorage.setItem('bl-room',code);
-  show('scr-lobby');busy=false;
+  subscribeAll(code);
+  show('scr-lobby');
+  busy=false;
 }
+
 const isHost=()=>me===0;
 
+// ─── Lobby controls ───────────────────────────────────────────────────────────
 function setNumPlayers(n){
   if(!isHost()||!state||state.phase!=='lobby')return;
   if(state.players.length>n)return;
@@ -482,6 +485,7 @@ function hostStart(){
   busy=true;dealAndStart(deepCopy(state));busy=false;
 }
 
+// ─── Game logic ───────────────────────────────────────────────────────────────
 function dealAndStart(s){
   const deck=shuffle([...Array(52).keys()]);
   const n=s.numPlayers;
@@ -577,6 +581,7 @@ function hostRematch(){
   busy=true;dealAndStart(deepCopy(state));busy=false;
 }
 
+// ─── Render ───────────────────────────────────────────────────────────────────
 function render(){
   const s=state;if(!s)return;
   $('rxn-bar').style.display=(s.phase==='play'||s.phase==='reveal')?'flex':'none';
@@ -656,7 +661,7 @@ function renderGame(s,phaseChanged){
     $('bluff-win-wrap').style.display='none';
   }
 
-  const myHand=(s.hands[me]||[]);
+  const myHand=(s.hands&&s.hands[me])||[];
   $('hand-count').textContent=myHand.length;
   const scroll=$('hand-scroll');scroll.innerHTML='';
   myHand.forEach((cardIdx,i)=>{
@@ -678,7 +683,7 @@ function renderGame(s,phaseChanged){
   s.players.forEach((p,i)=>{
     const row=document.createElement('div');
     row.className='ps-row'+(i===s.currentPlayer&&!hasBluffWin?' active-player':'');
-    const hSize=(s.hands[i]||[]).length;
+    const hSize=(s.hands&&s.hands[i]||[]).length;
     row.innerHTML=esc(av(p))+' <b>'+esc(p.name)+'</b>'+(p.id===myId?' <small style="opacity:.45;">(you)</small>':'')+(i===s.currentPlayer&&!hasBluffWin?' 🎯':'')+'<span class="card-count">'+hSize+' 🃏</span>';
     summary.appendChild(row);
   });
@@ -688,7 +693,7 @@ function renderGame(s,phaseChanged){
 }
 
 function updatePlayControls(s){
-  const myHand=(s.hands[me]||[]);
+  const myHand=(s.hands&&s.hands[me])||[];
   const hasBluffWin=!!(s.lastPlay&&s.bluffDeadline);
   const isMyTurn=me===s.currentPlayer&&!hasBluffWin;
   const sel=selectedCards.size;
@@ -722,8 +727,8 @@ function renderReveal(s,phaseChanged){
   const caller=br?s.players[br.callerIdx]:null;
   const player=s.players[lp.playerIdx]||{name:'?'};
   $('rv-title').textContent='🚨 '+(caller?esc(av(caller)+' '+caller.name):'')+' called bluff on '+esc(av(player)+' '+player.name)+'!';
-  const actualHTML=lp.actualCards.map(c=>'<span class="reveal-card" style="background:'+(isRed(c)?'#fff0ef':'#f0f0e8')+';color:'+(isRed(c)?'var(--red)':'var(--ink)')+';">'+cardLabel(c)+'</span>').join('');
-  const allMatch=!lp.actualCards.some(c=>cardRank(c)!==lp.declaredRankIdx);
+  const actualHTML=(lp.actualCards||[]).map(c=>'<span class="reveal-card" style="background:'+(isRed(c)?'#fff0ef':'#f0f0e8')+';color:'+(isRed(c)?'var(--red)':'var(--ink)')+';">'+cardLabel(c)+'</span>').join('');
+  const allMatch=!(lp.actualCards||[]).some(c=>cardRank(c)!==lp.declaredRankIdx);
   $('rv-body').innerHTML='<div style="font-size:14px;font-weight:700;margin-bottom:8px;">'+esc(player.name)+' declared <b>'+lp.count+'×'+RANKS[lp.declaredRankIdx]+'</b></div><div class="reveal-cards">'+actualHTML+'</div><div style="font-size:14px;font-weight:700;color:'+(allMatch?'var(--green)':'var(--red)')+';">'+(allMatch?'✅ Honest! All '+RANKS[lp.declaredRankIdx]+'s':'🚨 BLUFF! Not all '+RANKS[lp.declaredRankIdx]+'s')+'</div>';
   if(br){
     const taker=s.players[br.takerIdx]||{name:'?'};
@@ -742,7 +747,7 @@ function renderOver(s){
   const w=s.players[s.winner]||{name:'?',avatar:'🏆'};
   $('over-name').textContent=av(w)+' '+w.name;
   const t=$('over-table');
-  const rows=s.players.map((p,i)=>({...p,i,hSize:(s.hands[i]||[]).length})).sort((a,b)=>a.hSize-b.hSize);
+  const rows=s.players.map((p,i)=>({...p,i,hSize:(s.hands&&s.hands[i]||[]).length})).sort((a,b)=>a.hSize-b.hSize);
   t.innerHTML=rows.map((p,idx)=>'<tr class="'+(idx===0?'leader':'')+'"><td>'+(idx===0?'🏆 ':'')+esc(av(p))+' '+esc(p.name)+(p.id===myId?' <small style="opacity:.5;">(you)</small>':'')+'</td><td>'+p.hSize+' cards left</td></tr>').join('');
   $('over-rematch').style.display=isHost()?'block':'none';
   show('scr-over');
@@ -751,14 +756,23 @@ function renderOver(s){
 
 window.addEventListener('beforeunload',e=>{if(roomCode){e.preventDefault();e.returnValue='';}});
 
-(async function(){
-  const saved=sessionStorage.getItem('bl-room'); if(!saved) return;
-  const existing=await readRoom(saved);
-  if(!existing||!existing.players||!existing.players.find(p=>p.id===myId)){sessionStorage.removeItem('bl-room');return;}
-  roomCode=saved; state=existing; lastVer=existing.version||0;
-  me=existing.players.findIndex(p=>p.id===myId);
-  subscribeAll(saved); startHeartbeat();
-  render();
+// ─── Auto-rejoin ─────────────────────────────────────────────────────────────
+(function(){
+  const saved=JSON.parse(sessionStorage.getItem(SS_KEY)||'null');
+  if(!saved||saved.myId!==myId)return;
+  const{code}=saved;
+  db.ref('rooms/BL-'+code+'/state').once('value').then(snap=>{
+    const raw=snap.val();
+    if(!raw){sessionStorage.removeItem(SS_KEY);return;}
+    const s=_decState(deepCopy(raw));
+    if(!s||!s.players||!s.players.find(p=>p.id===myId)||(s.kickedIds||[]).includes(myId)){
+      sessionStorage.removeItem(SS_KEY);return;
+    }
+    roomCode=code;state=s;lastVer=s.version||0;
+    me=s.players.findIndex(p=>p.id===myId);
+    subscribeAll(code);
+    render();
+  });
 })();
 </script>
 </body>

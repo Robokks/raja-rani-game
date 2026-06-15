@@ -687,21 +687,16 @@ async function joinRoom(){
   busy=true;
   $('home-err').textContent='Joining…';
   try{
-    // Pre-read to verify room exists before entering the transaction
-    const check=await readRoom(code);
-    if(!check){$('home-err').textContent='Room இல்லை! Code சரியா இருக்கா?';busy=false;return;}
-    if((check.kickedIds||[]).includes(myId)){$('home-err').textContent='You were removed from this room.';busy=false;return;}
-    if(check.phase!=='lobby'&&!check.players.some(p=>p.id===myId)){$('home-err').textContent='Game already started.';busy=false;return;}
-    // Atomic transaction. Firebase JS SDK does not cache once('value') for transactions,
-    // so curr is null on the first call. Returning {} (not undefined) tells Firebase to
-    // fetch the real server value and retry — returning undefined would abort permanently.
-    let finalState=null;
+    let finalState=null,errMsg=null;
     await db.ref('rooms/'+code+'/state').transaction(curr=>{
-      if(!curr)return {};
-      if(!Array.isArray(curr.players)||!curr.numPlayers)return;
+      // Reset on each retry — Firebase may retry the transaction
+      errMsg=null;finalState=null;
+      if(!curr){errMsg='Room இல்லை! Code சரியா இருக்கா?';return;}
+      if((curr.kickedIds||[]).includes(myId)){errMsg='You were removed from this room.';return;}
       const alreadyIn=curr.players.some(p=>p.id===myId);
+      if(curr.phase!=='lobby'&&!alreadyIn){errMsg='Game already started.';return;}
       if(!alreadyIn){
-        if(curr.players.length>=curr.numPlayers)return;
+        if(curr.players.length>=curr.numPlayers){errMsg='Room full ('+curr.numPlayers+'/'+curr.numPlayers+').';return;}
         let name=myName,suffix=2;
         while(curr.players.some(p=>p.name.toLowerCase()===name.toLowerCase()))name=myName+(suffix++);
         curr.players.push({id:myId,name,score:0,avatar:myAvatar});myName=name;
@@ -710,7 +705,7 @@ async function joinRoom(){
       finalState=deepCopy(curr);
       return curr;
     });
-    if(!finalState||!Array.isArray(finalState.players)){$('home-err').textContent='Room full — could not join.';busy=false;return;}
+    if(errMsg||!finalState){$('home-err').textContent=errMsg||'Could not join room.';busy=false;return;}
     _decRoles(finalState);
     roomCode=code;
     me=finalState.players.findIndex(p=>p.id===myId);
@@ -804,32 +799,29 @@ function declareRaja(){
 function guessPlayer(targetIdx){
   if(busy||!state||state.phase!=='chain'||state.chainFinder!==me)return;
   busy=true;
-  try{
-    const s=deepCopy(state);
-    if((s.foundPlayers||[]).includes(targetIdx)||targetIdx===me){busy=false;return;}
-    s.roundPoints=s.roundPoints||{};
-    const target=chainTarget(s);
-    const tName=(s.players[targetIdx]||{name:'?'}).name;
-    if(s.playerRoles[targetIdx]===target){
-      playSound('correct');
-      const ro=ROLE_DEFS[target];
-      postLog('✅ '+tName+' ▸ '+ro.emoji+' '+ro.ta+'!');
-      const pts=ROLE_DEFS[s.playerRoles[s.chainFinder]].pts;
-      s.roundPoints[s.chainFinder]=(s.roundPoints[s.chainFinder]||0)+pts;
-      s.foundPlayers=[...(s.foundPlayers||[]),targetIdx];
-      s.chainStep++;s.chainFinder=targetIdx;
-      if(s.chainStep===s.numPlayers-1)finalizeRound(s);
-      else writeRoom(s);
-    }else{
-      playSound('wrong');
-      postLog('🔀 Cards swapped!');
-      const tmp=s.playerRoles[s.chainFinder];
-      s.playerRoles[s.chainFinder]=s.playerRoles[targetIdx];
-      s.playerRoles[targetIdx]=tmp;
-      s.chainFinder=targetIdx;
-      writeRoom(s);
-    }
-  }catch(e){console.error('guessPlayer error:',e);}
+  const s=deepCopy(state);
+  if((s.foundPlayers||[]).includes(targetIdx)||targetIdx===me){busy=false;return;}
+  const target=chainTarget(s);
+  const tName=(s.players[targetIdx]||{name:'?'}).name;
+  if(s.playerRoles[targetIdx]===target){
+    playSound('correct');
+    const ro=ROLE_DEFS[target];
+    postLog('✅ '+tName+' ▸ '+ro.emoji+' '+ro.ta+'!');
+    const pts=ROLE_DEFS[s.playerRoles[s.chainFinder]].pts;
+    s.roundPoints[s.chainFinder]=(s.roundPoints[s.chainFinder]||0)+pts;
+    s.foundPlayers=[...(s.foundPlayers||[]),targetIdx];
+    s.chainStep++;s.chainFinder=targetIdx;
+    if(s.chainStep===s.numPlayers-1)finalizeRound(s);
+    else writeRoom(s);
+  }else{
+    playSound('wrong');
+    postLog('🔀 Cards swapped!');
+    const tmp=s.playerRoles[s.chainFinder];
+    s.playerRoles[s.chainFinder]=s.playerRoles[targetIdx];
+    s.playerRoles[targetIdx]=tmp;
+    s.chainFinder=targetIdx;
+    writeRoom(s);
+  }
   busy=false;
 }
 

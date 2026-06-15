@@ -138,12 +138,6 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
     <input type="text" id="home-code" class="code" maxlength="4" placeholder="ABCD" autocomplete="off">
     <button class="btn blue" onclick="joinRoom()">Join Room</button>
     <div class="err" id="home-err"></div>
-    <label style="margin-top:18px;">ntfy Server</label>
-    <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
-      <span class="conn-dot" id="ntfy-dot"></span>
-      <input type="text" id="ntfy-url" style="flex:1;font-size:14px;" placeholder="https://ntfy.sh">
-    </div>
-    <div style="font-family:'Catamaran';font-size:11px;opacity:.55;margin-top:4px;" id="ntfy-status"></div>
   </div>
   <a class="back-link" href="index.html">← All Games</a>
 </div>
@@ -168,8 +162,8 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
       <span>Waiting for host…</span>
     </div>
     <div class="err" id="lobby-err"></div>
+    <button class="btn ghost" onclick="sessionStorage.removeItem(SS_KEY);leaveRoom()" style="margin-top:12px;">← Leave / New game</button>
   </div>
-  <a class="back-link" href="#" onclick="leaveRoom()">← Leave Room</a>
 </div>
 
 <!-- GAME -->
@@ -223,13 +217,22 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
   <div class="chat-input-row"><input type="text" id="chat-input" maxlength="100" placeholder="Message…" autocomplete="off" onkeydown="if(event.key==='Enter')submitChat()"><button class="chat-send" onclick="submitChat()">Send</button></div>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script>
+// ─── Firebase ────────────────────────────────────────────────────────────────
+const _FBCFG={apiKey:"AIzaSyAQ0l788yLKmfWIJ6Ok88k2TcwdD6XA1n4",authDomain:"raja-rani-game-ffecd.firebaseapp.com",databaseURL:"https://raja-rani-game-ffecd-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"raja-rani-game-ffecd"};
+let db,roomRef,presenceRef,chatRef;
+if(!firebase.apps.length)firebase.initializeApp(_FBCFG);
+db=firebase.database();
+
 // ─── Constants ───────────────────────────────────────────────────────────────
 const AVATARS = ['🐯','🦁','🐻','🐼','🐨','🦊','🐸','🐙','🦄','🐲','🦋','⭐'];
 const PCOLORS = ['red','yellow','green','blue'];
 const PNAMES  = ['Red','Yellow','Green','Blue'];
 const STARTS  = [0, 13, 26, 39];
 const SAFE    = new Set([0,8,13,21,26,34,39,47]);
+const SS_KEY  = 'ludo-room';
 
 const RNAMES=['SwiftTiger','BoldLion','BravePanda','CleverFox','LuckyDragon','WildNinja','EpicShark','SneakyOwl','MightyWolf','RoyalEagle','CoolBear','DarkPhoenix'];
 function randomName(){return RNAMES[Math.floor(Math.random()*RNAMES.length)];}
@@ -270,15 +273,7 @@ const YARD_POS = [
   [{c:10,r:11},{c:12,r:11},{c:10,r:13},{c:12,r:13}],
 ];
 
-// ─── ntfy / state vars ───────────────────────────────────────────────────────
-let NTFY = normalizeNtfy(
-  localStorage.getItem('lu-ntfy-url') ||
-  localStorage.getItem('su-ntfy-url') ||
-  localStorage.getItem('bl-ntfy-url') ||
-  localStorage.getItem('rr-ntfy-url') ||
-  'https://ntfy.sh'
-);
-
+// ─── State vars ───────────────────────────────────────────────────────────────
 let myId    = localStorage.getItem('lu-pid') || uid();
 let myName  = localStorage.getItem('lu-name') || '';
 let myAvatar = localStorage.getItem('lu-avatar') || AVATARS[0];
@@ -286,60 +281,76 @@ let myAvSel = myAvatar;
 let roomCode = '';
 let state   = null;
 let lastVer = 0;
-let roomEs  = null;
+let presenceMap = {};
+let lastRxnTs = 0;
 let busy    = false;
-let chatEs   = null;
-let rxnEs    = null;
-let presEs   = null;
-let heartbeatInterval = null;
-const lastSeenMap = {};
 let chatCollapsed = true;
 let unreadCount   = 0;
 const seenMsgs    = new Set();
 let animating     = false;
 let prevDiceValue = null;
 
-// Persist myId
 localStorage.setItem('lu-pid', myId);
 
 function uid() {
   return Math.random().toString(36).slice(2,10);
 }
-function normalizeNtfy(raw) {
-  let v = (raw || 'https://ntfy.sh').trim();
-  try { v = new URL(v).origin; } catch {}
-  return v.replace(/\/+$/, '') || 'https://ntfy.sh';
-}
 function $(id) { return document.getElementById(id); }
 function deepCopy(o) { return JSON.parse(JSON.stringify(o)); }
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-function subscribeChat(code) {
-  if (chatEs) chatEs.close();
-  chatEs = new EventSource(NTFY + '/lu-' + code + '-c/sse?since=' + Math.floor((Date.now()-60000)/1000));
-  chatEs.onmessage = e => {
-    try {
-      const ev = JSON.parse(e.data);
-      if (ev.event !== 'message') return;
-      const msg = JSON.parse(ev.message);
-      if (seenMsgs.has(msg.id)) return;
-      seenMsgs.add(msg.id);
-      appendMsg(msg);
-    } catch {}
-  };
+// ─── Firebase pub/sub ─────────────────────────────────────────────────────────
+function subscribeRoom(code){
+  if(roomRef)roomRef.off();
+  roomRef=db.ref('rooms/LUDO-'+code+'/state');
+  roomRef.on('value',snap=>{
+    const s=snap.val();if(!s)return;
+    const ver=s.version||0;
+    if(ver<=lastVer)return;
+    if((s.kickedIds||[]).includes(myId)){alert('You were removed from the room.');location.reload();return;}
+    lastVer=ver;state=s;render();
+  });
 }
 
-function subscribeReactions(code) {
-  if (rxnEs) rxnEs.close();
-  rxnEs = new EventSource(NTFY + '/lu-' + code + '-rxn/sse?since=' + Math.floor((Date.now()-5000)/1000));
-  rxnEs.onmessage = e => {
-    try {
-      const ev = JSON.parse(e.data);
-      if (ev.event !== 'message') return;
-      const rxn = JSON.parse(ev.message);
-      showRxnFloat(rxn.emoji);
-    } catch {}
-  };
+function writeRoom(s){
+  s.version=(s.version||0)+1;
+  s.ts=Date.now();
+  db.ref('rooms/LUDO-'+roomCode+'/state').set(s);
+  state=s;
+  lastVer=s.version;
+  render();
+}
+
+function subscribePresence(code){
+  const presRef=db.ref('rooms/LUDO-'+code+'/presence/'+myId);
+  presRef.set({name:myName,ts:Date.now()});
+  presRef.onDisconnect().remove();
+  if(presenceRef)presenceRef.off();
+  presenceRef=db.ref('rooms/LUDO-'+code+'/presence');
+  presenceRef.on('value',snap=>{
+    presenceMap=snap.val()||{};
+    if(state&&state.phase==='lobby')renderLobby();
+  });
+}
+
+function subscribeChat(code){
+  if(chatRef)chatRef.off();
+  chatRef=db.ref('rooms/LUDO-'+code+'/chat');
+  chatRef.limitToLast(50).on('child_added',snap=>{
+    const msg=snap.val();
+    if(!msg||seenMsgs.has(msg.id))return;
+    seenMsgs.add(msg.id);
+    appendMsg(msg);
+  });
+}
+
+function subscribeReactions(code){
+  db.ref('rooms/LUDO-'+code+'/rxn').on('value',snap=>{
+    const r=snap.val();
+    if(!r||!r.ts||r.ts<=lastRxnTs)return;
+    lastRxnTs=r.ts;
+    if(r.senderId!==myId)showRxnFloat(r.emoji);
+  });
 }
 
 function appendMsg(msg) {
@@ -379,13 +390,13 @@ function submitChat() {
   const text = inp.value.trim();
   if (!text || !roomCode) return;
   inp.value = '';
-  const msg = { id: uid(), senderId: myId, senderName: myName, text };
-  fetch(NTFY + '/lu-' + roomCode + '-c', { method: 'POST', body: JSON.stringify(msg) }).catch(() => {});
+  const msg = {id:uid(), senderId:myId, senderName:myName, text, ts:Date.now()};
+  db.ref('rooms/LUDO-'+roomCode+'/chat').push(msg);
 }
 
 function sendReaction(emoji) {
   if (!roomCode) return;
-  fetch(NTFY + '/lu-' + roomCode + '-rxn', { method: 'POST', body: JSON.stringify({ emoji, senderId: myId }) }).catch(() => {});
+  db.ref('rooms/LUDO-'+roomCode+'/rxn').set({emoji, senderId:myId, ts:Date.now()});
   showRxnFloat(emoji);
 }
 
@@ -399,28 +410,11 @@ function showRxnFloat(emoji) {
   setTimeout(() => el.remove(), 2100);
 }
 
-function subscribePresence(code) {
-  if (presEs) presEs.close();
-  presEs = new EventSource(NTFY + '/lu-' + code + '-pres/sse?since=' + Math.floor((Date.now()-25000)/1000));
-  presEs.onmessage = e => {
-    try {
-      const ev = JSON.parse(e.data); if (ev.event !== 'message') return;
-      const d = JSON.parse(ev.message);
-      if (d.id && d.ts) lastSeenMap[d.id] = { ts: Date.now(), ping: Math.max(0, Date.now() - d.ts) };
-    } catch {}
-  };
-}
-function pingPresence() {
-  if (!roomCode) return;
-  fetch(NTFY + '/lu-' + roomCode + '-pres', { method: 'POST', body: JSON.stringify({ id: myId, name: myName, ts: Date.now() }) }).catch(() => {});
-}
 function pingBadge(pid) {
   if (pid === myId) return '';
-  const p = lastSeenMap[pid];
-  if (!p || Date.now() - p.ts > 25000) return '<span style="color:#888;font-size:12px;">⚫</span>';
-  const ms = p.ping, col = ms < 400 ? '#27ae60' : ms < 1000 ? '#d49a2a' : '#e74c3c';
-  const lbl = ms < 1000 ? ms + 'ms' : (ms/1000).toFixed(1) + 's';
-  return '<span style="color:'+col+';font-size:11px;font-family:Catamaran;font-weight:700;">● '+lbl+'</span>';
+  return presenceMap[pid]
+    ? '<span style="color:#27ae60;font-size:11px;font-family:Catamaran;font-weight:700;">● online</span>'
+    : '<span style="color:#888;font-size:11px;">⚫</span>';
 }
 
 function animateDice(targetValue, onDone) {
@@ -453,64 +447,6 @@ function randCode() {
   return Array.from({length:4}, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ'[Math.floor(Math.random()*23)]).join('');
 }
 
-// ─── ntfy pub/sub ────────────────────────────────────────────────────────────
-function topic(code) { return 'lu-' + code + '-s'; }
-
-async function readRoom(code) {
-  for (let a = 0; a < 3; a++) {
-    if (a > 0) await new Promise(r => setTimeout(r, 1500));
-    try {
-      const res = await fetch(NTFY + '/' + topic(code) + '/json?poll=1&since=all');
-      if (!res.ok) continue;
-      const text = await res.text();
-      let latest = null;
-      for (const line of text.trim().split('\n').filter(Boolean)) {
-        try {
-          const ev = JSON.parse(line);
-          if (ev.event === 'message' && ev.message) {
-            const s = JSON.parse(ev.message);
-            if (!latest || (s.version||0) > (latest.version||0)) latest = s;
-          }
-        } catch {}
-      }
-      if (latest) return latest;
-    } catch {}
-  }
-  return null;
-}
-
-function writeRoom(s) {
-  s.version = (s.version || 0) + 1;
-  s.ts = Date.now();
-  fetch(NTFY + '/' + topic(s.code), {method:'POST', body: JSON.stringify(s)}).catch(() => onConnLost());
-  state = s;
-  lastVer = s.version;
-  render();
-}
-
-function subscribeRoom(code) {
-  if (roomEs) roomEs.close();
-  const since = Math.floor((Date.now() - 5000) / 1000);
-  roomEs = new EventSource(NTFY + '/' + topic(code) + '/sse?since=' + since);
-  roomEs.onmessage = e => {
-    try {
-      const ev = JSON.parse(e.data);
-      if (ev.event !== 'message') return;
-      const s = JSON.parse(ev.message);
-      if ((s.version||0) <= lastVer) return;
-      if ((s.kickedIds||[]).includes(myId)) { alert('You were removed from the room.'); location.reload(); return; }
-      lastVer = s.version;
-      state = s;
-      render();
-    } catch {}
-  };
-  roomEs.onerror = () => onConnLost();
-  roomEs.onopen  = () => onConnBack();
-}
-
-function onConnLost() { $('conn-banner').style.display = 'block'; }
-function onConnBack() { $('conn-banner').style.display = 'none'; }
-
 // ─── Avatar grid ─────────────────────────────────────────────────────────────
 function buildAvatarGrid() {
   const grid = $('avatar-grid');
@@ -530,24 +466,6 @@ function buildAvatarGrid() {
 }
 buildAvatarGrid();
 
-// ─── ntfy URL setup ──────────────────────────────────────────────────────────
-(function() {
-  const inp = $('ntfy-url');
-  inp.value = NTFY;
-  function checkNtfy() {
-    NTFY = normalizeNtfy(inp.value);
-    inp.value = NTFY;
-    localStorage.setItem('lu-ntfy-url', NTFY);
-    $('ntfy-dot').className = 'conn-dot';
-    $('ntfy-status').textContent = 'Checking…';
-    fetch(NTFY + '/', {method:'HEAD'})
-      .then(() => { $('ntfy-dot').className = 'conn-dot ok'; $('ntfy-status').textContent = NTFY + ' ✓'; })
-      .catch(() => { $('ntfy-dot').className = 'conn-dot err'; $('ntfy-status').textContent = 'Cannot reach ' + NTFY; });
-  }
-  inp.addEventListener('blur', checkNtfy);
-  checkNtfy();
-})();
-
 // Pre-fill name
 (function() {
   const inp = $('home-name');
@@ -564,11 +482,6 @@ function showScreen(id) {
 
 function isHost()   { return state && state.players[0] && state.players[0].id === myId; }
 function isMyTurn() { return state && state.players[state.currentPlayer] && state.players[state.currentPlayer].id === myId; }
-function myColorIdx() {
-  if (!state) return -1;
-  const p = state.players.find(p => p.id === myId);
-  return p ? p.colorIdx : -1;
-}
 
 // ─── Room create/join ────────────────────────────────────────────────────────
 async function createRoom() {
@@ -580,12 +493,12 @@ async function createRoom() {
   const code = randCode();
   const s = {
     code,
-    version: 0,
+    version: 1,
     ts: Date.now(),
     phase: 'lobby',
     numPlayers: 4,
     kickedIds: [],
-    players: [{id: myId, name: myName, avatar: myAvatar, colorIdx: 0}],
+    players: [{id:myId, name:myName, avatar:myAvatar, colorIdx:0}],
     tokens: {[myId]: [-1,-1,-1,-1]},
     currentPlayer: 0,
     diceValue: null,
@@ -594,17 +507,17 @@ async function createRoom() {
     winner: null,
     lastAction: '',
   };
+  await db.ref('rooms/LUDO-'+code+'/state').set(s);
   roomCode = code;
-  writeRoom(s);
+  lastVer = s.version;
+  state = s;
+  sessionStorage.setItem(SS_KEY, JSON.stringify({code, myId}));
   subscribeRoom(code);
   subscribeChat(code);
   subscribeReactions(code);
   subscribePresence(code);
-  clearInterval(heartbeatInterval);
-  pingPresence();
-  heartbeatInterval = setInterval(pingPresence, 15000);
-  sessionStorage.setItem('lu-room', code);
   showScreen('scr-lobby');
+  render();
   $('btn-create').disabled = false;
 }
 
@@ -615,43 +528,37 @@ async function joinRoom() {
   const code = $('home-code').value.trim().toUpperCase().slice(0,4);
   if (code.length < 4) { $('home-err').textContent = 'Enter a 4-letter room code.'; return; }
   $('home-err').textContent = '';
-  const existing = await readRoom(code);
-  if (!existing) { $('home-err').textContent = 'Room not found. Check the code.'; return; }
-  if (existing.phase !== 'lobby') { $('home-err').textContent = 'Game already in progress.'; return; }
-  if (existing.players.length >= existing.numPlayers) { $('home-err').textContent = 'Room is full.'; return; }
-  if (existing.players.find(p => p.id === myId)) {
-    // Already in room, just rejoin
-    roomCode = code;
-    state = existing;
-    lastVer = existing.version;
-    subscribeRoom(code);
-    subscribeChat(code);
-    subscribeReactions(code);
-    subscribePresence(code);
-    clearInterval(heartbeatInterval);
-    pingPresence();
-    heartbeatInterval = setInterval(pingPresence, 15000);
-    sessionStorage.setItem('lu-room', code);
-    showScreen('scr-lobby');
-    render();
+
+  let finalState = null;
+  await db.ref('rooms/LUDO-'+code+'/state').transaction(curr => {
+    if (!curr) return {};
+    if (curr.phase !== 'lobby') return;
+    if ((curr.kickedIds||[]).includes(myId)) return;
+    if (curr.players.some(p => p.id === myId)) { finalState = curr; return curr; }
+    if (curr.players.length >= curr.numPlayers) return;
+    const colorIdx = curr.players.length;
+    curr.players.push({id:myId, name:myName, avatar:myAvatar, colorIdx});
+    if (!curr.tokens) curr.tokens = {};
+    curr.tokens[myId] = [-1,-1,-1,-1];
+    curr.version = (curr.version||0)+1;
+    finalState = curr;
+    return curr;
+  });
+
+  if (!finalState) {
+    $('home-err').textContent = 'Room not found, full, or game already started.';
     return;
   }
-  const s = deepCopy(existing);
-  const colorIdx = s.players.length; // 0=Red,1=Yellow,2=Green,3=Blue by join order
-  s.players.push({id: myId, name: myName, avatar: myAvatar, colorIdx});
-  s.tokens[myId] = [-1,-1,-1,-1];
   roomCode = code;
-  lastVer = existing.version;
-  writeRoom(s);
+  lastVer = finalState.version||0;
+  state = finalState;
+  sessionStorage.setItem(SS_KEY, JSON.stringify({code, myId}));
   subscribeRoom(code);
   subscribeChat(code);
   subscribeReactions(code);
   subscribePresence(code);
-  clearInterval(heartbeatInterval);
-  pingPresence();
-  heartbeatInterval = setInterval(pingPresence, 15000);
-  sessionStorage.setItem('lu-room', code);
   showScreen('scr-lobby');
+  render();
 }
 
 function copyCode() {
@@ -663,15 +570,14 @@ function copyCode() {
 }
 
 function leaveRoom() {
-  if (roomEs) { roomEs.close(); roomEs = null; }
-  if (chatEs) { chatEs.close(); chatEs = null; }
-  if (rxnEs)  { rxnEs.close();  rxnEs  = null; }
-  if (presEs) { presEs.close(); presEs = null; }
-  clearInterval(heartbeatInterval); heartbeatInterval = null;
+  if (roomRef) { roomRef.off(); roomRef = null; }
+  if (presenceRef) { presenceRef.off(); presenceRef = null; }
+  if (chatRef) { chatRef.off(); chatRef = null; }
+  if (roomCode) db.ref('rooms/LUDO-'+roomCode+'/presence/'+myId).remove();
   state = null;
   roomCode = '';
   lastVer = 0;
-  sessionStorage.removeItem('lu-room');
+  sessionStorage.removeItem(SS_KEY);
   const chatPanel = $('chat-panel');
   const rxnBar = $('rxn-bar');
   if (chatPanel) { chatPanel.style.display = 'none'; chatCollapsed = true; chatPanel.classList.add('collapsed'); }
@@ -684,7 +590,6 @@ function kickPlayer(pid) {
   if (!isHost() || busy) return;
   const s = deepCopy(state);
   s.players = s.players.filter(p => p.id !== pid);
-  // Re-assign colorIdx by new order
   s.players.forEach((p, i) => { p.colorIdx = i; });
   delete s.tokens[pid];
   s.kickedIds = [...(s.kickedIds||[]), pid];
@@ -697,9 +602,8 @@ function hostStart() {
   if (state.players.length < 2) { $('lobby-err').textContent = 'Need at least 2 players.'; return; }
   const s = deepCopy(state);
   s.phase = 'play';
-  // Assign colorIdx by index
+  s.numPlayers = s.players.length;
   s.players.forEach((p, i) => { p.colorIdx = i; });
-  // Initialize all tokens
   s.tokens = {};
   s.players.forEach(p => { s.tokens[p.id] = [-1,-1,-1,-1]; });
   s.currentPlayer = 0;
@@ -746,7 +650,7 @@ function rollDice() {
     s.diceValue = roll;
     s.diceRolled = true;
 
-    // Check triple-six forfeit
+    // Triple-six forfeit
     if (s.sixCount >= 2 && roll === 6) {
       s.sixCount = 3;
       s.lastAction = s.players[s.currentPlayer].name + ' rolled three 6s — forfeited!';
@@ -793,7 +697,7 @@ function moveToken(tokenIdx) {
   }
   progs[tokenIdx] = newProg;
 
-  // Check capture: only on main track (0-51)
+  // Check capture (only on main track, non-safe squares)
   let captureMsg = '';
   if (newProg >= 0 && newProg <= 51) {
     const absPos = absTrack(newProg, ci);
@@ -840,14 +744,15 @@ function moveToken(tokenIdx) {
 }
 
 function endTurn(s) {
-  s.currentPlayer = (s.currentPlayer + 1) % s.numPlayers;
+  const n = s.players.length;
+  s.currentPlayer = (s.currentPlayer + 1) % n;
   let tries = 0;
-  while (tries++ < s.numPlayers) {
+  while (tries++ < n) {
     const p = s.players[s.currentPlayer];
     if (!p) break;
     const done = s.tokens[p.id] && s.tokens[p.id].every(t => t === 57);
     if (!done) break;
-    s.currentPlayer = (s.currentPlayer + 1) % s.numPlayers;
+    s.currentPlayer = (s.currentPlayer + 1) % n;
   }
   s.diceRolled = false;
   s.diceValue = null;
@@ -884,7 +789,6 @@ function buildNpPicker() {
       if (!isHost() || busy) return;
       const s = deepCopy(state);
       s.numPlayers = n;
-      // Kick players over the limit
       if (s.players.length > n) {
         const kicked = s.players.splice(n);
         kicked.forEach(p => {
@@ -925,13 +829,7 @@ function renderLobby() {
 
   const isH = isHost();
   $('lobby-host-settings').style.display = isH ? 'block' : 'none';
-  if (isH) {
-    buildNpPicker();
-    let monEl = $('lobby-monitor');
-    if (!monEl) { monEl = document.createElement('div'); monEl.id = 'lobby-monitor'; $('lobby-host-settings').appendChild(monEl); }
-    const murl = NTFY + '/lu-' + state.code + '-s';
-    monEl.innerHTML = `<div style="margin-top:10px;padding:8px 10px;background:rgba(58,42,24,.07);border-radius:6px;font-family:'Catamaran',sans-serif;font-size:11px;font-weight:700;word-break:break-all;">📡 ntfy monitor:<br><a href="${murl}" target="_blank" style="color:var(--red);opacity:.8;">${murl}</a></div>`;
-  }
+  if (isH) buildNpPicker();
 
   // Player list
   const list = $('lobby-players');
@@ -1110,11 +1008,9 @@ function renderOver() {
 
 // ─── Canvas drawing ──────────────────────────────────────────────────────────
 function drawBoard(ctx, cs, s) {
-  // 1. White background
   ctx.fillStyle = '#fff';
   ctx.fillRect(0, 0, cs * 15, cs * 15);
 
-  // 2. Colored home quadrants
   const quads = [
     {c:0, r:10, color:'red'},
     {c:0, r:0,  color:'yellow'},
@@ -1128,10 +1024,8 @@ function drawBoard(ctx, cs, s) {
     ctx.fillRect((c + 0.5) * cs, (r + 0.5) * cs, 4 * cs, 4 * cs);
   });
 
-  // 3. Finish triangles
   drawFinishArea(ctx, cs);
 
-  // 4. Main track squares
   TRACK.forEach(({c, r}) => {
     ctx.fillStyle = '#f0f0f0';
     ctx.fillRect(c * cs, r * cs, cs, cs);
@@ -1140,7 +1034,6 @@ function drawBoard(ctx, cs, s) {
     ctx.strokeRect(c * cs, r * cs, cs, cs);
   });
 
-  // 5. Safe star squares
   SAFE.forEach(i => {
     const {c, r} = TRACK[i];
     ctx.fillStyle = '#fffde7';
@@ -1155,7 +1048,6 @@ function drawBoard(ctx, cs, s) {
     ctx.fillText('★', (c + 0.5) * cs, (r + 0.5) * cs);
   });
 
-  // 6. Entry squares (colored with arrow circle)
   STARTS.forEach((absIdx, pi) => {
     const {c, r} = TRACK[absIdx];
     ctx.fillStyle = CSS_COLORS[PCOLORS[pi]].fill;
@@ -1166,7 +1058,6 @@ function drawBoard(ctx, cs, s) {
     ctx.fill();
   });
 
-  // 7. Home column squares
   HOME_COLS.forEach((cols, pi) => {
     cols.forEach(({c, r}) => {
       ctx.fillStyle = CSS_COLORS[PCOLORS[pi]].light;
@@ -1177,15 +1068,13 @@ function drawBoard(ctx, cs, s) {
     });
   });
 
-  // 8. Grid lines over track
   TRACK.forEach(({c, r}) => {
     ctx.strokeStyle = '#ddd';
     ctx.lineWidth = 0.5;
     ctx.strokeRect(c * cs, r * cs, cs, cs);
   });
 
-  // 9. Yard circles (only for active players)
-  const numP = s ? s.numPlayers : 4;
+  const numP = s ? s.players.length : 4;
   YARD_POS.forEach((positions, pi) => {
     if (pi >= numP) return;
     positions.forEach(({c, r}) => {
@@ -1200,7 +1089,6 @@ function drawBoard(ctx, cs, s) {
     });
   });
 
-  // 10. Center finish square
   ctx.fillStyle = '#fff8e1';
   ctx.fillRect(7 * cs, 7 * cs, cs, cs);
   ctx.fillStyle = '#888';
@@ -1234,8 +1122,7 @@ function drawFinishArea(ctx, cs) {
 function drawTokens(ctx, cs, s) {
   if (!s || !s.players) return;
 
-  // Build cell map for stacking
-  const cellMap = {}; // "c,r" → [{color, tokenKey}]
+  const cellMap = {};
 
   s.players.forEach(p => {
     const ci = p.colorIdx;
@@ -1243,7 +1130,6 @@ function drawTokens(ctx, cs, s) {
     const progs = s.tokens[p.id] || [];
     progs.forEach((prog, ti) => {
       if (prog === -1) {
-        // In yard — draw directly
         const yp = YARD_POS[ci][ti];
         drawToken(ctx, cs * 0.75, (yp.c + 0.5) * cs, (yp.r + 0.5) * cs, color, false);
       } else if (prog === 57) {
@@ -1261,7 +1147,6 @@ function drawTokens(ctx, cs, s) {
     });
   });
 
-  // Draw stacked tokens with offsets
   const offsets = [
     {dx: 0,    dy: 0},
     {dx: 0.45, dy: 0},
@@ -1286,7 +1171,6 @@ function drawTokens(ctx, cs, s) {
     });
   });
 
-  // Highlight valid-move tokens for current player
   if (s.diceRolled) {
     const cp = s.players[s.currentPlayer];
     if (cp && cp.id === myId) {
@@ -1300,29 +1184,18 @@ function drawTokens(ctx, cs, s) {
           const cell = tokenCell(prog, cp.colorIdx);
           if (cell) {
             const progs = s.tokens[myId];
-            const sameCell = progs.filter((p2, i2) => {
-              if (p2 === -1 || p2 >= 57) return false;
-              const c2 = tokenCell(p2, cp.colorIdx);
-              return c2 && c2.c === cell.c && c2.r === cell.r;
-            });
-            const idx = sameCell.indexOf(prog);
-            const off = offsets[Math.min(Math.max(idx, 0), 3)];
-            let x, y;
-            // Count all tokens at this cell across all players
             const key = cell.c + ',' + cell.r;
             const allAtCell = cellMap[key] || [];
+            let x, y;
             if (allAtCell.length === 1) {
               x = (cell.c + 0.5) * cs;
               y = (cell.r + 0.5) * cs;
             } else {
-              const myTokensAtCell = s.players.reduce((acc, pp) => {
-                if (pp.id !== myId) return acc;
-                s.tokens[pp.id].forEach((pp2, ii) => {
-                  const cc = tokenCell(pp2, pp.colorIdx);
-                  if (cc && cc.c === cell.c && cc.r === cell.r) acc.push(ii);
-                });
-                return acc;
-              }, []);
+              const myTokensAtCell = [];
+              s.tokens[myId].forEach((pp2, ii) => {
+                const cc = tokenCell(pp2, cp.colorIdx);
+                if (cc && cc.c === cell.c && cc.r === cell.r) myTokensAtCell.push(ii);
+              });
               const myPos = myTokensAtCell.indexOf(ti);
               const globalPos = allAtCell.findIndex(t => t.color === PCOLORS[cp.colorIdx] && myPos <= 0);
               const useOff = offsets[Math.min(Math.max(globalPos, 0), 3)];
@@ -1338,17 +1211,14 @@ function drawTokens(ctx, cs, s) {
 }
 
 function drawToken(ctx, r, x, y, color, done) {
-  // Outer circle
   ctx.fillStyle = CSS_COLORS[color].dark;
   ctx.beginPath();
   ctx.arc(x, y, r * 0.86, 0, Math.PI * 2);
   ctx.fill();
-  // Inner circle
   ctx.fillStyle = done ? '#ffd700' : CSS_COLORS[color].fill;
   ctx.beginPath();
   ctx.arc(x, y, r * 0.6, 0, Math.PI * 2);
   ctx.fill();
-  // Highlight
   ctx.fillStyle = 'rgba(255,255,255,0.45)';
   ctx.beginPath();
   ctx.arc(x - r * 0.18, y - r * 0.18, r * 0.22, 0, Math.PI * 2);
@@ -1370,8 +1240,6 @@ function drawTokenHighlight(ctx, r, x, y) {
 
 // ─── Canvas tap detection ────────────────────────────────────────────────────
 (function() {
-  let validMoveCells = [];
-
   function getCanvasTap(e) {
     const canvas = $('board-canvas');
     const rect = canvas.getBoundingClientRect();
@@ -1399,7 +1267,6 @@ function drawTokenHighlight(ctx, r, x, y) {
     const vm = validMoves(state, myId, cp.colorIdx);
     const progs = state.tokens[myId];
 
-    // Find matching token at tapped cell
     for (const ti of vm) {
       const prog = progs[ti];
       let cell = null;
@@ -1427,16 +1294,25 @@ window.addEventListener('resize', () => {
   if (state && state.phase === 'play') renderGame();
 });
 
-window.addEventListener('beforeunload',e=>{if(roomCode){e.preventDefault();e.returnValue='';}});
+window.addEventListener('beforeunload', e => { if (roomCode) { e.preventDefault(); e.returnValue = ''; } });
 
-(async function(){
-  const saved=sessionStorage.getItem('lu-room'); if(!saved) return;
-  const existing=await readRoom(saved);
-  if(!existing||!existing.players||!existing.players.find(p=>p.id===myId)){sessionStorage.removeItem('lu-room');return;}
-  roomCode=saved; state=existing; lastVer=existing.version||0;
-  subscribeRoom(saved); subscribeChat(saved); subscribeReactions(saved); subscribePresence(saved);
-  clearInterval(heartbeatInterval); pingPresence(); heartbeatInterval=setInterval(pingPresence,15000);
-  render();
+// ─── Auto-rejoin ─────────────────────────────────────────────────────────────
+(function(){
+  const saved = JSON.parse(sessionStorage.getItem(SS_KEY)||'null');
+  if (!saved || saved.myId !== myId) return;
+  const {code} = saved;
+  db.ref('rooms/LUDO-'+code+'/state').once('value').then(snap => {
+    const s = snap.val();
+    if (!s || !s.players || !s.players.find(p => p.id === myId) || (s.kickedIds||[]).includes(myId)) {
+      sessionStorage.removeItem(SS_KEY); return;
+    }
+    roomCode = code; state = s; lastVer = s.version||0;
+    subscribeRoom(code);
+    subscribeChat(code);
+    subscribeReactions(code);
+    subscribePresence(code);
+    render();
+  });
 })();
 </script>
 </body>

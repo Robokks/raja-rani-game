@@ -148,14 +148,8 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
       autocapitalize="characters" autocorrect="off" spellcheck="false"
       oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,'')">
     <button class="btn green" onclick="joinRoom()">&#x1F6AA; Join room</button>
-    <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(58,42,24,.18);">
-      <label style="margin-top:0;">&#x1F4E1; ntfy server URL</label>
-      <input type="text" id="ntfy-url" placeholder="https://ntfy.sh" autocomplete="off" style="font-size:15px;letter-spacing:.5px;">
-      <div style="font-family:'Catamaran';font-size:11px;font-weight:600;opacity:.65;margin-top:4px;line-height:1.5;">All players must use the same ntfy URL</div>
-    </div>
     <div class="err" id="home-err"></div>
   </div>
-  <p class="hint"><span class="conn-dot" id="conn-dot"></span><span id="conn-txt">Checking ntfy.sh&hellip;</span></p>
   <p class="hint" style="margin-top:8px;"><a href="index.html" style="color:var(--red);font-weight:800;">&#x2190; Back to games</a></p>
 </div>
 
@@ -189,6 +183,7 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
       </div>
     </div>
     <div class="player-list" id="lobby-players"></div>
+    <button class="btn ghost" onclick="leaveRoom()" style="margin-top:12px;">← Leave / New game</button>
     <button class="btn" id="lobby-start" onclick="hostStart()" style="display:none;" disabled>Waiting&hellip;</button>
     <div class="waiting" id="lobby-wait"><span class="dotpulse"></span><span class="dotpulse"></span><span class="dotpulse"></span><span style="margin-left:4px;font-size:13px;">Waiting for players&hellip;</span></div>
   </div>
@@ -288,6 +283,8 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
   </div>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script>
 const $=id=>document.getElementById(id);
 const deepCopy=o=>JSON.parse(JSON.stringify(o));
@@ -297,7 +294,6 @@ const show=id=>{document.querySelectorAll('.screen').forEach(s=>s.classList.remo
 
 const AVATARS=['\u{1F42F}','\u{1F981}','\u{1F43B}','\u{1F43C}','\u{1F428}','\u{1F98A}','\u{1F438}','\u{1F419}','\u{1F984}','\u{1F409}','\u{1F98B}','⭐'];
 const av=p=>{const a=(p&&p.avatar)||'\u{1F6F8}';return AVATARS.includes(a)||a==='\u{1F6F8}'?a:'\u{1F6F8}';};
-
 const RAND_NAMES=['Arjun','Priya','கார்த்திக்','Meena','Vijay','தீபா','Ravi','Muthu','Selvi','Bala','Kavya','Surya','Tamil','Vel','நிலா','Deepak','Kiran','Sandy','Siva','Rocky'];
 
 (function(){
@@ -320,136 +316,68 @@ let myAvatar=localStorage.getItem('su-avatar')||'\u{1F6F8}';
   });
 })();
 
-// ── Obfuscation helpers ───────────────────────────────────────────────
-const _K=[114,103,103,97,109,101];
-function _enc(str){const b=new TextEncoder().encode(str);let s='';for(let i=0;i<b.length;i++)s+=String.fromCharCode(b[i]^_K[i%6]);return btoa(s);}
-function _dec(b64){const s=atob(b64);const b=new Uint8Array(s.length);for(let i=0;i<s.length;i++)b[i]=s.charCodeAt(i)^_K[i%6];return new TextDecoder().decode(b);}
-function _encState(s){
-  const o=Object.assign({},s);
-  o.players=s.players.map(p=>Object.assign({},p));
-  if(s.players.length&&s.players[0].role!==undefined){
-    o._roles=_enc(JSON.stringify(s.players.map(p=>p.role)));
-    o.players.forEach(p=>delete p.role);
-  }
-  return JSON.stringify(o);
-}
-function _decState(s){
-  if(!s)return s;
-  if(s._roles)try{const r=JSON.parse(_dec(s._roles));s.players.forEach((p,i)=>{p.role=r[i];});delete s._roles;}catch{}
-  return s;
-}
-
-function normalizeNtfy(raw){
-  let v=(raw||'https://ntfy.sh').trim();
-  try{v=new URL(v).origin;}catch{}
-  return v.replace(/\/+$/,'')||'https://ntfy.sh';
-}
-let NTFY=normalizeNtfy(localStorage.getItem('su-ntfy-url')||localStorage.getItem('rr-ntfy-url')||localStorage.getItem('bl-ntfy-url'));
-localStorage.setItem('su-ntfy-url',NTFY);
-(function(){
-  const el=$('ntfy-url');
-  el.value=NTFY;
-  el.oninput=()=>{NTFY=el.value.trim().replace(/\/+$/,'')||'https://ntfy.sh';};
-  el.onblur=()=>{const v=normalizeNtfy(el.value);NTFY=v;el.value=v;localStorage.setItem('su-ntfy-url',v);};
-})();
-(function(){
-  const dot=$('conn-dot'),txt=$('conn-txt');
-  fetch(NTFY+'/',{method:'HEAD'}).then(()=>{dot.className='conn-dot ok';txt.textContent=NTFY+' ready ✓';}).catch(()=>{dot.className='conn-dot err';txt.textContent='Cannot reach '+NTFY;});
-})();
 (function(){
   const code=new URLSearchParams(location.search).get('room');
   if(code&&code.length===4){$('joincode').value=code.toUpperCase();$('myname').focus();$('home-err').textContent='👋 Room '+code.toUpperCase()+' — enter your name and tap Join!';}
 })();
 
+const _FBCFG={apiKey:"AIzaSyAQ0l788yLKmfWIJ6Ok88k2TcwdD6XA1n4",authDomain:"raja-rani-game-ffecd.firebaseapp.com",databaseURL:"https://raja-rani-game-ffecd-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"raja-rani-game-ffecd"};
+const SS_KEY='sus-room';
+let db,roomRef,chatRef,rxnRef;
+function initFB(){
+  if(!firebase.apps.length)firebase.initializeApp(_FBCFG);
+  db=firebase.database();
+  return Promise.resolve();
+}
+
 let myId=localStorage.getItem('su-pid');if(!myId){myId='p'+Math.random().toString(36).slice(2,10);localStorage.setItem('su-pid',myId);}
 let myName='',roomCode=null,me=-1;
-let state=null,lastVer=-1,busy=false,renderedPhase=null;
-let roomEs=null,presEs=null,rxnEs=null,chatEs=null;
-let heartbeatInterval=null;
+let state=null,busy=false,renderedPhase=null;
 let gameTimerInterval=null,roleRevealTimer=null,elimTimer=null;
 let myVote=null;
 let chatCollapsed=true,unreadCount=0;
-let connLost=false;
 const seenMsgs=new Set();
-const lastSeenMap={};
 
-function onConnLost(){if(connLost)return;connLost=true;const b=$('conn-banner');if(b)b.style.display='block';}
-function onConnBack(){connLost=false;const b=$('conn-banner');if(b)b.style.display='none';}
-
-async function readRoom(code){
-  for(let a=0;a<3;a++){
-    if(a>0)await new Promise(r=>setTimeout(r,1500));
-    try{
-      const res=await fetch(NTFY+'/su-'+code+'-s/json?poll=1&since=all');
-      if(!res.ok)continue;
-      const text=await res.text();let latest=null;
-      for(const line of text.trim().split('\n').filter(Boolean)){
-        try{const ev=JSON.parse(line);if(ev.event==='message'&&ev.message){const s=_decState(JSON.parse(ev.message));if(!latest||(s.version||0)>(latest.version||0))latest=s;}}catch{}
-      }
-      if(latest)return latest;
-    }catch{}
-  }
-  return null;
-}
 function writeRoom(s){
-  s.version=(s.version||0)+1;s.ts=Date.now();
-  fetch(NTFY+'/su-'+roomCode+'-s',{method:'POST',body:_encState(s)}).catch(()=>onConnLost());
-  state=s;lastVer=s.version;render();
+  s.ts=Date.now();
+  db.ref('rooms/SUS-'+roomCode+'/state').set(s);
+  state=s;me=s.players.findIndex(p=>p.id===myId);render();
 }
-function subscribeRoom(code){
-  if(roomEs)roomEs.close();
-  const since=Math.floor((Date.now()-5000)/1000);
-  roomEs=new EventSource(NTFY+'/su-'+code+'-s/sse?since='+since);
-  roomEs.onmessage=e=>{
-    try{
-      const ev=JSON.parse(e.data);if(ev.event!=='message')return;
-      const s=_decState(JSON.parse(ev.message));
-      if(s.version<=lastVer)return;
-      if((s.kickedIds||[]).includes(myId)){alert('You were removed.');location.reload();return;}
-      lastVer=s.version;state=s;me=s.players.findIndex(p=>p.id===myId);render();
-    }catch{}
-  };
-  roomEs.onerror=()=>onConnLost();
-  roomEs.onopen=()=>onConnBack();
-}
-function subscribeChat(code){
-  if(chatEs)chatEs.close();
-  const since=Math.floor((Date.now()-5000)/1000);
-  chatEs=new EventSource(NTFY+'/su-'+code+'-c/sse?since='+since);
-  chatEs.onmessage=e=>{
-    try{const ev=JSON.parse(e.data);if(ev.event!=='message')return;const d=JSON.parse(ev.message);const k=ev.id;if(!d.msg||seenMsgs.has(k))return;seenMsgs.add(k);appendMsg(d);}catch{}
-  };
-}
-function subscribeReactions(code){
-  if(rxnEs)rxnEs.close();
-  const since=Math.floor((Date.now()-3000)/1000);
-  rxnEs=new EventSource(NTFY+'/su-'+code+'-rxn/sse?since='+since);
-  rxnEs.onmessage=e=>{
-    try{const ev=JSON.parse(e.data);if(ev.event!=='message')return;const d=JSON.parse(ev.message);if(d.pid!==myId)showRxnFloat(d.emoji);}catch{}
-  };
-}
-function subscribePresence(code){
-  if(presEs)presEs.close();
-  presEs=new EventSource(NTFY+'/su-'+code+'-pres/sse?since='+Math.floor((Date.now()-25000)/1000));
-  presEs.onmessage=e=>{
-    try{const ev=JSON.parse(e.data);if(ev.event!=='message')return;const d=JSON.parse(ev.message);if(d.id&&d.ts)lastSeenMap[d.id]={ts:Date.now(),ping:Math.max(0,Date.now()-d.ts)};}catch{}
-  };
-}
-function pingPresence(){
-  if(!roomCode)return;
-  fetch(NTFY+'/su-'+roomCode+'-pres',{method:'POST',body:JSON.stringify({id:myId,name:myName,ts:Date.now()})}).catch(()=>{});
-}
-function pingBadge(pid){
-  if(pid===myId)return '';
-  const p=lastSeenMap[pid];
-  if(!p||Date.now()-p.ts>25000)return '<span style="color:#888;font-size:12px;margin-left:auto;">⚫</span>';
-  const ms=p.ping,col=ms<400?'#27ae60':ms<1000?'#d49a2a':'#e74c3c';
-  const lbl=ms<1000?ms+'ms':(ms/1000).toFixed(1)+'s';
-  return '<span style="color:'+col+';font-size:11px;font-family:Catamaran;font-weight:700;margin-left:auto;">● '+lbl+'</span>';
-}
-function subscribeAll(code){subscribeRoom(code);subscribeChat(code);subscribeReactions(code);subscribePresence(code);}
 
-function sendChat(txt){if(!txt.trim()||!roomCode)return;fetch(NTFY+'/su-'+roomCode+'-c',{method:'POST',body:JSON.stringify({pid:myId,name:myName,msg:txt.trim().slice(0,100),t:Date.now()})});}
+function subscribeRoom(code){
+  if(roomRef)roomRef.off();
+  roomRef=db.ref('rooms/SUS-'+code+'/state');
+  roomRef.on('value',snap=>{
+    const s=snap.val();if(!s)return;
+    if((s.kickedIds||[]).includes(myId)){alert('You were removed.');sessionStorage.removeItem(SS_KEY);location.reload();return;}
+    state=s;me=s.players.findIndex(p=>p.id===myId);render();
+  });
+}
+
+function subscribeChat(code){
+  if(chatRef)chatRef.off();
+  chatRef=db.ref('rooms/SUS-'+code+'/chat');
+  chatRef.on('child_added',snap=>{
+    const k=snap.key;const d=snap.val();
+    if(!d||!d.msg||seenMsgs.has(k))return;
+    seenMsgs.add(k);appendMsg(d);
+  });
+}
+
+function subscribeReactions(code){
+  if(rxnRef)rxnRef.off();
+  rxnRef=db.ref('rooms/SUS-'+code+'/rxn');
+  rxnRef.on('child_added',snap=>{
+    const d=snap.val();if(!d)return;
+    if(d.pid!==myId)showRxnFloat(d.emoji);
+  });
+}
+
+function sendChat(txt){
+  if(!txt.trim()||!roomCode)return;
+  db.ref('rooms/SUS-'+roomCode+'/chat').push({pid:myId,name:myName,msg:txt.trim().slice(0,100),t:Date.now()});
+}
+
 function appendMsg(d){
   const box=$('chat-messages');
   const el=document.createElement('div');
@@ -459,15 +387,22 @@ function appendMsg(d){
   box.appendChild(el);box.scrollTop=box.scrollHeight;
   if(chatCollapsed&&d.pid!==myId){unreadCount++;const b=$('chat-badge');b.textContent=unreadCount;b.style.display='inline-block';}
 }
+
 function toggleChat(){
   chatCollapsed=!chatCollapsed;
   $('chat-panel').classList.toggle('collapsed',chatCollapsed);
   $('chat-icon').textContent=chatCollapsed?'▲':'▼';
   if(!chatCollapsed){unreadCount=0;$('chat-badge').style.display='none';$('chat-messages').scrollTop=$('chat-messages').scrollHeight;}
 }
+
 function submitChat(){const i=$('chat-input');sendChat(i.value);i.value='';}
 
-function sendReaction(emoji){if(!roomCode)return;showRxnFloat(emoji);fetch(NTFY+'/su-'+roomCode+'-rxn',{method:'POST',body:JSON.stringify({emoji,pid:myId,t:Date.now()})});}
+function sendReaction(emoji){
+  if(!roomCode)return;
+  showRxnFloat(emoji);
+  db.ref('rooms/SUS-'+roomCode+'/rxn').push({emoji,pid:myId,t:Date.now()});
+}
+
 function showRxnFloat(emoji){const el=document.createElement('div');el.className='rxn-float';el.textContent=emoji;el.style.cssText='left:'+(15+Math.random()*70)+'%;bottom:70px;';document.body.appendChild(el);setTimeout(()=>el.remove(),2100);}
 
 function launchConfetti(){
@@ -477,48 +412,66 @@ function launchConfetti(){
   let frame;function draw(){ctx.clearRect(0,0,canvas.width,canvas.height);pieces.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.rot+=p.vr;ctx.save();ctx.translate(p.x+p.w/2,p.y+p.h/2);ctx.rotate(p.rot);ctx.fillStyle=p.color;ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);ctx.restore();});if(pieces.some(p=>p.y<canvas.height+20))frame=requestAnimationFrame(draw);else canvas.style.display='none';}
   draw();setTimeout(()=>{canvas.style.display='none';cancelAnimationFrame(frame);},5000);
 }
+
 function copyCode(){if(!roomCode)return;navigator.clipboard.writeText(roomCode).then(()=>{const btn=$('copy-code-btn');btn.textContent='✓ Copied!';setTimeout(()=>{btn.innerHTML='&#x1F4CB; Copy code';},2000);}).catch(()=>prompt('Copy this code:',roomCode));}
+
+function leaveRoom(){sessionStorage.removeItem(SS_KEY);location.href='sus.html';}
 
 function getName(){
   myName=$('myname').value.trim();
   if(!myName){myName=RAND_NAMES[Math.floor(Math.random()*RAND_NAMES.length)];$('myname').value=myName;localStorage.setItem('su-name',myName);}
   return true;
 }
+
 async function createRoom(){
   if(busy||!getName())return;busy=true;
-  NTFY=normalizeNtfy($('ntfy-url').value);localStorage.setItem('su-ntfy-url',NTFY);$('ntfy-url').value=NTFY;
   $('home-err').textContent='Creating room…';
   try{
-    let code;const chars='ABCDEFGHJKMNPQRSTUVWXYZ';
-    for(let t=0;t<6;t++){code=Array.from({length:4},()=>chars[Math.floor(Math.random()*chars.length)]).join('');const ex=await readRoom(code);if(!ex||Date.now()-(ex.ts||0)>4*3600*1000)break;}
-    roomCode=code;me=0;$('home-err').textContent='';
-    const s={code,version:0,ts:Date.now(),phase:'lobby',numPlayers:5,numImpostors:1,discussSecs:60,
+    await initFB();
+    const chars='ABCDEFGHJKMNPQRSTUVWXYZ';
+    const code=Array.from({length:4},()=>chars[Math.floor(Math.random()*chars.length)]).join('');
+    roomCode=code;me=0;
+    const s={code,ts:Date.now(),phase:'lobby',numPlayers:5,numImpostors:1,discussSecs:60,
       kickedIds:[],players:[{id:myId,name:myName,avatar:myAvatar,alive:true}],
       roles:{},votes:{},eliminated:null,round:1,winner:null,
       discussDeadline:null,voteDeadline:null};
-    writeRoom(s);subscribeAll(code);clearInterval(heartbeatInterval);pingPresence();heartbeatInterval=setInterval(pingPresence,15000);history.replaceState(null,'','sus.html?room='+code);sessionStorage.setItem('su-room',code);show('scr-lobby');
+    await db.ref('rooms/SUS-'+code+'/state').set(s);
+    sessionStorage.setItem(SS_KEY,JSON.stringify({code,myId}));
+    history.replaceState(null,'','sus.html?room='+code);
+    state=s;subscribeRoom(code);subscribeChat(code);subscribeReactions(code);
+    $('home-err').textContent='';show('scr-lobby');
   }catch(e){$('home-err').textContent='Error — check internet.';console.error(e);}
   busy=false;
 }
+
 async function joinRoom(){
   if(busy||!getName())return;
   const code=$('joincode').value.trim().toUpperCase();
   if(code.length!==4){$('home-err').textContent='Enter 4-letter room code.';return;}
-  busy=true;
-  NTFY=normalizeNtfy($('ntfy-url').value);localStorage.setItem('su-ntfy-url',NTFY);$('ntfy-url').value=NTFY;
-  $('home-err').textContent='Joining…';
-  const s=await readRoom(code);
-  if(!s){$('home-err').textContent='Room not found! (ntfy: '+NTFY+')';busy=false;return;}
-  if(s.phase!=='lobby'){$('home-err').textContent='Game already started.';busy=false;return;}
-  if(s.players.length>=s.numPlayers){$('home-err').textContent='Room full ('+s.numPlayers+'/'+s.numPlayers+').';busy=false;return;}
-  if(!s.players.some(p=>p.id===myId)){
-    let name=myName,suf=2;
-    while(s.players.some(p=>p.name.toLowerCase()===name.toLowerCase()))name=myName+(suf++);
-    s.players.push({id:myId,name,avatar:myAvatar,alive:true});myName=name;
-  }
-  roomCode=code;me=s.players.findIndex(p=>p.id===myId);
-  $('home-err').textContent='';writeRoom(s);subscribeAll(code);clearInterval(heartbeatInterval);pingPresence();heartbeatInterval=setInterval(pingPresence,15000);history.replaceState(null,'','sus.html?room='+code);sessionStorage.setItem('su-room',code);show('scr-lobby');busy=false;
+  busy=true;$('home-err').textContent='Joining…';
+  await initFB();
+  let finalState=null;
+  try{
+    await db.ref('rooms/SUS-'+code+'/state').transaction(curr=>{
+      if(!curr)return {};
+      if(curr.phase!=='lobby'){$('home-err').textContent='Game already started.';return;}
+      if((curr.players||[]).some(p=>p.id===myId)){finalState=curr;return curr;}
+      if((curr.players||[]).length>=(curr.numPlayers||5)){$('home-err').textContent='Room full.';return;}
+      let name=myName,suf=2;
+      while((curr.players||[]).some(p=>p.name&&p.name.toLowerCase()===name.toLowerCase()))name=myName+(suf++);
+      curr.players=[...(curr.players||[]),{id:myId,name,avatar:myAvatar,alive:true}];
+      curr.ts=Date.now();finalState=curr;return curr;
+    });
+  }catch(e){$('home-err').textContent='Error joining room.';busy=false;return;}
+  if(!finalState){busy=false;return;}
+  roomCode=code;me=finalState.players.findIndex(p=>p.id===myId);
+  sessionStorage.setItem(SS_KEY,JSON.stringify({code,myId}));
+  history.replaceState(null,'','sus.html?room='+code);
+  state=finalState;$('home-err').textContent='';
+  subscribeRoom(code);subscribeChat(code);subscribeReactions(code);
+  show('scr-lobby');busy=false;
 }
+
 const isHost=()=>!!(state&&state.players.length&&state.players[0].id===myId);
 const myPlayer=()=>state&&state.players.find(p=>p.id===myId);
 const isAlive=()=>{const p=myPlayer();return !!(p&&p.alive);};
@@ -554,75 +507,45 @@ function hostRematch(){
 
 function castVote(targetId){
   if(busy||!state||state.phase!=='vote')return;
-  if(!isAlive())return;
-  if(myVote!==null)return;
-  busy=true;
-  myVote=targetId;
-  const s=deepCopy(state);
-  s.votes=s.votes||{};
-  s.votes[myId]=targetId;
-  writeRoom(s);
-  $('vote-confirmed').style.display='block';
-  $('skip-vote-btn').style.display='none';
-  busy=false;
+  if(!isAlive())return;if(myVote!==null)return;
+  busy=true;myVote=targetId;
+  const s=deepCopy(state);s.votes=s.votes||{};s.votes[myId]=targetId;
+  writeRoom(s);$('vote-confirmed').style.display='block';$('skip-vote-btn').style.display='none';busy=false;
 }
 
 function startGameTimer(s){
   clearInterval(gameTimerInterval);
-  const isDisc=s.phase==='discuss';
-  const isVote=s.phase==='vote';
+  const isDisc=s.phase==='discuss',isVote=s.phase==='vote';
   if(!isDisc&&!isVote)return;
   const deadline=isDisc?s.discussDeadline:s.voteDeadline;
   const total=isDisc?(s.discussSecs||60):30;
-  const fillId=isDisc?'disc-fill':'vote-fill';
-  const numId=isDisc?'disc-num':'vote-num';
+  const fillId=isDisc?'disc-fill':'vote-fill',numId=isDisc?'disc-num':'vote-num';
   gameTimerInterval=setInterval(()=>{
     if(!state||(state.phase!=='discuss'&&state.phase!=='vote')){clearInterval(gameTimerInterval);return;}
     const rem=Math.max(0,Math.ceil((deadline-Date.now())/1000));
-    const pct=rem/total*100;
     const fill=$(fillId),num=$(numId);
-    if(fill){fill.style.width=pct+'%';fill.style.background=rem<=10?'var(--red)':'var(--green)';}
+    if(fill){fill.style.width=(rem/total*100)+'%';fill.style.background=rem<=10?'var(--red)':'var(--green)';}
     if(num)num.textContent=rem>60?Math.ceil(rem/60)+'m':rem+'s';
     if(rem===0){
       clearInterval(gameTimerInterval);
-      const doAdvance=()=>{
-        if(!state)return;
-        if(state.phase==='discuss')advanceToVote(deepCopy(state));
-        else if(state.phase==='vote')tallyVotes(deepCopy(state));
-      };
-      if(isHost())doAdvance();
-      else setTimeout(doAdvance,900+Math.random()*600);
+      const doAdvance=()=>{if(!state)return;if(state.phase==='discuss')advanceToVote(deepCopy(state));else if(state.phase==='vote')tallyVotes(deepCopy(state));};
+      if(isHost())doAdvance();else setTimeout(doAdvance,900+Math.random()*600);
     }
   },250);
 }
 
 function advanceFromRoles(){
   if(!isHost()||!state||state.phase!=='roles')return;
-  const s=deepCopy(state);
-  s.phase='discuss';
-  s.discussDeadline=Date.now()+(s.discussSecs||60)*1000;
-  writeRoom(s);
+  const s=deepCopy(state);s.phase='discuss';s.discussDeadline=Date.now()+(s.discussSecs||60)*1000;writeRoom(s);
 }
-function advanceToVote(s){
-  s.phase='vote';
-  s.voteDeadline=Date.now()+30000;
-  s.votes={};
-  writeRoom(s);
-}
+function advanceToVote(s){s.phase='vote';s.voteDeadline=Date.now()+30000;s.votes={};writeRoom(s);}
 function tallyVotes(s){
-  const votes=s.votes||{};
-  const alive=s.players.filter(p=>p.alive);
-  const counts={};
-  alive.forEach(p=>{
-    const t=votes[p.id];
-    if(t&&t!=='skip')counts[t]=(counts[t]||0)+1;
-  });
+  const votes=s.votes||{},alive=s.players.filter(p=>p.alive),counts={};
+  alive.forEach(p=>{const t=votes[p.id];if(t&&t!=='skip')counts[t]=(counts[t]||0)+1;});
   const maxV=Math.max(0,...Object.values(counts));
   const top=Object.entries(counts).filter(([,v])=>v===maxV&&maxV>0).map(([k])=>k);
-  if(top.length===1){
-    s.eliminated=top[0];
-    s.players=s.players.map(p=>p.id===s.eliminated?{...p,alive:false}:p);
-  }else{s.eliminated=null;}
+  if(top.length===1){s.eliminated=top[0];s.players=s.players.map(p=>p.id===s.eliminated?{...p,alive:false}:p);}
+  else{s.eliminated=null;}
   const aliveNow=s.players.filter(p=>p.alive);
   const aliveImps=aliveNow.filter(p=>s.roles[p.id]==='impostor');
   const aliveCrew=aliveNow.filter(p=>s.roles[p.id]==='crewmate');
@@ -633,11 +556,7 @@ function tallyVotes(s){
 }
 function hostNextRound(){
   if(!isHost()||!state||state.phase!=='elim')return;
-  const s=deepCopy(state);
-  s.phase='discuss';
-  s.discussDeadline=Date.now()+(s.discussSecs||60)*1000;
-  s.votes={};
-  writeRoom(s);
+  const s=deepCopy(state);s.phase='discuss';s.discussDeadline=Date.now()+(s.discussSecs||60)*1000;s.votes={};writeRoom(s);
 }
 
 function render(){
@@ -646,8 +565,7 @@ function render(){
   const chatPhases=['discuss','vote','elim'];
   $('chat-panel').style.display=chatPhases.includes(s.phase)?'block':'none';
   $('rxn-bar').style.display=chatPhases.includes(s.phase)?'flex':'none';
-  const phaseChanged=s.phase!==renderedPhase;
-  renderedPhase=s.phase;
+  const phaseChanged=s.phase!==renderedPhase;renderedPhase=s.phase;
   switch(s.phase){
     case 'lobby':  return renderLobby(s);
     case 'roles':  return renderRoles(s,phaseChanged);
@@ -665,13 +583,12 @@ function renderLobby(s){
     $('np-picker').querySelectorAll('.np-btn').forEach(btn=>{const n=parseInt(btn.textContent);btn.classList.toggle('active',n===s.numPlayers);btn.disabled=s.players.length>n;});
     $('imp-picker').querySelectorAll('.np-btn').forEach(btn=>btn.classList.toggle('active',parseInt(btn.textContent)===(s.numImpostors||1)));
     $('disc-picker').querySelectorAll('.np-btn').forEach(btn=>btn.classList.toggle('active',parseInt(btn.textContent)===(s.discussSecs||60)));
-    // disable 2 impostors if too few players
     $('imp-picker').querySelectorAll('.np-btn').forEach(btn=>{btn.disabled=parseInt(btn.textContent)===2&&s.numPlayers<5;});
   }else{$('lobby-host-settings').style.display='none';}
   const box=$('lobby-players');box.innerHTML='';
   for(let i=0;i<s.numPlayers;i++){
     const d=document.createElement('div');
-    if(s.players[i]){const p=s.players[i];d.className='pl-row';let inner='<span style="font-size:22px;">'+esc(av(p))+'</span> '+esc(p.name);if(i===0)inner+=' <span class="tag">HOST</span>';if(p.id===myId)inner+=' <small style="opacity:.5;">(you)</small>';inner+=pingBadge(p.id);if(isHost()&&i!==0&&p.id!==myId)inner+='<button class="kick-btn" onclick="hostKick(\''+p.id+'\')" title="Remove">✕</button>';d.innerHTML=inner;}
+    if(s.players[i]){const p=s.players[i];d.className='pl-row';let inner='<span style="font-size:22px;">'+esc(av(p))+'</span> '+esc(p.name);if(i===0)inner+=' <span class="tag">HOST</span>';if(p.id===myId)inner+=' <small style="opacity:.5;">(you)</small>';if(isHost()&&i!==0&&p.id!==myId)inner+='<button class="kick-btn" onclick="hostKick(\''+p.id+'\')" title="Remove">✕</button>';d.innerHTML=inner;}
     else{d.className='pl-row empty';d.textContent='Waiting…';}
     box.appendChild(d);
   }
@@ -684,18 +601,15 @@ function renderLobby(s){
 }
 
 function renderRoles(s,phaseChanged){
-  const role=myRole();
-  const isImp=role==='impostor';
+  const role=myRole(),isImp=role==='impostor';
   $('roles-tag').textContent='Round '+s.round+' — Your role';
   $('role-emoji').textContent=isImp?'🔴':'🧑‍🚀';
   $('role-name').className='role-name '+(isImp?'imp':'crew');
   $('role-name').textContent=isImp?'IMPOSTOR':'CREWMATE';
   $('role-hint').textContent=isImp?'Blend in. Avoid suspicion.':'Find the impostor. Vote them out.';
   $('flip-back').className='flip-face flip-back '+(isImp?'imp':'crew');
-  if(isImp){
-    const mates=s.players.filter(p=>p.id!==myId&&(s.roles||{})[p.id]==='impostor');
-    $('imp-mates').innerHTML=mates.length?'Impostor partners: '+mates.map(p=>esc(av(p))+' <b>'+esc(p.name)+'</b>').join(', '):'You are the only impostor.';
-  }else{$('imp-mates').textContent='';}
+  if(isImp){const mates=s.players.filter(p=>p.id!==myId&&(s.roles||{})[p.id]==='impostor');$('imp-mates').innerHTML=mates.length?'Impostor partners: '+mates.map(p=>esc(av(p))+' <b>'+esc(p.name)+'</b>').join(', '):'You are the only impostor.';}
+  else{$('imp-mates').textContent='';}
   if(phaseChanged){
     const inner=$('flip-inner');inner.classList.remove('flipped');
     setTimeout(()=>inner.classList.add('flipped'),400);
@@ -715,23 +629,15 @@ function renderDiscuss(s,phaseChanged){
     list.appendChild(d);
   });
   let hostBtn=$('disc-force-vote');
-  if(!hostBtn){
-    hostBtn=document.createElement('button');hostBtn.id='disc-force-vote';hostBtn.className='btn';
-    hostBtn.style.cssText='margin-top:14px;background:var(--green);box-shadow:0 5px 0 #1c4732;';
-    hostBtn.textContent='→ Go to vote now';
-    hostBtn.onclick=()=>{if(state&&state.phase==='discuss')advanceToVote(deepCopy(state));};
-    $('scr-discuss').appendChild(hostBtn);
-  }
+  if(!hostBtn){hostBtn=document.createElement('button');hostBtn.id='disc-force-vote';hostBtn.className='btn';hostBtn.style.cssText='margin-top:14px;background:var(--green);box-shadow:0 5px 0 #1c4732;';hostBtn.textContent='→ Go to vote now';hostBtn.onclick=()=>{if(state&&state.phase==='discuss')advanceToVote(deepCopy(state));};$('scr-discuss').appendChild(hostBtn);}
   hostBtn.style.display=isHost()?'block':'none';
-  startGameTimer(s);
-  show('scr-discuss');
+  startGameTimer(s);show('scr-discuss');
 }
 
 function renderVote(s,phaseChanged){
   if(phaseChanged)myVote=null;
   $('vote-tag').textContent='Round '+s.round+' — Vote!';
-  const alive=s.players.filter(p=>p.alive);
-  const iVoted=myVote!==null;
+  const alive=s.players.filter(p=>p.alive),iVoted=myVote!==null;
   $('vote-status').textContent=iVoted?'Waiting for others to vote…':'Who is the impostor? Tap to vote!';
   $('vote-confirmed').style.display=iVoted?'block':'none';
   $('skip-vote-btn').style.display=(isAlive()&&!iVoted)?'block':'none';
@@ -739,38 +645,29 @@ function renderVote(s,phaseChanged){
   grid.className='player-grid'+(alive.length<=4?' two-col':'');
   alive.forEach(p=>{
     const card=document.createElement('div');
-    const isMe=p.id===myId;
-    const votedFor=myVote===p.id;
+    const isMe=p.id===myId,votedFor=myVote===p.id;
     card.className='p-card'+(isMe?' me-card':'')+(votedFor?' selected':'');
-    if(!isAlive()||iVoted||isMe)card.classList.add(iVoted&&!votedFor?'':isMe?'me-card':'');
     const voteCount=Object.values(s.votes||{}).filter(t=>t===p.id).length;
     card.innerHTML='<div class="p-av">'+esc(av(p))+'</div><div class="p-name">'+esc(p.name)+'</div>'+
-      (voteCount>0?'<div class="p-vote-badge">'+voteCount+'</div>':'')+
-      (isMe?'<div class="p-status" style="color:var(--gold);">You</div>':'');
+      (voteCount>0?'<div class="p-vote-badge">'+voteCount+'</div>':'')+(isMe?'<div class="p-status" style="color:var(--gold);">You</div>':'');
     if(!isMe&&!iVoted&&isAlive())card.onclick=()=>castVote(p.id);
     grid.appendChild(card);
   });
-  startGameTimer(s);
-  show('scr-vote');
+  startGameTimer(s);show('scr-vote');
 }
 
 function renderElim(s,phaseChanged){
   const box=$('elim-box');
   if(s.eliminated){
     const p=s.players.find(pl=>pl.id===s.eliminated)||{name:'?',avatar:'👤'};
-    const role=(s.roles||{})[s.eliminated]||'crewmate';
-    const isImp=role==='impostor';
+    const role=(s.roles||{})[s.eliminated]||'crewmate',isImp=role==='impostor';
     let voteLines='';
     if(s.votes&&Object.keys(s.votes).length){
       voteLines='<div class="vote-tally">';
-      s.players.forEach(pl=>{
-        const t=s.votes[pl.id];if(!t)return;
-        const tp=t==='skip'?{name:'Skip',avatar:'⏩'}:s.players.find(x=>x.id===t)||{name:'?'};
-        voteLines+=esc(av(pl))+' '+esc(pl.name)+' → '+esc(av(tp))+' '+esc(tp.name)+'<br>';
-      });
+      s.players.forEach(pl=>{const t=s.votes[pl.id];if(!t)return;const tp=t==='skip'?{name:'Skip',avatar:'⏩'}:s.players.find(x=>x.id===t)||{name:'?'};voteLines+=esc(av(pl))+' '+esc(pl.name)+' → '+esc(av(tp))+' '+esc(tp.name)+'<br>';});
       voteLines+='</div>';
     }
-    box.innerHTML='<div class="elim-av">'+esc(av(p))+'</div><div class="elim-name">'+esc(p.name)+' eliminated!</div><div class="elim-role '+(isImp?'imp':'crew')+'">'+(isImp?'🔴 IMPOSTOR!':'🧑‍🚀 Crewmate'+(isImp?'':' — innocent!'))+'</div>'+voteLines;
+    box.innerHTML='<div class="elim-av">'+esc(av(p))+'</div><div class="elim-name">'+esc(p.name)+' eliminated!</div><div class="elim-role '+(isImp?'imp':'crew')+'">'+(isImp?'🔴 IMPOSTOR!':'🧑‍🚀 Crewmate — innocent!')+'</div>'+voteLines;
   }else{
     box.innerHTML='<div style="font-size:48px;">🤷</div><div class="elim-name">No one eliminated!</div><div style="font-family:\'Catamaran\';opacity:.7;margin-top:8px;">Votes were tied or all skipped</div>';
   }
@@ -794,26 +691,25 @@ function renderOver(s){
     imps.appendChild(row);
   });
   const t=$('over-table');
-  t.innerHTML=s.players.map(p=>{
-    const role=(s.roles||{})[p.id]||'?';
-    const alive=p.alive;
-    return '<tr><td>'+esc(av(p))+' '+esc(p.name)+(p.id===myId?' <small style="opacity:.5;">(you)</small>':'')+'</td><td>'+(role==='impostor'?'🔴 Impostor':'🧑‍🚀 Crew')+(alive?'':' 💀')+'</td></tr>';
-  }).join('');
+  t.innerHTML=s.players.map(p=>{const role=(s.roles||{})[p.id]||'?';return '<tr><td>'+esc(av(p))+' '+esc(p.name)+(p.id===myId?' <small style="opacity:.5;">(you)</small>':'')+'</td><td>'+(role==='impostor'?'🔴 Impostor':'🧑‍🚀 Crew')+(p.alive?'':' 💀')+'</td></tr>';}).join('');
   $('over-rematch').style.display=isHost()?'block':'none';
+  sessionStorage.removeItem(SS_KEY);
   show('scr-over');
   if(crewWin)launchConfetti();
 }
 
-window.addEventListener('beforeunload',e=>{if(roomCode){e.preventDefault();e.returnValue='';}});
-
 (async function(){
-  const saved=sessionStorage.getItem('su-room'); if(!saved) return;
-  const existing=await readRoom(saved);
-  if(!existing||!existing.players||!existing.players.find(p=>p.id===myId)){sessionStorage.removeItem('su-room');return;}
-  roomCode=saved; state=existing; lastVer=existing.version||0;
+  await initFB();
+  const saved=JSON.parse(sessionStorage.getItem(SS_KEY)||'null');
+  if(!saved)return;
+  const snap=await db.ref('rooms/SUS-'+saved.code+'/state').once('value');
+  const existing=snap.val();
+  if(!existing||!existing.players||!existing.players.find(p=>p.id===saved.myId)||existing.phase==='over'){
+    sessionStorage.removeItem(SS_KEY);return;
+  }
+  myId=saved.myId;roomCode=saved.code;state=existing;
   me=existing.players.findIndex(p=>p.id===myId);
-  subscribeAll(saved);
-  clearInterval(heartbeatInterval); pingPresence(); heartbeatInterval=setInterval(pingPresence,15000);
+  subscribeRoom(saved.code);subscribeChat(saved.code);subscribeReactions(saved.code);
   render();
 })();
 </script>

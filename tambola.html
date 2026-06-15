@@ -41,23 +41,18 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
 .np-picker{display:flex;gap:6px;margin-top:8px;}
 .np-btn{flex:1;padding:10px 4px;font-family:'Baloo Thambi 2';font-size:16px;font-weight:800;border:2px solid rgba(58,42,24,.3);border-radius:8px;background:#fffdf6;color:var(--ink);cursor:pointer;}
 .np-btn.active{background:var(--ink);color:var(--kraft);border-color:var(--ink);}
-.conn-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;background:#888;vertical-align:middle;}
-.conn-dot.ok{background:#27ae60;}.conn-dot.err{background:#e74c3c;}
 .back-link{display:block;text-align:center;font-family:'Catamaran';font-size:13px;font-weight:700;color:var(--ink);opacity:.55;margin-top:18px;text-decoration:none;letter-spacing:1px;}
 .back-link:hover{opacity:.9;}
 #conn-banner{display:none;position:fixed;top:0;left:0;right:0;background:var(--red);color:#fff;font-family:'Baloo Thambi 2';font-size:14px;font-weight:700;text-align:center;padding:8px;z-index:9999;}
-/* Last called number */
 .last-called-box{text-align:center;padding:14px;background:var(--paper);border-radius:6px;box-shadow:0 4px 0 var(--shadow);margin-top:10px;}
 .last-num{font-size:64px;font-weight:800;line-height:1;color:var(--red);}
 .last-num-label{font-family:'Catamaran';font-size:12px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;opacity:.6;margin-top:2px;}
 .autocall-info{font-family:'Catamaran';font-size:13px;font-weight:700;opacity:.7;margin-top:6px;min-height:18px;}
 .call-btn{margin-top:10px;padding:11px 0;font-size:17px;}
-/* Number board */
 .tb-numboard{display:grid;grid-template-columns:repeat(10,1fr);gap:3px;margin-top:8px;}
 .tb-num{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;border-radius:4px;background:#fffdf6;border:1px solid rgba(58,42,24,.15);color:var(--ink);}
 .tb-num.called{background:var(--green);color:#fff;border-color:var(--green);}
 .tb-num.last-call{background:var(--red);color:#fff;border-color:var(--red);}
-/* Ticket */
 .tb-ticket{border:2px solid var(--ink);border-radius:6px;overflow:hidden;margin-top:8px;}
 .tb-trow{display:grid;grid-template-columns:repeat(9,1fr);}
 .tb-trow+.tb-trow{border-top:1px solid rgba(58,42,24,.2);}
@@ -65,19 +60,16 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
 .tb-tcell:last-child{border-right:none;}
 .tb-tcell.blank{background:rgba(58,42,24,.05);color:transparent;}
 .tb-tcell.marked{background:var(--gold);color:#fff;}
-/* Wins panel */
 .win-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid rgba(58,42,24,.1);font-size:14px;font-weight:700;}
 .win-row:last-child{border-bottom:none;}
 .win-label{opacity:.6;font-family:'Catamaran';font-size:12px;flex-shrink:0;}
 .win-val{flex:1;font-size:13px;}
 .win-row.won .win-val{color:var(--green);}
 .win-row:not(.won) .win-val{opacity:.4;}
-/* Over - all wins list */
 .ov-win{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(58,42,24,.1);font-size:15px;font-weight:700;}
 .ov-win:last-child{border-bottom:none;}
 .ov-label{font-family:'Catamaran';font-size:12px;letter-spacing:1px;text-transform:uppercase;opacity:.6;}
 .ov-winner{color:var(--green);}
-/* Chat */
 .chat-panel{position:fixed;bottom:0;left:0;right:0;max-width:480px;margin:0 auto;background:var(--paper);border-top:2px solid rgba(58,42,24,.2);border-radius:12px 12px 0 0;box-shadow:0 -4px 16px rgba(0,0,0,.15);z-index:100;transition:transform .25s ease;}
 .chat-panel.collapsed{transform:translateY(calc(100% - 46px));}
 .chat-header{height:46px;padding:0 16px;display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:800;font-size:15px;}
@@ -108,12 +100,6 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
     <input type="text" id="home-code" class="code" maxlength="4" placeholder="ABCD" autocomplete="off">
     <button class="btn blue" onclick="joinRoom()">Join Room</button>
     <div class="err" id="home-err"></div>
-    <label style="margin-top:18px;">ntfy Server</label>
-    <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
-      <span class="conn-dot" id="ntfy-dot"></span>
-      <input type="text" id="ntfy-url" style="flex:1;font-size:14px;" placeholder="https://ntfy.sh">
-    </div>
-    <div style="font-family:'Catamaran';font-size:11px;opacity:.55;margin-top:4px;" id="ntfy-status"></div>
   </div>
   <a class="back-link" href="index.html">← All Games</a>
 </div>
@@ -146,7 +132,6 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
       </div>
     </div>
     <div id="lobby-maxplayers" style="display:none;font-family:'Catamaran';font-size:13px;opacity:.6;margin:8px 0 0;"></div>
-    <div id="lobby-monitor" style="display:none;margin-top:10px;font-family:'Catamaran';font-size:12px;opacity:.7;text-align:center;word-break:break-all;"></div>
     <button class="btn green" id="lobby-start" style="display:none;" onclick="hostStart()">Deal Tickets &amp; Start</button>
     <div class="waiting" id="lobby-wait" style="display:none;">
       <span class="dotpulse"></span><span class="dotpulse"></span><span class="dotpulse"></span>
@@ -154,7 +139,7 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
     </div>
     <div class="err" id="lobby-err"></div>
   </div>
-  <a class="back-link" href="#" onclick="leaveRoom()">← Leave Room</a>
+  <button class="btn ghost" onclick="leaveRoom()" style="margin-top:12px;">← Leave / New game</button>
 </div>
 
 <!-- GAME -->
@@ -191,7 +176,7 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
       <span>Waiting for host…</span>
     </div>
   </div>
-  <a class="back-link" href="#" onclick="leaveRoom()">← Leave Room</a>
+  <button class="btn ghost" onclick="leaveRoom()" style="margin-top:12px;">← Leave / New game</button>
 </div>
 
 <!-- CHAT -->
@@ -201,110 +186,67 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
   <div class="chat-input-row"><input type="text" id="chat-input" maxlength="100" placeholder="Message…" autocomplete="off" onkeydown="if(event.key==='Enter')submitChat()"><button class="chat-send" onclick="submitChat()">Send</button></div>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script>
-const WIN_LABELS = {earlyFive:'⚡ Early Five',topRow:'↑ Top Row',middleRow:'↔ Middle Row',bottomRow:'↓ Bottom Row',fullHouse:'🏆 Full House'};
-const WIN_ORDER  = ['earlyFive','topRow','middleRow','bottomRow','fullHouse'];
-const RNAMES = ['SwiftTiger','BoldLion','BravePanda','CleverFox','LuckyDragon','WildNinja','EpicShark','SneakyOwl','MightyWolf','RoyalEagle','CoolBear','DarkPhoenix'];
+const SS_KEY='tb-room';
+const _FBCFG={apiKey:"AIzaSyAQ0l788yLKmfWIJ6Ok88k2TcwdD6XA1n4",databaseURL:"https://raja-rani-game-ffecd-default-rtdb.asia-southeast1.firebasedatabase.app"};
+const WIN_LABELS={earlyFive:'⚡ Early Five',topRow:'↑ Top Row',middleRow:'↔ Middle Row',bottomRow:'↓ Bottom Row',fullHouse:'🏆 Full House'};
+const WIN_ORDER=['earlyFive','topRow','middleRow','bottomRow','fullHouse'];
+const RNAMES=['SwiftTiger','BoldLion','BravePanda','CleverFox','LuckyDragon','WildNinja','EpicShark','SneakyOwl','MightyWolf','RoyalEagle','CoolBear','DarkPhoenix'];
 function randomName(){ return RNAMES[Math.floor(Math.random()*RNAMES.length)]; }
 
-let NTFY = normalizeNtfy(
-  localStorage.getItem('tb-ntfy-url') ||
-  localStorage.getItem('lu-ntfy-url') ||
-  localStorage.getItem('rr-ntfy-url') ||
-  'https://ntfy.sh'
-);
-let myId   = localStorage.getItem('tb-pid') || uid();
-let myName = localStorage.getItem('tb-name') || '';
-let roomCode='', state=null, lastVer=0, roomEs=null, chatEs=null;
-let busy=false, autoCallTimer=null, countdownTick=null;
-let presEs=null, heartbeatInterval=null;
-const lastSeenMap={};
-let chatCollapsed=true, unreadCount=0;
+let myId=localStorage.getItem('tb-pid')||uid();
+let myName=localStorage.getItem('tb-name')||'';
+let roomCode='',state=null;
+let busy=false,autoCallTimer=null,countdownTick=null;
+let chatCollapsed=true,unreadCount=0;
 const seenMsgs=new Set();
 localStorage.setItem('tb-pid',myId);
 
+let db,roomRef,chatRef;
+
 function uid(){ return Math.random().toString(36).slice(2,10); }
-function normalizeNtfy(r){ let v=(r||'https://ntfy.sh').trim();try{v=new URL(v).origin;}catch{}return v.replace(/\/+$/,'')||'https://ntfy.sh'; }
 function $(id){ return document.getElementById(id); }
 function deepCopy(o){ return JSON.parse(JSON.stringify(o)); }
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function randCode(){ return Array.from({length:4},()=>'ABCDEFGHJKLMNPQRSTUVWXYZ'[Math.floor(Math.random()*23)]).join(''); }
 
-function topic(code){ return 'tb-'+code+'-s'; }
-
-async function readRoom(code){
-  for(let a=0;a<3;a++){
-    if(a>0) await new Promise(r=>setTimeout(r,1500));
-    try{
-      const res=await fetch(NTFY+'/'+topic(code)+'/json?poll=1&since=all');
-      if(!res.ok) continue;
-      const text=await res.text(); let latest=null;
-      for(const line of text.trim().split('\n').filter(Boolean)){
-        try{ const ev=JSON.parse(line); if(ev.event==='message'&&ev.message){ const s=JSON.parse(ev.message); if(!latest||(s.version||0)>(latest.version||0)) latest=s; } }catch{}
-      }
-      if(latest) return latest;
-    }catch{}
-  }
-  return null;
+// ── Firebase ─────────────────────────────────────────────────────────────────
+function initFB(){
+  if(!firebase.apps.length) firebase.initializeApp(_FBCFG);
+  db=firebase.database(); return Promise.resolve();
+  db.ref('.info/connected').on('value',snap=>{
+    if(snap.val()) $('conn-banner').style.display='none';
+    else if(roomCode) $('conn-banner').style.display='block';
+  });
 }
 
 function writeRoom(s){
-  s.version=(s.version||0)+1; s.ts=Date.now();
-  fetch(NTFY+'/'+topic(s.code),{method:'POST',body:JSON.stringify(s)}).catch(()=>onConnLost());
-  state=s; lastVer=s.version; render();
+  s.ts=Date.now();
+  db.ref('rooms/TB-'+roomCode+'/state').set(s);
+  state=s; render();
 }
 
 function subscribeRoom(code){
-  if(roomEs) roomEs.close();
-  const since=Math.floor((Date.now()-5000)/1000);
-  roomEs=new EventSource(NTFY+'/'+topic(code)+'/sse?since='+since);
-  roomEs.onmessage=e=>{
-    try{
-      const ev=JSON.parse(e.data); if(ev.event!=='message') return;
-      const s=JSON.parse(ev.message); if((s.version||0)<=lastVer) return;
-      lastVer=s.version; state=s; render();
-    }catch{}
-  };
-  roomEs.onerror=()=>onConnLost();
-  roomEs.onopen=()=>onConnBack();
-}
-
-function subscribePresence(code){
-  if(presEs) presEs.close();
-  presEs=new EventSource(NTFY+'/tb-'+code+'-pres/sse?since='+Math.floor((Date.now()-25000)/1000));
-  presEs.onmessage=e=>{
-    try{
-      const ev=JSON.parse(e.data); if(ev.event!=='message') return;
-      const d=JSON.parse(ev.message);
-      if(d.id&&d.ts) lastSeenMap[d.id]={ts:Date.now(),ping:Math.max(0,Date.now()-d.ts)};
-    }catch{}
-  };
-}
-function pingPresence(){
-  if(!roomCode) return;
-  fetch(NTFY+'/tb-'+roomCode+'-pres',{method:'POST',body:JSON.stringify({id:myId,name:myName,ts:Date.now()})}).catch(()=>{});
-}
-function pingBadge(pid){
-  if(pid===myId) return '<span style="font-family:Catamaran;font-size:11px;opacity:.45;margin-left:auto;">you</span>';
-  const p=lastSeenMap[pid];
-  if(!p||Date.now()-p.ts>25000) return '<span style="color:#888;font-size:13px;margin-left:auto;">⚫</span>';
-  const ms=p.ping, col=ms<400?'#27ae60':ms<1000?'#d49a2a':'#e74c3c';
-  const lbl=ms<1000?ms+'ms':(ms/1000).toFixed(1)+'s';
-  return '<span style="color:'+col+';font-size:11px;font-family:Catamaran;font-weight:700;margin-left:auto;">● '+lbl+'</span>';
+  if(roomRef) roomRef.off();
+  roomRef=db.ref('rooms/TB-'+code+'/state');
+  roomRef.on('value',snap=>{
+    const s=snap.val(); if(!s) return;
+    state=s; render();
+  });
 }
 
 function subscribeChat(code){
-  if(chatEs) chatEs.close();
-  chatEs=new EventSource(NTFY+'/tb-'+code+'-c/sse?since='+Math.floor((Date.now()-60000)/1000));
-  chatEs.onmessage=e=>{
-    try{
-      const ev=JSON.parse(e.data); if(ev.event!=='message') return;
-      const msg=JSON.parse(ev.message); if(seenMsgs.has(msg.id)) return;
-      seenMsgs.add(msg.id); appendMsg(msg);
-    }catch{}
-  };
+  if(chatRef) chatRef.off();
+  chatRef=db.ref('rooms/TB-'+code+'/chat');
+  chatRef.on('child_added',snap=>{
+    const msg=snap.val(); if(!msg||seenMsgs.has(snap.key)) return;
+    seenMsgs.add(snap.key); appendMsg(msg);
+  });
 }
 
+// ── Chat ──────────────────────────────────────────────────────────────────────
 function appendMsg(msg){
   const el=$('chat-messages'); if(!el) return;
   const isMe=msg.senderId===myId;
@@ -326,25 +268,10 @@ function submitChat(){
   const inp=$('chat-input'); if(!inp) return;
   const text=inp.value.trim(); if(!text||!roomCode) return;
   inp.value='';
-  fetch(NTFY+'/tb-'+roomCode+'-c',{method:'POST',body:JSON.stringify({id:uid(),senderId:myId,senderName:myName,text})}).catch(()=>{});
+  db.ref('rooms/TB-'+roomCode+'/chat').push({senderId:myId,senderName:myName,text,ts:Date.now()});
 }
 
-function onConnLost(){ $('conn-banner').style.display='block'; }
-function onConnBack(){ $('conn-banner').style.display='none'; }
-
-// ntfy setup
-(function(){
-  const inp=$('ntfy-url'); inp.value=NTFY;
-  function check(){
-    NTFY=normalizeNtfy(inp.value); inp.value=NTFY; localStorage.setItem('tb-ntfy-url',NTFY);
-    $('ntfy-dot').className='conn-dot'; $('ntfy-status').textContent='Checking…';
-    fetch(NTFY+'/',{method:'HEAD'})
-      .then(()=>{ $('ntfy-dot').className='conn-dot ok'; $('ntfy-status').textContent=NTFY+' ✓'; })
-      .catch(()=>{ $('ntfy-dot').className='conn-dot err'; $('ntfy-status').textContent='Cannot reach '+NTFY; });
-  }
-  inp.addEventListener('blur',check); check();
-})();
-
+// ── Name init ─────────────────────────────────────────────────────────────────
 (function(){
   const inp=$('home-name');
   if(!myName){ myName=randomName(); localStorage.setItem('tb-name',myName); }
@@ -353,9 +280,9 @@ function onConnBack(){ $('conn-banner').style.display='none'; }
 })();
 
 function showScreen(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); $(id).classList.add('active'); }
-function isHost(){ return state&&state.players[0]&&state.players[0].id===myId; }
+function isHost(){ return state&&state.players&&state.players[0]&&state.players[0].id===myId; }
 
-// ── Ticket generation ────────────────────────────────────────────────────────
+// ── Ticket generation ─────────────────────────────────────────────────────────
 function hashSeed(str){
   let h=0; for(let i=0;i<str.length;i++) h=(Math.imul(31,h)+str.charCodeAt(i))|0;
   return h>>>0;
@@ -366,33 +293,23 @@ function generateTicket(seed){
   function rand(){ s=(Math.imul(1664525,s)+1013904223)>>>0; return s/0x100000000; }
   function rInt(n){ return Math.floor(rand()*n); }
   function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=rInt(i+1);[a[i],a[j]]=[a[j],a[i]];} }
-
   const colUsed=Array(9).fill(0);
   const rowCols=[];
-
-  // Row 0: pick any 5 columns
   const all0=[0,1,2,3,4,5,6,7,8]; shuffle(all0); rowCols.push(all0.slice(0,5));
   rowCols[0].forEach(c=>colUsed[c]++);
-
-  // Row 1: ensure overlap with row 0 is 1-4 (not all 5)
   const r0set=new Set(rowCols[0]);
-  let r1, tries=0;
-  do {
-    const all1=[0,1,2,3,4,5,6,7,8]; shuffle(all1); r1=all1.slice(0,5); tries++;
-  } while(r1.every(c=>r0set.has(c))&&tries<20);
+  let r1,tries=0;
+  do{ const all1=[0,1,2,3,4,5,6,7,8]; shuffle(all1); r1=all1.slice(0,5); tries++; }
+  while(r1.every(c=>r0set.has(c))&&tries<20);
   rowCols.push(r1); r1.forEach(c=>colUsed[c]++);
-
-  // Row 2: must include all cols with colUsed=0, fill from colUsed=1
   const must=[],opt=[];
   for(let c=0;c<9;c++){ if(colUsed[c]===0) must.push(c); else if(colUsed[c]===1) opt.push(c); }
   shuffle(opt);
   rowCols.push([...must,...opt.slice(0,5-must.length)]);
   rowCols[2].forEach(c=>colUsed[c]++);
-
-  // Fill numbers per column
   const ticket=Array(3).fill(null).map(()=>Array(9).fill(null));
   for(let c=0;c<9;c++){
-    const start=c===0?1:c*10, end=c===8?90:c*10+9;
+    const start=c===0?1:c*10,end=c===8?90:c*10+9;
     const range=[]; for(let n=start;n<=end;n++) range.push(n);
     shuffle(range);
     const rows=rowCols.map((rc,r)=>rc.includes(c)?r:-1).filter(r=>r>=0).sort((a,b)=>a-b);
@@ -402,16 +319,16 @@ function generateTicket(seed){
   return ticket;
 }
 
-// ── Win checking (host only) ─────────────────────────────────────────────────
+// ── Win checking (host only) ──────────────────────────────────────────────────
 function checkWins(s){
-  const called=new Set(s.calledNumbers);
+  const called=new Set(s.calledNumbers||[]);
+  s.wins=s.wins||{};
   for(const p of s.players){
-    const t=s.tickets[p.id]; if(!t) continue;
+    const t=generateTicket(hashSeed(p.id+(s.code||roomCode)));
     const allNums=t.flat().filter(n=>n!==null);
     const marked=allNums.filter(n=>called.has(n)).length;
     if(!s.wins.earlyFive&&marked>=5) s.wins.earlyFive={playerId:p.id,name:p.name};
-    [0,1,2].forEach((r,i)=>{
-      const cond=['topRow','middleRow','bottomRow'][i];
+    ['topRow','middleRow','bottomRow'].forEach((cond,r)=>{
       if(!s.wins[cond]){
         const rowNums=t[r].filter(n=>n!==null);
         if(rowNums.length&&rowNums.every(n=>called.has(n))) s.wins[cond]={playerId:p.id,name:p.name};
@@ -419,22 +336,21 @@ function checkWins(s){
     });
     if(!s.wins.fullHouse&&allNums.length&&allNums.every(n=>called.has(n))) s.wins.fullHouse={playerId:p.id,name:p.name};
   }
-  if(Object.values(s.wins).every(v=>v!==null)||s.calledNumbers.length>=90) s.phase='over';
+  if(WIN_ORDER.every(k=>s.wins[k])||(s.calledNumbers||[]).length>=90) s.phase='over';
 }
 
-// ── Auto-call scheduling ─────────────────────────────────────────────────────
+// ── Auto-call ─────────────────────────────────────────────────────────────────
 function scheduleAutoCall(){
   clearTimeout(autoCallTimer); autoCallTimer=null;
-  if(!state||state.phase!=='play'||!state.autoCallSecs||!isHost()||state.calledNumbers.length>=90) return;
+  if(!state||state.phase!=='play'||!state.autoCallSecs||!isHost()||(state.calledNumbers||[]).length>=90) return;
   const elapsed=Date.now()-state.lastCallTs;
   const delay=Math.max(300,state.autoCallSecs*1000-elapsed);
-  autoCallTimer=setTimeout(()=>{ autoCallTimer=null; if(state&&state.phase==='play'&&isHost()&&!busy&&state.calledNumbers.length<90) callNumber(); },delay);
+  autoCallTimer=setTimeout(()=>{ autoCallTimer=null; if(state&&state.phase==='play'&&isHost()&&!busy) callNumber(); },delay);
 }
 
 function ensureCountdownTick(s){
-  if(s.phase==='play'&&s.autoCallSecs>0){
-    if(!countdownTick) countdownTick=setInterval(updateCountdown,500);
-  } else { clearInterval(countdownTick); countdownTick=null; }
+  if(s.phase==='play'&&s.autoCallSecs>0){ if(!countdownTick) countdownTick=setInterval(updateCountdown,500); }
+  else{ clearInterval(countdownTick); countdownTick=null; }
 }
 function updateCountdown(){
   if(!state||!state.autoCallSecs) return;
@@ -442,20 +358,17 @@ function updateCountdown(){
   const el=$('autocall-info'); if(el) el.textContent='Next call in: '+rem+'s';
 }
 
-// ── Room management ──────────────────────────────────────────────────────────
+// ── Room management ───────────────────────────────────────────────────────────
 async function createRoom(){
   myName=$('home-name').value.trim()||randomName();
   $('home-name').value=myName; localStorage.setItem('tb-name',myName);
   const code=randCode();
-  const s={code,version:0,ts:Date.now(),phase:'lobby',
-    players:[{id:myId,name:myName}],hostId:myId,numPlayers:8,
-    calledNumbers:[],tickets:{},
-    wins:{earlyFive:null,topRow:null,middleRow:null,bottomRow:null,fullHouse:null},
-    autoCallSecs:0,lastCallTs:0};
-  roomCode=code; writeRoom(s); subscribeRoom(code); subscribeChat(code);
-  subscribePresence(code); clearInterval(heartbeatInterval); pingPresence(); heartbeatInterval=setInterval(pingPresence,15000);
-  sessionStorage.setItem('tb-room',code);
-  showScreen('scr-lobby');
+  const s={code,ts:Date.now(),phase:'lobby',players:[{id:myId,name:myName}],hostId:myId,numPlayers:8,calledNumbers:[],wins:{},autoCallSecs:0,lastCallTs:0};
+  roomCode=code;
+  await db.ref('rooms/TB-'+code+'/state').set(s);
+  sessionStorage.setItem(SS_KEY,JSON.stringify({code,myId}));
+  state=s; subscribeRoom(code); subscribeChat(code);
+  showScreen('scr-lobby'); render();
 }
 
 async function joinRoom(){
@@ -463,25 +376,25 @@ async function joinRoom(){
   $('home-name').value=myName; localStorage.setItem('tb-name',myName);
   const code=$('home-code').value.trim().toUpperCase().slice(0,4);
   if(code.length<4){ $('home-err').textContent='Enter a 4-letter room code.'; return; }
-  $('home-err').textContent='';
-  const existing=await readRoom(code);
-  if(!existing){ $('home-err').textContent='Room not found. Check the code.'; return; }
-  if(existing.phase!=='lobby'){ $('home-err').textContent='Game already in progress.'; return; }
-  if(existing.players.length>=(existing.numPlayers||8)){ $('home-err').textContent='Room is full (max '+(existing.numPlayers||8)+' players).'; return; }
-  if(existing.players.find(p=>p.id===myId)){
-    roomCode=code; state=existing; lastVer=existing.version;
-    subscribeRoom(code); subscribeChat(code);
-    subscribePresence(code); clearInterval(heartbeatInterval); pingPresence(); heartbeatInterval=setInterval(pingPresence,15000);
-    sessionStorage.setItem('tb-room',code);
-    showScreen('scr-lobby'); render(); return;
-  }
-  const s=deepCopy(existing);
-  s.players.push({id:myId,name:myName});
-  roomCode=code; lastVer=existing.version;
-  writeRoom(s); subscribeRoom(code); subscribeChat(code);
-  subscribePresence(code); clearInterval(heartbeatInterval); pingPresence(); heartbeatInterval=setInterval(pingPresence,15000);
-  sessionStorage.setItem('tb-room',code);
-  showScreen('scr-lobby');
+  $('home-err').textContent='Joining…';
+  let finalState=null;
+  try{
+    await db.ref('rooms/TB-'+code+'/state').transaction(curr=>{
+      if(!curr) return {};
+      if(curr.phase!=='lobby') return;
+      if((curr.players||[]).some(p=>p.id===myId)){ finalState=curr; return curr; }
+      if((curr.players||[]).length>=(curr.numPlayers||8)) return;
+      const players=curr.players||[];
+      players.push({id:myId,name:myName});
+      curr.players=players; curr.ts=Date.now();
+      finalState=curr; return curr;
+    });
+  }catch(e){ $('home-err').textContent='Connection error. Try again.'; return; }
+  if(!finalState){ $('home-err').textContent='Room not found, full, or game already started.'; return; }
+  roomCode=code;
+  sessionStorage.setItem(SS_KEY,JSON.stringify({code,myId}));
+  state=finalState; subscribeRoom(code); subscribeChat(code);
+  showScreen('scr-lobby'); render();
 }
 
 function copyCode(){
@@ -491,12 +404,12 @@ function copyCode(){
 }
 
 function leaveRoom(){
-  if(roomEs){roomEs.close();roomEs=null;} if(chatEs){chatEs.close();chatEs=null;}
-  if(presEs){presEs.close();presEs=null;} clearInterval(heartbeatInterval); heartbeatInterval=null;
+  if(roomRef){roomRef.off();roomRef=null;}
+  if(chatRef){chatRef.off();chatRef=null;}
   clearTimeout(autoCallTimer); autoCallTimer=null;
   clearInterval(countdownTick); countdownTick=null;
-  state=null; roomCode=''; lastVer=0;
-  sessionStorage.removeItem('tb-room');
+  state=null; roomCode='';
+  sessionStorage.removeItem(SS_KEY);
   const cp=$('chat-panel'); if(cp){cp.style.display='none';chatCollapsed=true;cp.classList.add('collapsed');}
   showScreen('scr-home');
 }
@@ -515,37 +428,29 @@ function setAutoCall(n){
   const s=deepCopy(state); s.autoCallSecs=n; writeRoom(s);
   updateSpeedPicker(n);
 }
-
 function updateSpeedPicker(n){
   const btns=document.querySelectorAll('#speed-picker .np-btn');
-  const vals=[0,5,10,15];
-  btns.forEach((b,i)=>{ b.classList.toggle('active',vals[i]===n); });
+  [0,5,10,15].forEach((v,i)=>{ if(btns[i]) btns[i].classList.toggle('active',v===n); });
 }
 
 function hostStart(){
   if(!isHost()||busy) return;
-  if(state.players.length<2){ $('lobby-err').textContent='Need at least 2 players.'; return; }
+  if((state.players||[]).length<2){ $('lobby-err').textContent='Need at least 2 players.'; return; }
   busy=true;
   const s=deepCopy(state);
-  // Generate tickets for all players
-  s.tickets={};
-  s.players.forEach(p=>{ s.tickets[p.id]=generateTicket(hashSeed(p.id+s.code)); });
   s.calledNumbers=[]; s.lastCallTs=Date.now();
-  s.wins={earlyFive:null,topRow:null,middleRow:null,bottomRow:null,fullHouse:null};
-  s.phase='play';
+  s.wins={}; s.phase='play';
   writeRoom(s); busy=false;
 }
 
 function callNumber(){
-  if(!isHost()||!state||state.phase!=='play'||busy||state.calledNumbers.length>=90) return;
+  if(!isHost()||!state||state.phase!=='play'||busy||(state.calledNumbers||[]).length>=90) return;
   busy=true;
   const s=deepCopy(state);
-  // Pick a random uncalled number
-  const pool=[];
-  for(let n=1;n<=90;n++) if(!s.calledNumbers.includes(n)) pool.push(n);
+  const pool=[]; for(let n=1;n<=90;n++) if(!(s.calledNumbers||[]).includes(n)) pool.push(n);
   if(!pool.length){ busy=false; return; }
   const num=pool[Math.floor(Math.random()*pool.length)];
-  s.calledNumbers.push(num); s.lastCallTs=Date.now();
+  s.calledNumbers=(s.calledNumbers||[]); s.calledNumbers.push(num); s.lastCallTs=Date.now();
   checkWins(s);
   writeRoom(s); busy=false;
 }
@@ -553,56 +458,50 @@ function callNumber(){
 function playAgain(){
   if(!isHost()) return;
   const s=deepCopy(state);
-  s.phase='lobby'; s.calledNumbers=[]; s.tickets={};
-  s.wins={earlyFive:null,topRow:null,middleRow:null,bottomRow:null,fullHouse:null};
-  s.lastCallTs=0;
+  s.phase='lobby'; s.calledNumbers=[]; s.wins={}; s.lastCallTs=0;
   writeRoom(s);
 }
 
-// ── Rendering ────────────────────────────────────────────────────────────────
+// ── Rendering ─────────────────────────────────────────────────────────────────
 function renderLobby(s){
-  $('lobby-code').textContent=s.code;
+  $('lobby-code').textContent=s.code||roomCode;
   const lp=$('lobby-players'); lp.innerHTML='';
-  s.players.forEach((p,i)=>{
+  (s.players||[]).forEach((p,i)=>{
     const row=document.createElement('div'); row.className='pl-row';
     const nm=document.createElement('span'); nm.textContent=p.name; row.appendChild(nm);
     if(i===0){ const t=document.createElement('span'); t.className='pl-tag'; t.textContent='HOST'; row.appendChild(t); }
-    const pb=document.createElement('span'); pb.innerHTML=pingBadge(p.id); row.appendChild(pb);
     lp.appendChild(row);
   });
-  const hOpts=$('lobby-host-opts'), mon=$('lobby-monitor'), mp=$('lobby-maxplayers');
+  const hOpts=$('lobby-host-opts'),mp=$('lobby-maxplayers');
   if(isHost()){
     hOpts.style.display='block'; mp.style.display='none';
-    updateNpPicker(s.numPlayers||8);
-    updateSpeedPicker(s.autoCallSecs||0);
-    const link=NTFY+'/tb-'+s.code+'-s';
-    mon.style.display='block';
-    mon.innerHTML='Monitor: <a href="'+link+'" target="_blank" style="color:var(--blue);">'+link+'</a>';
+    updateNpPicker(s.numPlayers||8); updateSpeedPicker(s.autoCallSecs||0);
   } else {
-    hOpts.style.display='none'; mon.style.display='none';
-    mp.style.display='block'; mp.textContent='Max players: '+(s.numPlayers||8);
+    hOpts.style.display='none'; mp.style.display='block';
+    mp.textContent='Max players: '+(s.numPlayers||8);
   }
-  $('lobby-start').style.display=(isHost()&&s.players.length>=2)?'block':'none';
+  $('lobby-start').style.display=(isHost()&&(s.players||[]).length>=2)?'block':'none';
   $('lobby-wait').style.display=isHost()?'none':'flex';
   $('lobby-err').textContent='';
 }
 
 function renderNumBoard(s){
   const board=$('tb-numboard'); board.innerHTML='';
-  const last=s.calledNumbers.length?s.calledNumbers[s.calledNumbers.length-1]:null;
-  const calledSet=new Set(s.calledNumbers);
+  const nums=s.calledNumbers||[];
+  const last=nums.length?nums[nums.length-1]:null;
+  const calledSet=new Set(nums);
   for(let n=1;n<=90;n++){
     const d=document.createElement('div');
     d.className='tb-num'+(calledSet.has(n)?(n===last?' last-call':' called'):'');
     d.textContent=n; board.appendChild(d);
   }
-  const cc=$('called-count'); if(cc) cc.textContent=s.calledNumbers.length;
+  const cc=$('called-count'); if(cc) cc.textContent=nums.length;
 }
 
 function renderTicket(s){
-  const ticket=s.tickets[myId]; const el=$('my-ticket'); if(!el) return;
-  if(!ticket){ el.innerHTML='<div style="text-align:center;padding:16px;opacity:.5;">Waiting for ticket…</div>'; return; }
-  const calledSet=new Set(s.calledNumbers);
+  const ticket=generateTicket(hashSeed(myId+(s.code||roomCode)));
+  const el=$('my-ticket'); if(!el) return;
+  const calledSet=new Set(s.calledNumbers||[]);
   el.innerHTML='';
   for(let r=0;r<3;r++){
     const row=document.createElement('div'); row.className='tb-trow';
@@ -611,7 +510,7 @@ function renderTicket(s){
       const val=ticket[r][c];
       if(val===null){ cell.className='tb-tcell blank'; cell.textContent='·'; }
       else if(calledSet.has(val)){ cell.className='tb-tcell marked'; cell.textContent=val; }
-      else { cell.className='tb-tcell'; cell.textContent=val; }
+      else{ cell.className='tb-tcell'; cell.textContent=val; }
       row.appendChild(cell);
     }
     el.appendChild(row);
@@ -620,9 +519,10 @@ function renderTicket(s){
 
 function renderWins(s){
   const el=$('wins-display'); if(!el) return;
+  const wins=s.wins||{};
   el.innerHTML='';
   WIN_ORDER.forEach(k=>{
-    const w=s.wins[k];
+    const w=wins[k];
     const row=document.createElement('div');
     row.className='win-row'+(w?' won':'');
     row.innerHTML='<span class="win-label">'+WIN_LABELS[k]+'</span><span class="win-val">'+(w?esc(w.name)+' ✓':'—')+'</span>';
@@ -631,26 +531,28 @@ function renderWins(s){
 }
 
 function renderGame(s){
-  const last=s.calledNumbers.length?s.calledNumbers[s.calledNumbers.length-1]:null;
+  const nums=s.calledNumbers||[];
+  const last=nums.length?nums[nums.length-1]:null;
   $('last-num').textContent=last||'—';
   const bc=$('btn-call');
-  if(bc){ bc.style.display=(isHost()&&!s.autoCallSecs&&s.calledNumbers.length<90)?'block':'none'; }
-  const ai=$('autocall-info');
-  if(ai&&!s.autoCallSecs) ai.textContent='';
+  if(bc) bc.style.display=(isHost()&&!s.autoCallSecs&&nums.length<90)?'block':'none';
+  const ai=$('autocall-info'); if(ai&&!s.autoCallSecs) ai.textContent='';
   renderNumBoard(s); renderTicket(s); renderWins(s);
   const cp=$('chat-panel'); if(cp) cp.style.display='block';
   scheduleAutoCall(); ensureCountdownTick(s);
 }
 
 function renderOver(s){
+  sessionStorage.removeItem(SS_KEY);
   const el=$('over-wins'); el.innerHTML='';
+  const wins=s.wins||{};
   WIN_ORDER.forEach(k=>{
-    const w=s.wins[k];
+    const w=wins[k];
     const row=document.createElement('div'); row.className='ov-win';
-    row.innerHTML='<span class="win-label">'+WIN_LABELS[k]+'</span><span class="ov-winner">'+(w?'🏆 '+esc(w.name):'—')+'</span>';
+    row.innerHTML='<span class="ov-label">'+WIN_LABELS[k]+'</span><span class="ov-winner">'+(w?'🏆 '+esc(w.name):'—')+'</span>';
     el.appendChild(row);
   });
-  if(s.calledNumbers.length>=90){
+  if((s.calledNumbers||[]).length>=90){
     const note=document.createElement('div'); note.style.cssText='text-align:center;font-family:Catamaran;font-size:13px;opacity:.6;margin-top:8px;'; note.textContent='All 90 numbers called!'; el.appendChild(note);
   }
   $('btn-playagain').style.display=isHost()?'block':'none';
@@ -666,15 +568,21 @@ function render(){
   else if(state.phase==='over'){ showScreen('scr-over'); renderOver(state); }
 }
 
+// ── Auto-rejoin ───────────────────────────────────────────────────────────────
 (async function(){
-  const saved=sessionStorage.getItem('tb-room'); if(!saved) return;
-  const existing=await readRoom(saved);
-  if(!existing||!existing.players||!existing.players.find(p=>p.id===myId)){sessionStorage.removeItem('tb-room');return;}
-  roomCode=saved; state=existing; lastVer=existing.version||0;
-  subscribeRoom(saved); subscribeChat(saved); subscribePresence(saved);
-  clearInterval(heartbeatInterval); pingPresence(); heartbeatInterval=setInterval(pingPresence,15000);
+  await initFB();
+  const saved=JSON.parse(sessionStorage.getItem(SS_KEY)||'null');
+  if(!saved) return;
+  const snap=await db.ref('rooms/TB-'+saved.code+'/state').once('value');
+  const existing=snap.val();
+  if(!existing||!existing.players||!existing.players.find(p=>p.id===saved.myId)||existing.phase==='over'){
+    sessionStorage.removeItem(SS_KEY); return;
+  }
+  myId=saved.myId; roomCode=saved.code; state=existing;
+  subscribeRoom(saved.code); subscribeChat(saved.code);
   render();
 })();
 </script>
+
 </body>
 </html>
