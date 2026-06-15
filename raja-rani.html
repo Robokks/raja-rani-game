@@ -1047,10 +1047,11 @@ function renderChain(s){
     area.appendChild(d);
   });
   renderLog();
-  // Show the initial role (frozen at mycard phase) — don't reveal swapped roles
-  if(myRoleThisRound&&me>=0){
-    const ro=ROLE_DEFS[myRoleThisRound];const p=s.players[me];
+  // Show THIS player's own role — each player sees only their own role
+  if(s.playerRoles&&me>=0){
+    const ro=ROLE_DEFS[s.playerRoles[me]];const p=s.players[me];
     if(ro&&p){const el=$('mychit');el.textContent=av(p)+' '+ro.emoji+' '+ro.ta;el.style.display='block';}
+    else $('mychit').style.display='none';
   }
   show('scr-chain');
 }
