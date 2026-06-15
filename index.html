@@ -8,6 +8,36 @@
 <style>
 :root{--kraft:#d9b98a;--paper:#fdf6e3;--ink:#3a2a18;--red:#b3322b;--green:#2e6e4e;--gold:#d49a2a;--shadow:rgba(58,42,24,.25);}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+/* ── Control panel button ── */
+.ctrl-btn{position:fixed;top:14px;right:14px;z-index:200;background:rgba(58,42,24,.15);border:none;border-radius:50%;width:40px;height:40px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s;}
+.ctrl-btn:hover{background:rgba(58,42,24,.3);}
+/* ── Modal overlay ── */
+.ctrl-overlay{display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.5);align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto;}
+.ctrl-overlay.open{display:flex;}
+.ctrl-panel{background:var(--paper);border-radius:14px;width:100%;max-width:480px;box-shadow:0 8px 32px rgba(0,0,0,.3);overflow:hidden;margin:auto;}
+.ctrl-header{background:var(--ink);color:var(--kraft);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;}
+.ctrl-header h2{font-size:17px;font-weight:800;}
+.ctrl-close{background:none;border:none;color:var(--kraft);font-size:22px;cursor:pointer;line-height:1;padding:0 4px;}
+.ctrl-body{padding:14px;}
+.ctrl-status{font-family:Catamaran,sans-serif;font-size:12px;font-weight:700;margin-bottom:12px;opacity:.7;}
+.ctrl-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
+.ctrl-actions button{font-family:'Baloo Thambi 2',sans-serif;font-size:13px;font-weight:700;border:none;border-radius:8px;padding:8px 12px;cursor:pointer;}
+.cb-all-btn{background:rgba(58,42,24,.12);color:var(--ink);}
+.del-sel-btn{background:var(--red);color:#fff;}
+.del-old-btn{background:#8a4a00;color:#fff;}
+.refresh-btn{background:var(--green);color:#fff;}
+.ctrl-room-list{display:flex;flex-direction:column;gap:8px;max-height:55vh;overflow-y:auto;}
+.ctrl-room{background:#fff;border-radius:8px;border:1.5px solid rgba(58,42,24,.1);padding:10px 12px;display:flex;align-items:center;gap:10px;cursor:pointer;}
+.ctrl-room:active{background:#f0e8d8;}
+.ctrl-room input[type=checkbox]{width:18px;height:18px;cursor:pointer;flex-shrink:0;accent-color:var(--red);}
+.ctrl-room-code{font-size:18px;font-weight:800;letter-spacing:2px;flex-shrink:0;}
+.ctrl-room-info{flex:1;font-family:Catamaran,sans-serif;font-size:12px;font-weight:700;opacity:.75;line-height:1.5;}
+.ctrl-phase{display:inline-block;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;padding:2px 7px;border-radius:20px;color:#fff;margin-left:6px;}
+.phase-lobby{background:var(--green);}
+.phase-active{background:#1a6fbf;}
+.phase-over{background:#888;}
+.ctrl-empty{text-align:center;padding:32px;font-family:Catamaran,sans-serif;opacity:.5;}
+.ctrl-log{margin-top:10px;font-family:Catamaran,sans-serif;font-size:12px;font-weight:700;color:var(--green);min-height:18px;}
 html,body{min-height:100%;}
 body{font-family:'Baloo Thambi 2','Catamaran',sans-serif;background:var(--kraft);background-image:radial-gradient(circle at 20% 10%,rgba(255,255,255,.25),transparent 40%),radial-gradient(circle at 80% 90%,rgba(0,0,0,.08),transparent 45%);color:var(--ink);display:flex;flex-direction:column;align-items:center;padding:28px 16px 48px;}
 .crown{font-size:52px;text-align:center;line-height:1;margin-top:8px;}
@@ -167,5 +197,156 @@ h1{text-align:center;font-weight:800;font-size:30px;color:var(--red);text-shadow
   </a>
 
 </div>
+
+<!-- ── Control Panel Button ── -->
+<button class="ctrl-btn" onclick="openCtrl()" title="Firebase Room Manager">⚙️</button>
+
+<!-- ── Control Panel Modal ── -->
+<div class="ctrl-overlay" id="ctrl-overlay" onclick="if(event.target===this)closeCtrl()">
+  <div class="ctrl-panel">
+    <div class="ctrl-header">
+      <h2>🗄️ Firebase Room Manager</h2>
+      <button class="ctrl-close" onclick="closeCtrl()">✕</button>
+    </div>
+    <div class="ctrl-body">
+      <div class="ctrl-status" id="ctrl-status">Connecting to Firebase…</div>
+      <div class="ctrl-actions">
+        <button class="refresh-btn" onclick="loadRooms()">🔄 Refresh</button>
+        <button class="cb-all-btn" onclick="toggleSelectAll()">☑ Select All</button>
+        <button class="del-sel-btn" onclick="deleteSelected()">🗑 Delete Selected</button>
+        <button class="del-old-btn" onclick="deleteOld()">🕒 Delete &gt;24h old</button>
+      </div>
+      <div class="ctrl-room-list" id="ctrl-room-list">
+        <div class="ctrl-empty">Loading…</div>
+      </div>
+      <div class="ctrl-log" id="ctrl-log"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script>
+const _FBCFG={
+  apiKey:"AIzaSyAQ0l788yLKmfWIJ6Ok88k2TcwdD6XA1n4",
+  databaseURL:"https://raja-rani-game-ffecd-default-rtdb.asia-southeast1.firebasedatabase.app"
+};
+let _db=null;
+function _initFB(){
+  if(_db)return;
+  try{
+    if(!firebase.apps.length)firebase.initializeApp(_FBCFG);
+    _db=firebase.database();
+  }catch(e){document.getElementById('ctrl-status').textContent='Firebase error: '+e.message;}
+}
+
+let _rooms={};
+
+function openCtrl(){
+  document.getElementById('ctrl-overlay').classList.add('open');
+  _initFB();
+  loadRooms();
+}
+function closeCtrl(){
+  document.getElementById('ctrl-overlay').classList.remove('open');
+}
+
+function _ago(ts){
+  if(!ts)return '?';
+  const s=Math.floor((Date.now()-ts)/1000);
+  if(s<60)return s+'s ago';
+  if(s<3600)return Math.floor(s/60)+'m ago';
+  if(s<86400)return Math.floor(s/3600)+'h ago';
+  return Math.floor(s/86400)+'d ago';
+}
+function _phaseClass(ph){
+  if(ph==='lobby')return 'phase-lobby';
+  if(ph==='over')return 'phase-over';
+  return 'phase-active';
+}
+
+async function loadRooms(){
+  const status=document.getElementById('ctrl-status');
+  const list=document.getElementById('ctrl-room-list');
+  if(!_db){status.textContent='Firebase not connected.';return;}
+  status.textContent='Loading rooms…';
+  list.innerHTML='<div class="ctrl-empty">Loading…</div>';
+  try{
+    const snap=await _db.ref('rooms').once('value');
+    _rooms=snap.val()||{};
+    const codes=Object.keys(_rooms);
+    status.textContent=codes.length+' room'+(codes.length===1?'':'s')+' in Firebase';
+    if(!codes.length){list.innerHTML='<div class="ctrl-empty">No rooms found ✨</div>';return;}
+    // Sort newest first
+    codes.sort((a,b)=>{
+      const ta=(_rooms[a]&&_rooms[a].state&&_rooms[a].state.ts)||0;
+      const tb=(_rooms[b]&&_rooms[b].state&&_rooms[b].state.ts)||0;
+      return tb-ta;
+    });
+    list.innerHTML='';
+    codes.forEach(code=>{
+      const r=_rooms[code];
+      const s=r&&r.state||{};
+      const players=(s.players||[]);
+      const pLen=Array.isArray(players)?players.length:Object.keys(players).length;
+      const numP=s.numPlayers||'?';
+      const ph=s.phase||'?';
+      const row=document.createElement('div');
+      row.className='ctrl-room';
+      row.innerHTML=`
+        <input type="checkbox" id="cb-${code}" value="${code}">
+        <div class="ctrl-room-code">${code}</div>
+        <div class="ctrl-room-info">
+          ${pLen}/${numP} players &nbsp;•&nbsp; ${_ago(s.ts)}
+          <span class="ctrl-phase ${_phaseClass(ph)}">${ph}</span>
+          <br>Round ${s.round||'?'}/${s.totalRounds||'?'}
+        </div>`;
+      row.onclick=e=>{if(e.target.tagName!=='INPUT'){const cb=document.getElementById('cb-'+code);cb.checked=!cb.checked;}};
+      list.appendChild(row);
+    });
+  }catch(e){status.textContent='Error: '+e.message;}
+}
+
+function toggleSelectAll(){
+  const cbs=[...document.querySelectorAll('#ctrl-room-list input[type=checkbox]')];
+  const allChecked=cbs.every(c=>c.checked);
+  cbs.forEach(c=>c.checked=!allChecked);
+}
+
+async function deleteSelected(){
+  const sel=[...document.querySelectorAll('#ctrl-room-list input[type=checkbox]:checked')].map(c=>c.value);
+  if(!sel.length){_log('Select rooms first.');return;}
+  if(!confirm('Delete '+sel.length+' room(s)?'))return;
+  const log=document.getElementById('ctrl-log');
+  log.textContent='Deleting…';
+  for(const code of sel){
+    await _db.ref('rooms/'+code).remove();
+  }
+  _log('Deleted: '+sel.join(', '));
+  await loadRooms();
+}
+
+async function deleteOld(){
+  const cutoff=Date.now()-(24*60*60*1000);
+  const old=Object.entries(_rooms).filter(([,r])=>{
+    const ts=(r&&r.state&&r.state.ts)||0;
+    return ts>0&&ts<cutoff;
+  }).map(([code])=>code);
+  if(!old.length){_log('No rooms older than 24h found.');return;}
+  if(!confirm('Delete '+old.length+' room(s) older than 24h?\n'+old.join(', ')))return;
+  for(const code of old){
+    await _db.ref('rooms/'+code).remove();
+  }
+  _log('Deleted: '+old.join(', '));
+  await loadRooms();
+}
+
+function _log(msg){
+  const el=document.getElementById('ctrl-log');
+  el.textContent=msg;
+  setTimeout(()=>{if(el.textContent===msg)el.textContent='';},4000);
+}
+</script>
 </body>
 </html>
