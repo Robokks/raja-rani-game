@@ -146,6 +146,12 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
     <div class="err" id="home-err"></div>
   </div>
   <p class="hint"><span class="conn-dot" id="conn-dot"></span><span id="conn-txt">Connecting…</span><br>Host creates room &middot; Others join with code</p>
+  <button class="btn ghost" style="margin-top:10px;font-size:13px;opacity:.7;" onclick="
+    sessionStorage.removeItem('rr-room');
+    localStorage.removeItem('rr-room');
+    document.getElementById('joincode').value='';
+    document.getElementById('home-err').textContent='✅ Session cleared. Try joining again.';
+  ">&#x1F504; Clear session / Stuck? Tap here</button>
 </div>
 
 <!-- LOBBY -->
