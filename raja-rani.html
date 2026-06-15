@@ -125,6 +125,11 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
 .rxn-btn:active{transform:scale(1.5);}
 .rxn-float{position:fixed;font-size:34px;pointer-events:none;z-index:200;animation:rxnRise 2s ease-out forwards;}
 @keyframes rxnRise{0%{opacity:1;transform:translateY(0) scale(1);}60%{opacity:1;transform:translateY(-80px) scale(1.2);}100%{opacity:0;transform:translateY(-140px) scale(.8);}}
+@keyframes jailIn{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
+@keyframes jailOut{from{opacity:1}to{opacity:0}}
+@keyframes jailBounce{0%{transform:translateY(-90px);opacity:0}55%{transform:translateY(10px)}75%{transform:translateY(-5px)}100%{transform:translateY(0);opacity:1}}
+@keyframes jailBarsDown{from{transform:translateY(-100%)}to{transform:translateY(0)}}
+@keyframes policeLight{0%,49%{color:#ff2222}50%,100%{color:#2255ff}}
 </style>
 </head>
 <body>
@@ -899,7 +904,7 @@ function render(){
     case 'mycard': return renderMycard(s,phaseChanged);
     case 'declare':return renderDeclare(s);
     case 'chain':  return renderChain(s);
-    case 'result': return renderResult(s);
+    case 'result': return renderResult(s,phaseChanged);
     case 'over':   return renderOver(s);
   }
 }
@@ -1060,7 +1065,30 @@ function renderChainProgress(s){
   });
 }
 
-function renderResult(s){
+function showJailAnimation(s){
+  const thief=(s.lastResult||[]).find(p=>p.roleKey==='thirudan');
+  if(!thief)return;
+  const old=document.getElementById('jail-anim');if(old)old.remove();
+  const ov=document.createElement('div');
+  ov.id='jail-anim';
+  ov.style.cssText='position:fixed;inset:0;z-index:998;background:rgba(6,3,0,.94);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;overflow:hidden;animation:jailIn .35s ease-out;';
+  const barCount=9;
+  const barHtml=Array.from({length:barCount},()=>'<div style="flex:1;background:linear-gradient(180deg,#5a3a00,#c8890a 40%,#5a3a00);margin:0 4px;border-radius:0 0 6px 6px;"></div>').join('');
+  ov.innerHTML=
+    '<div style="position:absolute;top:0;left:0;right:0;height:100%;display:flex;animation:jailBarsDown .65s .25s ease-in both;z-index:3;pointer-events:none;">'+barHtml+'</div>'
+    +'<div style="font-size:52px;animation:policeLight .6s infinite;z-index:4;margin-bottom:4px;">🚨</div>'
+    +'<div style="font-size:68px;animation:jailBounce .65s .1s both;z-index:4;">'+esc(thief.avatar||'🎭')+'</div>'
+    +'<div style="font-size:22px;font-weight:800;color:#fff;font-family:Catamaran,sans-serif;animation:jailIn .4s .55s both;z-index:4;">'+esc(thief.name)+'</div>'
+    +'<div style="font-size:14px;color:#ffd060;font-weight:800;letter-spacing:.6px;font-family:Catamaran,sans-serif;animation:jailIn .4s .75s both;z-index:4;">⛓️ திருடன் பிடிபட்டான்!</div>';
+  document.body.appendChild(ov);
+  setTimeout(()=>{
+    ov.style.animation='jailOut .45s ease-in forwards';
+    setTimeout(()=>ov.remove(),450);
+  },2800);
+}
+
+function renderResult(s,phaseChanged){
+  if(phaseChanged)showJailAnimation(s);
   $('res-banner').textContent='✅ Chain complete! Points this round:';
   const list=$('res-roles');list.innerHTML='';
   (s.lastResult||[]).forEach(p=>{
