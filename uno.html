@@ -1132,10 +1132,6 @@ function render(){
   // Countdown management
   if(s.phase==='play'&&s.autoSkipAt&&s.dcProtect){startCountdown();}
   else{clearCountdown();}
-  // Re-check offline status on every state change (catches consecutive offline players)
-  if(s.phase==='play'&&s.dcProtect&&roomCode){
-    setTimeout(checkOfflineCurrentPlayer,500);
-  }
   if(s.phase==='lobby'){
     renderLobby(s);
     if(currentScreen()!=='scr-lobby'&&currentScreen()!=='scr-home')show('scr-lobby');
