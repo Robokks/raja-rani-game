@@ -40,17 +40,13 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
 .pl-tag{font-family:'Catamaran';font-size:11px;font-weight:800;letter-spacing:1px;padding:2px 8px;border-radius:10px;color:#fff;background:var(--ink);white-space:nowrap;}
 .pl-row.empty{opacity:.45;font-weight:600;border-style:dashed;}
 .kick-btn{background:none;border:none;color:var(--red);font-size:17px;font-weight:800;cursor:pointer;padding:2px 6px;margin-left:auto;line-height:1;flex-shrink:0;}
-.conn-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;background:#888;vertical-align:middle;}
-.conn-dot.ok{background:#27ae60;}.conn-dot.err{background:#e74c3c;}
 .back-link{display:block;text-align:center;font-family:'Catamaran';font-size:13px;font-weight:700;color:var(--ink);opacity:.55;margin-top:18px;text-decoration:none;letter-spacing:1px;}
 .back-link:hover{opacity:.9;}
 #conn-banner{display:none;position:fixed;top:0;left:0;right:0;background:var(--red);color:#fff;font-family:'Baloo Thambi 2';font-size:14px;font-weight:700;text-align:center;padding:8px;z-index:9999;}
-/* Board */
 #sl-board{display:grid;grid-template-columns:repeat(10,1fr);grid-template-rows:repeat(10,1fr);width:100%;aspect-ratio:1;border:2.5px solid var(--ink);border-radius:6px;overflow:hidden;background:#fffdf6;margin-top:10px;position:relative;}
 .sl-cell{border-right:1px solid rgba(58,42,24,.22);border-bottom:1px solid rgba(58,42,24,.22);display:flex;flex-direction:column;align-items:center;padding:1px;position:relative;}
 .cell-num{font-size:7px;font-weight:800;opacity:.75;align-self:flex-start;line-height:1.2;flex-shrink:0;color:rgba(58,42,24,.7);}
 .cell-tokens{display:flex;flex-wrap:wrap;gap:1px;justify-content:center;margin-top:auto;}
-/* Game UI */
 .game-panel{background:var(--paper);border-radius:6px;box-shadow:0 4px 0 var(--shadow);padding:12px 16px;margin-top:8px;width:100%;max-width:480px;}
 .dice-row{display:flex;align-items:center;justify-content:center;gap:14px;}
 .dice-face{font-size:50px;line-height:1;cursor:pointer;transition:transform .12s;display:block;}
@@ -62,18 +58,15 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
 .turn-msg{font-weight:800;font-size:15px;flex:1;text-align:center;line-height:1.3;}
 .move-msg{text-align:center;font-family:'Catamaran';font-size:13px;font-weight:700;min-height:20px;margin-top:8px;opacity:.8;}
 .roll-btn{margin-top:10px;padding:12px 0;font-size:17px;}
-/* Players */
 .sl-players{display:flex;flex-direction:column;gap:6px;margin-top:8px;width:100%;max-width:480px;}
 .sl-prow{display:flex;align-items:center;gap:8px;background:var(--paper);border-radius:6px;padding:8px 12px;box-shadow:0 2px 0 var(--shadow);border:2px solid transparent;}
 .sl-prow.active-p{border-width:2.5px;}
 .sl-pdot{width:12px;height:12px;border-radius:50%;flex-shrink:0;}
 .sl-pname{font-weight:800;font-size:14px;flex:1;}
 .sl-ppos{font-family:'Catamaran';font-size:13px;font-weight:700;opacity:.7;}
-/* Over */
 .winner-box{text-align:center;padding:16px 0;}
 .winner-emoji{font-size:56px;line-height:1;}
 .winner-name{font-size:24px;font-weight:800;margin-top:8px;}
-/* Chat */
 .chat-panel{position:fixed;bottom:0;left:0;right:0;max-width:480px;margin:0 auto;background:var(--paper);border-top:2px solid rgba(58,42,24,.2);border-radius:12px 12px 0 0;box-shadow:0 -4px 16px rgba(0,0,0,.15);z-index:100;transition:transform .25s ease;}
 .chat-panel.collapsed{transform:translateY(calc(100% - 46px));}
 .chat-header{height:46px;padding:0 16px;display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:800;font-size:15px;}
@@ -87,6 +80,9 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
 .chat-input-row input{flex:1;padding:8px 10px;font-family:'Baloo Thambi 2';font-size:15px;font-weight:700;border:2px solid rgba(58,42,24,.3);border-radius:6px;background:#fffdf6;color:var(--ink);outline:none;}
 .chat-input-row input:focus{border-color:var(--red);}
 .chat-send{padding:8px 16px;font-family:'Baloo Thambi 2';font-size:14px;font-weight:800;background:var(--red);color:#fff;border:none;border-radius:6px;cursor:pointer;}
+.np-picker{display:flex;gap:6px;margin-top:8px;}
+.np-btn{flex:1;padding:10px 4px;font-family:'Baloo Thambi 2';font-size:16px;font-weight:800;border:2px solid rgba(58,42,24,.3);border-radius:8px;background:#fffdf6;color:var(--ink);cursor:pointer;}
+.np-btn.active{background:var(--ink);color:var(--kraft);border-color:var(--ink);}
 </style>
 </head>
 <body>
@@ -104,12 +100,6 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
     <input type="text" id="home-code" class="code" maxlength="4" placeholder="ABCD" autocomplete="off">
     <button class="btn blue" onclick="joinRoom()">Join Room</button>
     <div class="err" id="home-err"></div>
-    <label style="margin-top:18px;">ntfy Server</label>
-    <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
-      <span class="conn-dot" id="ntfy-dot"></span>
-      <input type="text" id="ntfy-url" style="flex:1;font-size:14px;" placeholder="https://ntfy.sh">
-    </div>
-    <div style="font-family:'Catamaran';font-size:11px;opacity:.55;margin-top:4px;" id="ntfy-status"></div>
   </div>
   <a class="back-link" href="index.html">← All Games</a>
 </div>
@@ -133,7 +123,6 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
     <div id="lobby-maxplayers" style="display:none;font-family:'Catamaran';font-size:13px;opacity:.6;margin:8px 0 0;"></div>
     <label>Players</label>
     <div class="player-list" id="lobby-players"></div>
-    <div id="lobby-monitor" style="display:none;margin-top:10px;font-family:'Catamaran';font-size:12px;opacity:.7;text-align:center;word-break:break-all;"></div>
     <button class="btn green" id="lobby-start" style="display:none;" onclick="hostStart()">Start Game</button>
     <div class="waiting" id="lobby-wait" style="display:none;">
       <span class="dotpulse"></span><span class="dotpulse"></span><span class="dotpulse"></span>
@@ -141,7 +130,7 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
     </div>
     <div class="err" id="lobby-err"></div>
   </div>
-  <a class="back-link" href="#" onclick="leaveRoom()">← Leave Room</a>
+  <button class="btn ghost" onclick="leaveRoom()" style="margin-top:12px;">← Leave / New game</button>
 </div>
 
 <!-- GAME -->
@@ -169,7 +158,7 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
       <span>Waiting for host…</span>
     </div>
   </div>
-  <a class="back-link" href="#" onclick="leaveRoom()">← Leave Room</a>
+  <button class="btn ghost" onclick="leaveRoom()" style="margin-top:12px;">← Leave / New game</button>
 </div>
 
 <!-- CHAT -->
@@ -179,112 +168,68 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
   <div class="chat-input-row"><input type="text" id="chat-input" maxlength="100" placeholder="Message…" autocomplete="off" onkeydown="if(event.key==='Enter')submitChat()"><button class="chat-send" onclick="submitChat()">Send</button></div>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script>
-const SNAKES  = {17:7,54:34,62:19,64:60,87:24,93:73,95:75,99:78};
-const LADDERS = {4:14,9:31,20:38,28:84,40:59,51:67,63:81,71:91};
-const PCOLORS = ['#e74c3c','#3498db','#2ecc71','#f0b429'];
-const FACES   = ['','⚀','⚁','⚂','⚃','⚄','⚅'];
-const RNAMES  = ['SwiftTiger','BoldLion','BravePanda','CleverFox','LuckyDragon','WildNinja','EpicShark','SneakyOwl','MightyWolf','RoyalEagle','CoolBear','DarkPhoenix'];
+const SS_KEY='sl-room';
+const _FBCFG={apiKey:"AIzaSyAQ0l788yLKmfWIJ6Ok88k2TcwdD6XA1n4",databaseURL:"https://raja-rani-game-ffecd-default-rtdb.asia-southeast1.firebasedatabase.app"};
+const SNAKES  ={17:7,54:34,62:19,64:60,87:24,93:73,95:75,99:78};
+const LADDERS ={4:14,9:31,20:38,28:84,40:59,51:67,63:81,71:91};
+const PCOLORS =['#e74c3c','#3498db','#2ecc71','#f0b429'];
+const FACES   =['','⚀','⚁','⚂','⚃','⚄','⚅'];
+const RNAMES  =['SwiftTiger','BoldLion','BravePanda','CleverFox','LuckyDragon','WildNinja','EpicShark','SneakyOwl','MightyWolf','RoyalEagle','CoolBear','DarkPhoenix'];
 function randomName(){ return RNAMES[Math.floor(Math.random()*RNAMES.length)]; }
 
-let NTFY = normalizeNtfy(
-  localStorage.getItem('sl-ntfy-url') ||
-  localStorage.getItem('lu-ntfy-url') ||
-  localStorage.getItem('rr-ntfy-url') ||
-  'https://ntfy.sh'
-);
-let myId   = localStorage.getItem('sl-pid') || uid();
-let myName = localStorage.getItem('sl-name') || '';
-let roomCode = '', state = null, lastVer = 0, roomEs = null, chatEs = null;
-let busy = false, animating = false;
-let presEs = null, heartbeatInterval = null;
-const lastSeenMap = {};
-let chatCollapsed = true, unreadCount = 0;
-const seenMsgs = new Set();
-localStorage.setItem('sl-pid', myId);
+let myId=localStorage.getItem('sl-pid')||uid();
+let myName=localStorage.getItem('sl-name')||'';
+let roomCode='',state=null;
+let busy=false,animating=false;
+let chatCollapsed=true,unreadCount=0;
+const seenMsgs=new Set();
+localStorage.setItem('sl-pid',myId);
+
+let db,roomRef,chatRef;
 
 function uid(){ return Math.random().toString(36).slice(2,10); }
-function normalizeNtfy(r){ let v=(r||'https://ntfy.sh').trim();try{v=new URL(v).origin;}catch{}return v.replace(/\/+$/,'')||'https://ntfy.sh'; }
 function $(id){ return document.getElementById(id); }
 function deepCopy(o){ return JSON.parse(JSON.stringify(o)); }
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function randCode(){ return Array.from({length:4},()=>'ABCDEFGHJKLMNPQRSTUVWXYZ'[Math.floor(Math.random()*23)]).join(''); }
 
-function topic(code){ return 'sl-'+code+'-s'; }
-
-async function readRoom(code){
-  for(let a=0;a<3;a++){
-    if(a>0) await new Promise(r=>setTimeout(r,1500));
-    try{
-      const res=await fetch(NTFY+'/'+topic(code)+'/json?poll=1&since=all');
-      if(!res.ok) continue;
-      const text=await res.text(); let latest=null;
-      for(const line of text.trim().split('\n').filter(Boolean)){
-        try{ const ev=JSON.parse(line); if(ev.event==='message'&&ev.message){ const s=JSON.parse(ev.message); if(!latest||(s.version||0)>(latest.version||0)) latest=s; } }catch{}
-      }
-      if(latest) return latest;
-    }catch{}
-  }
-  return null;
+// ── Firebase ──────────────────────────────────────────────────────────────────
+function initFB(){
+  if(!firebase.apps.length) firebase.initializeApp(_FBCFG);
+  db=firebase.database();
+  db.ref('.info/connected').on('value',snap=>{
+    $('conn-banner').style.display=(snap.val()||!roomCode)?'none':'block';
+  });
 }
 
 function writeRoom(s){
-  s.version=(s.version||0)+1; s.ts=Date.now();
-  fetch(NTFY+'/'+topic(s.code),{method:'POST',body:JSON.stringify(s)}).catch(()=>onConnLost());
-  state=s; lastVer=s.version; render();
+  s.ts=Date.now();
+  db.ref('rooms/SL-'+roomCode+'/state').set(s);
+  state=s; render();
 }
 
 function subscribeRoom(code){
-  if(roomEs) roomEs.close();
-  const since=Math.floor((Date.now()-5000)/1000);
-  roomEs=new EventSource(NTFY+'/'+topic(code)+'/sse?since='+since);
-  roomEs.onmessage=e=>{
-    try{
-      const ev=JSON.parse(e.data); if(ev.event!=='message') return;
-      const s=JSON.parse(ev.message); if((s.version||0)<=lastVer) return;
-      lastVer=s.version; state=s; render();
-    }catch{}
-  };
-  roomEs.onerror=()=>onConnLost();
-  roomEs.onopen=()=>onConnBack();
-}
-
-function subscribePresence(code){
-  if(presEs) presEs.close();
-  presEs=new EventSource(NTFY+'/sl-'+code+'-pres/sse?since='+Math.floor((Date.now()-25000)/1000));
-  presEs.onmessage=e=>{
-    try{
-      const ev=JSON.parse(e.data); if(ev.event!=='message') return;
-      const d=JSON.parse(ev.message);
-      if(d.id&&d.ts) lastSeenMap[d.id]={ts:Date.now(),ping:Math.max(0,Date.now()-d.ts)};
-    }catch{}
-  };
-}
-function pingPresence(){
-  if(!roomCode) return;
-  fetch(NTFY+'/sl-'+roomCode+'-pres',{method:'POST',body:JSON.stringify({id:myId,name:myName,ts:Date.now()})}).catch(()=>{});
-}
-function pingBadge(pid){
-  if(pid===myId) return '<span style="font-family:Catamaran;font-size:11px;opacity:.45;margin-left:auto;">you</span>';
-  const p=lastSeenMap[pid];
-  if(!p||Date.now()-p.ts>25000) return '<span style="color:#888;font-size:13px;margin-left:auto;">⚫</span>';
-  const ms=p.ping, col=ms<400?'#27ae60':ms<1000?'#d49a2a':'#e74c3c';
-  const lbl=ms<1000?ms+'ms':(ms/1000).toFixed(1)+'s';
-  return '<span style="color:'+col+';font-size:11px;font-family:Catamaran;font-weight:700;margin-left:auto;">● '+lbl+'</span>';
+  if(roomRef) roomRef.off();
+  roomRef=db.ref('rooms/SL-'+code+'/state');
+  roomRef.on('value',snap=>{
+    const s=snap.val(); if(!s) return;
+    state=s; render();
+  });
 }
 
 function subscribeChat(code){
-  if(chatEs) chatEs.close();
-  chatEs=new EventSource(NTFY+'/sl-'+code+'-c/sse?since='+Math.floor((Date.now()-60000)/1000));
-  chatEs.onmessage=e=>{
-    try{
-      const ev=JSON.parse(e.data); if(ev.event!=='message') return;
-      const msg=JSON.parse(ev.message); if(seenMsgs.has(msg.id)) return;
-      seenMsgs.add(msg.id); appendMsg(msg);
-    }catch{}
-  };
+  if(chatRef) chatRef.off();
+  chatRef=db.ref('rooms/SL-'+code+'/chat');
+  chatRef.on('child_added',snap=>{
+    const msg=snap.val(); if(!msg||seenMsgs.has(snap.key)) return;
+    seenMsgs.add(snap.key); appendMsg(msg);
+  });
 }
 
+// ── Chat ──────────────────────────────────────────────────────────────────────
 function appendMsg(msg){
   const el=$('chat-messages'); if(!el) return;
   const isMe=msg.senderId===myId;
@@ -306,26 +251,10 @@ function submitChat(){
   const inp=$('chat-input'); if(!inp) return;
   const text=inp.value.trim(); if(!text||!roomCode) return;
   inp.value='';
-  fetch(NTFY+'/sl-'+roomCode+'-c',{method:'POST',body:JSON.stringify({id:uid(),senderId:myId,senderName:myName,text})}).catch(()=>{});
+  db.ref('rooms/SL-'+roomCode+'/chat').push({senderId:myId,senderName:myName,text,ts:Date.now()});
 }
 
-function onConnLost(){ $('conn-banner').style.display='block'; }
-function onConnBack(){ $('conn-banner').style.display='none'; }
-
-// ntfy URL setup
-(function(){
-  const inp=$('ntfy-url'); inp.value=NTFY;
-  function check(){
-    NTFY=normalizeNtfy(inp.value); inp.value=NTFY; localStorage.setItem('sl-ntfy-url',NTFY);
-    $('ntfy-dot').className='conn-dot'; $('ntfy-status').textContent='Checking…';
-    fetch(NTFY+'/',{method:'HEAD'})
-      .then(()=>{ $('ntfy-dot').className='conn-dot ok'; $('ntfy-status').textContent=NTFY+' ✓'; })
-      .catch(()=>{ $('ntfy-dot').className='conn-dot err'; $('ntfy-status').textContent='Cannot reach '+NTFY; });
-  }
-  inp.addEventListener('blur',check); check();
-})();
-
-// Pre-fill name
+// ── Name init ─────────────────────────────────────────────────────────────────
 (function(){
   const inp=$('home-name');
   if(!myName){ myName=randomName(); localStorage.setItem('sl-name',myName); }
@@ -334,7 +263,9 @@ function onConnBack(){ $('conn-banner').style.display='none'; }
 })();
 
 function showScreen(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); $(id).classList.add('active'); }
-function isHost(){ return state&&state.players[0]&&state.players[0].id===myId; }
+function isHost(){ return state&&state.players&&state.players[0]&&state.players[0].id===myId; }
+function isMyTurn(){ return state&&state.players&&state.players[state.currentTurnIdx]&&state.players[state.currentTurnIdx].id===myId; }
+
 function setNumPlayers(n){
   if(!isHost()||!state) return;
   const s=deepCopy(state); s.numPlayers=n; writeRoom(s);
@@ -343,19 +274,20 @@ function updateNpPicker(n){
   const btns=document.querySelectorAll('#sl-np-picker .np-btn');
   [2,3,4].forEach((v,i)=>{ if(btns[i]) btns[i].classList.toggle('active',v===n); });
 }
-function isMyTurn(){ return state&&state.players[state.currentTurnIdx]&&state.players[state.currentTurnIdx].id===myId; }
 
+// ── Room management ───────────────────────────────────────────────────────────
 async function createRoom(){
   myName=$('home-name').value.trim()||randomName();
   $('home-name').value=myName; localStorage.setItem('sl-name',myName);
   const code=randCode();
-  const s={code,version:0,ts:Date.now(),phase:'lobby',
+  const s={code,ts:Date.now(),phase:'lobby',
     players:[{id:myId,name:myName,pos:0,colorIdx:0}],
     hostId:myId,numPlayers:4,currentTurnIdx:0,diceValue:null,lastMove:null,winner:null};
-  roomCode=code; writeRoom(s); subscribeRoom(code); subscribeChat(code);
-  subscribePresence(code); clearInterval(heartbeatInterval); pingPresence(); heartbeatInterval=setInterval(pingPresence,15000);
-  sessionStorage.setItem('sl-room',code);
-  showScreen('scr-lobby');
+  roomCode=code;
+  await db.ref('rooms/SL-'+code+'/state').set(s);
+  sessionStorage.setItem(SS_KEY,JSON.stringify({code,myId}));
+  state=s; subscribeRoom(code); subscribeChat(code);
+  showScreen('scr-lobby'); render();
 }
 
 async function joinRoom(){
@@ -363,25 +295,25 @@ async function joinRoom(){
   $('home-name').value=myName; localStorage.setItem('sl-name',myName);
   const code=$('home-code').value.trim().toUpperCase().slice(0,4);
   if(code.length<4){ $('home-err').textContent='Enter a 4-letter room code.'; return; }
-  $('home-err').textContent='';
-  const existing=await readRoom(code);
-  if(!existing){ $('home-err').textContent='Room not found. Check the code.'; return; }
-  if(existing.phase!=='lobby'){ $('home-err').textContent='Game already in progress.'; return; }
-  if(existing.players.length>=(existing.numPlayers||4)){ $('home-err').textContent='Room is full (max '+(existing.numPlayers||4)+' players).'; return; }
-  if(existing.players.find(p=>p.id===myId)){
-    roomCode=code; state=existing; lastVer=existing.version;
-    subscribeRoom(code); subscribeChat(code);
-    subscribePresence(code); clearInterval(heartbeatInterval); pingPresence(); heartbeatInterval=setInterval(pingPresence,15000);
-    sessionStorage.setItem('sl-room',code);
-    showScreen('scr-lobby'); render(); return;
-  }
-  const s=deepCopy(existing);
-  s.players.push({id:myId,name:myName,pos:0,colorIdx:s.players.length});
-  roomCode=code; lastVer=existing.version;
-  writeRoom(s); subscribeRoom(code); subscribeChat(code);
-  subscribePresence(code); clearInterval(heartbeatInterval); pingPresence(); heartbeatInterval=setInterval(pingPresence,15000);
-  sessionStorage.setItem('sl-room',code);
-  showScreen('scr-lobby');
+  $('home-err').textContent='Joining…';
+  let finalState=null;
+  try{
+    await db.ref('rooms/SL-'+code+'/state').transaction(curr=>{
+      if(!curr) return {};
+      if(curr.phase!=='lobby') return;
+      if((curr.players||[]).some(p=>p.id===myId)){ finalState=curr; return curr; }
+      if((curr.players||[]).length>=(curr.numPlayers||4)) return;
+      const players=curr.players||[];
+      players.push({id:myId,name:myName,pos:0,colorIdx:players.length});
+      curr.players=players; curr.ts=Date.now();
+      finalState=curr; return curr;
+    });
+  }catch(e){ $('home-err').textContent='Connection error. Try again.'; return; }
+  if(!finalState){ $('home-err').textContent='Room not found, full, or game already started.'; return; }
+  roomCode=code;
+  sessionStorage.setItem(SS_KEY,JSON.stringify({code,myId}));
+  state=finalState; subscribeRoom(code); subscribeChat(code);
+  showScreen('scr-lobby'); render();
 }
 
 function copyCode(){
@@ -391,17 +323,17 @@ function copyCode(){
 }
 
 function leaveRoom(){
-  if(roomEs){roomEs.close();roomEs=null;} if(chatEs){chatEs.close();chatEs=null;}
-  if(presEs){presEs.close();presEs=null;} clearInterval(heartbeatInterval); heartbeatInterval=null;
-  state=null; roomCode=''; lastVer=0;
-  sessionStorage.removeItem('sl-room');
+  if(roomRef){roomRef.off();roomRef=null;}
+  if(chatRef){chatRef.off();chatRef=null;}
+  state=null; roomCode='';
+  sessionStorage.removeItem(SS_KEY);
   const cp=$('chat-panel'); if(cp){cp.style.display='none';chatCollapsed=true;cp.classList.add('collapsed');}
   showScreen('scr-home');
 }
 
 function hostStart(){
   if(!isHost()||busy) return;
-  if(state.players.length<2){ $('lobby-err').textContent='Need at least 2 players.'; return; }
+  if((state.players||[]).length<2){ $('lobby-err').textContent='Need at least 2 players.'; return; }
   const s=deepCopy(state);
   s.phase='play';
   s.players.forEach((p,i)=>{p.pos=0;p.colorIdx=i;});
@@ -416,7 +348,6 @@ function applyMove(s,pi,rawPos){
   s.players[pi].pos=lm.final; s.lastMove=lm;
   if(lm.final===100){s.winner=s.players[pi].id;s.phase='over';}
   else if(s.diceValue!==6) s.currentTurnIdx=(s.currentTurnIdx+1)%s.players.length;
-  // skip players who already finished (pos=100) - find next active
   if(s.phase!=='over'){
     let tries=s.players.length;
     while(tries-->0&&s.players[s.currentTurnIdx].pos===100)
@@ -425,7 +356,7 @@ function applyMove(s,pi,rawPos){
 }
 
 function rollDice(){
-  if(!isMyTurn()||state.phase!=='play'||busy||animating) return;
+  if(!isMyTurn()||!state||state.phase!=='play'||busy||animating) return;
   busy=true;
   const roll=Math.ceil(Math.random()*6);
   const dEl=$('dice-face');
@@ -447,8 +378,8 @@ function doRoll(roll){
   const s=deepCopy(state);
   const pi=s.currentTurnIdx;
   s.diceValue=roll;
-  let newPos=s.players[pi].pos+roll;
-  if(newPos>100) newPos=200-newPos; // bounce back
+  let newPos=(s.players[pi].pos||0)+roll;
+  if(newPos>100) newPos=200-newPos;
   if(newPos<1) newPos=1;
   applyMove(s,pi,newPos);
   writeRoom(s); busy=false;
@@ -462,32 +393,18 @@ function playAgain(){
   writeRoom(s);
 }
 
-// ── Board ────────────────────────────────────────────────────────────────────
+// ── Board ─────────────────────────────────────────────────────────────────────
 function sq2grid(n){
-  const rfb=Math.floor((n-1)/10), pir=(n-1)%10;
-  return{gridRow:10-rfb, gridCol:(rfb%2===0?pir:9-pir)+1};
+  const rfb=Math.floor((n-1)/10),pir=(n-1)%10;
+  return{gridRow:10-rfb,gridCol:(rfb%2===0?pir:9-pir)+1};
 }
-
 const CELL_COLORS=['#ffd6e7','#ffeaa7','#d4f5d4','#a8d8ea','#e8c0f5','#ffd4a3'];
 const SNAKE_COLORS=['#e74c3c','#e67e22','#27ae60','#8e44ad','#2980b9','#d35400','#16a085','#c0392b'];
 
-function getCellPos(n){
-  const {gridRow,gridCol}=sq2grid(n);
-  return{x:(gridCol-0.5)*10, y:(gridRow-0.5)*10};
-}
-function svgEl(tag,attrs){
-  const el=document.createElementNS('http://www.w3.org/2000/svg',tag);
-  Object.entries(attrs).forEach(([k,v])=>el.setAttribute(k,v));
-  return el;
-}
-function svgLine(svg,x1,y1,x2,y2,color,w){
-  svg.appendChild(svgEl('line',{x1,y1,x2,y2,stroke:color,'stroke-width':w,'stroke-linecap':'round'}));
-}
-function svgCircle(parent,cx,cy,r,fill,stroke,sw){
-  const attrs={cx,cy,r,fill};
-  if(stroke){attrs.stroke=stroke;attrs['stroke-width']=sw||0.5;}
-  parent.appendChild(svgEl('circle',attrs));
-}
+function getCellPos(n){ const{gridRow,gridCol}=sq2grid(n); return{x:(gridCol-0.5)*10,y:(gridRow-0.5)*10}; }
+function svgEl(tag,attrs){ const el=document.createElementNS('http://www.w3.org/2000/svg',tag); Object.entries(attrs).forEach(([k,v])=>el.setAttribute(k,v)); return el; }
+function svgLine(svg,x1,y1,x2,y2,color,w){ svg.appendChild(svgEl('line',{x1,y1,x2,y2,stroke:color,'stroke-width':w,'stroke-linecap':'round'})); }
+function svgCircle(parent,cx,cy,r,fill,stroke,sw){ const attrs={cx,cy,r,fill}; if(stroke){attrs.stroke=stroke;attrs['stroke-width']=sw||0.5;} parent.appendChild(svgEl('circle',attrs)); }
 
 function drawLadder(svg,from,to){
   const b=getCellPos(from),t=getCellPos(to);
@@ -495,10 +412,7 @@ function drawLadder(svg,from,to){
   const nx=-dy/len*1.5,ny=dx/len*1.5;
   svgLine(svg,b.x-nx,b.y-ny,t.x-nx,t.y-ny,'#8B4513',1.1);
   svgLine(svg,b.x+nx,b.y+ny,t.x+nx,t.y+ny,'#8B4513',1.1);
-  for(let frac=0.12;frac<0.92;frac+=0.14){
-    const rx=b.x+dx*frac,ry=b.y+dy*frac;
-    svgLine(svg,rx-nx,ry-ny,rx+nx,ry+ny,'#D2691E',1.0);
-  }
+  for(let frac=0.12;frac<0.92;frac+=0.14){ const rx=b.x+dx*frac,ry=b.y+dy*frac; svgLine(svg,rx-nx,ry-ny,rx+nx,ry+ny,'#D2691E',1.0); }
 }
 
 function drawSnake(svg,head,tail,color){
@@ -508,19 +422,12 @@ function drawSnake(svg,head,tail,color){
   const off=Math.min(len*0.45,20);
   const c1={x:h.x+dx*0.3+nx*off,y:h.y+dy*0.3+ny*off};
   const c2={x:h.x+dx*0.7-nx*off,y:h.y+dy*0.7-ny*off};
-  // Outline (slightly wider, darker)
-  svg.appendChild(svgEl('path',{d:`M${h.x},${h.y} C${c1.x},${c1.y} ${c2.x},${c2.y} ${t.x},${t.y}`,
-    stroke:'rgba(0,0,0,.25)','stroke-width':'5','fill':'none','stroke-linecap':'round'}));
-  // Body
-  svg.appendChild(svgEl('path',{d:`M${h.x},${h.y} C${c1.x},${c1.y} ${c2.x},${c2.y} ${t.x},${t.y}`,
-    stroke:color,'stroke-width':'3.8','fill':'none','stroke-linecap':'round'}));
-  // Head circle
+  svg.appendChild(svgEl('path',{d:`M${h.x},${h.y} C${c1.x},${c1.y} ${c2.x},${c2.y} ${t.x},${t.y}`,stroke:'rgba(0,0,0,.25)','stroke-width':'5','fill':'none','stroke-linecap':'round'}));
+  svg.appendChild(svgEl('path',{d:`M${h.x},${h.y} C${c1.x},${c1.y} ${c2.x},${c2.y} ${t.x},${t.y}`,stroke:color,'stroke-width':'3.8','fill':'none','stroke-linecap':'round'}));
   svgCircle(svg,h.x,h.y,3.2,color,'rgba(0,0,0,.3)',0.5);
-  // Eyes (offset perpendicular to body direction)
   const ex=-dx/len*0.8,ey=-dy/len*0.8;
   svgCircle(svg,h.x+nx*1.3+ex,h.y+ny*1.3+ey,0.75,'white');
   svgCircle(svg,h.x-nx*1.3+ex,h.y-ny*1.3+ey,0.75,'white');
-  // Tail dot
   svgCircle(svg,t.x,t.y,1.3,color,'white',0.4);
 }
 
@@ -537,12 +444,11 @@ function drawSnakesLadders(){
 function buildBoard(){
   const board=$('sl-board'); board.innerHTML='';
   for(let n=1;n<=100;n++){
-    const {gridRow,gridCol}=sq2grid(n);
+    const{gridRow,gridCol}=sq2grid(n);
     const cell=document.createElement('div');
-    cell.className='sl-cell';
-    cell.id='sq'+n;
+    cell.className='sl-cell'; cell.id='sq'+n;
     cell.style.gridRow=gridRow; cell.style.gridColumn=gridCol;
-    cell.style.background = n===100 ? '#fef3cd' : CELL_COLORS[(n-1)%6];
+    cell.style.background=n===100?'#fef3cd':CELL_COLORS[(n-1)%6];
     const num=document.createElement('div'); num.className='cell-num'; num.textContent=n; cell.appendChild(num);
     if(n===100){ const ic=document.createElement('div'); ic.style.cssText='font-size:11px;line-height:1;'; ic.textContent='🏆'; cell.appendChild(ic); }
     const toks=document.createElement('div'); toks.className='cell-tokens'; toks.id='toks'+n; cell.appendChild(toks);
@@ -555,11 +461,11 @@ buildBoard();
 function renderBoard(s){
   const svg=$('sl-board').querySelector('svg.sl-overlay'); if(!svg) return;
   svg.querySelectorAll('.sl-token').forEach(e=>e.remove());
-  s.players.forEach((p,i)=>{
+  (s.players||[]).forEach((p,i)=>{
     if(p.pos<1||p.pos>100) return;
-    const {x,y}=getCellPos(p.pos);
+    const{x,y}=getCellPos(p.pos);
     const color=PCOLORS[p.colorIdx]||PCOLORS[i%4];
-    const samePos=s.players.filter(pp=>pp.pos===p.pos);
+    const samePos=(s.players||[]).filter(pp=>pp.pos===p.pos);
     const idx=samePos.findIndex(pp=>pp.id===p.id);
     const ox=(idx-(samePos.length-1)/2)*3.0;
     const g=svgEl('g',{class:'sl-token'});
@@ -578,21 +484,20 @@ function kickPlayer(pid){
   writeRoom(s);
 }
 
-// ── Render ───────────────────────────────────────────────────────────────────
+// ── Render ────────────────────────────────────────────────────────────────────
 function renderLobby(s){
-  $('lobby-code').textContent=s.code;
+  $('lobby-code').textContent=s.code||roomCode;
   const lp=$('lobby-players'); lp.innerHTML='';
   const numP=s.numPlayers||4;
   for(let i=0;i<numP;i++){
     const row=document.createElement('div');
-    if(s.players[i]){
+    if(s.players&&s.players[i]){
       const p=s.players[i]; row.className='pl-row';
       const dot=document.createElement('span');
       dot.style.cssText='display:inline-block;width:12px;height:12px;border-radius:50%;background:'+PCOLORS[i%4]+';flex-shrink:0;';
       row.appendChild(dot);
       const nm=document.createElement('span'); nm.textContent=p.name; row.appendChild(nm);
       if(i===0){ const t=document.createElement('span'); t.className='pl-tag'; t.textContent='HOST'; row.appendChild(t); }
-      const pb=document.createElement('span'); pb.innerHTML=pingBadge(p.id); row.appendChild(pb);
       if(isHost()&&p.id!==myId){
         const kb=document.createElement('button'); kb.className='kick-btn'; kb.textContent='✕';
         kb.onclick=()=>kickPlayer(p.id); row.appendChild(kb);
@@ -602,18 +507,10 @@ function renderLobby(s){
     }
     lp.appendChild(row);
   }
-  const hostOpts=$('sl-host-opts'), mon=$('lobby-monitor'), mp=$('lobby-maxplayers');
-  if(isHost()){
-    hostOpts.style.display='block'; mp.style.display='none';
-    updateNpPicker(numP);
-    const link=NTFY+'/sl-'+s.code+'-s';
-    mon.style.display='block';
-    mon.innerHTML='Monitor: <a href="'+link+'" target="_blank" style="color:var(--blue);">'+link+'</a>';
-  } else {
-    hostOpts.style.display='none'; mon.style.display='none';
-    mp.style.display='block'; mp.textContent='Max players: '+numP;
-  }
-  $('lobby-start').style.display=(isHost()&&s.players.length>=2)?'block':'none';
+  const hostOpts=$('sl-host-opts'),mp=$('lobby-maxplayers');
+  if(isHost()){ hostOpts.style.display='block'; mp.style.display='none'; updateNpPicker(numP); }
+  else{ hostOpts.style.display='none'; mp.style.display='block'; mp.textContent='Max players: '+numP; }
+  $('lobby-start').style.display=(isHost()&&(s.players||[]).length>=2)?'block':'none';
   $('lobby-wait').style.display=isHost()?'none':'flex';
   $('lobby-err').textContent='';
 }
@@ -621,13 +518,13 @@ function renderLobby(s){
 function renderGame(s){
   renderBoard(s);
   if(!animating){ const d=$('dice-face'); if(d) d.textContent=s.diceValue?FACES[s.diceValue]:'⚀'; }
-  const cp=s.players[s.currentTurnIdx];
+  const cp=s.players&&s.players[s.currentTurnIdx];
   const tm=$('turn-msg');
   if(cp) tm.textContent=isMyTurn()?'Your turn — roll!':esc(cp.name)+"'s turn";
   $('btn-roll').style.display=(isMyTurn()&&!animating)?'block':'none';
-  const lm=s.lastMove, me2=$('move-msg');
+  const lm=s.lastMove,me2=$('move-msg');
   if(lm){
-    const pn=esc((s.players.find(p=>p.id===lm.playerId)||{}).name||'?');
+    const pn=esc(((s.players||[]).find(p=>p.id===lm.playerId)||{}).name||'?');
     let msg=pn+' rolled '+lm.dice;
     if(lm.snake) msg+=' — 🐍 slid from '+lm.landed+' → '+lm.final;
     else if(lm.ladder) msg+=' — 🪜 climbed to '+lm.final;
@@ -636,7 +533,7 @@ function renderGame(s){
     me2.innerHTML=msg;
   } else me2.textContent='';
   const pl=$('sl-players'); pl.innerHTML='';
-  s.players.forEach((p,i)=>{
+  (s.players||[]).forEach((p,i)=>{
     const row=document.createElement('div');
     row.className='sl-prow'+(i===s.currentTurnIdx?' active-p':'');
     if(i===s.currentTurnIdx) row.style.borderColor=PCOLORS[p.colorIdx]||PCOLORS[i%4];
@@ -650,7 +547,8 @@ function renderGame(s){
 }
 
 function renderOver(s){
-  const w=s.players.find(p=>p.id===s.winner);
+  sessionStorage.removeItem(SS_KEY);
+  const w=s.players&&s.players.find(p=>p.id===s.winner);
   $('winner-box').innerHTML=w
     ?'<div class="winner-emoji">🏆</div><div class="winner-name">'+esc(w.name)+' wins!</div>'
     :'<div class="winner-name">Game over!</div>';
@@ -666,13 +564,18 @@ function render(){
   else if(state.phase==='over'){ showScreen('scr-over'); renderOver(state); }
 }
 
+// ── Auto-rejoin ───────────────────────────────────────────────────────────────
 (async function(){
-  const saved=sessionStorage.getItem('sl-room'); if(!saved) return;
-  const existing=await readRoom(saved);
-  if(!existing||!existing.players||!existing.players.find(p=>p.id===myId)){sessionStorage.removeItem('sl-room');return;}
-  roomCode=saved; state=existing; lastVer=existing.version||0;
-  subscribeRoom(saved); subscribeChat(saved); subscribePresence(saved);
-  clearInterval(heartbeatInterval); pingPresence(); heartbeatInterval=setInterval(pingPresence,15000);
+  initFB();
+  const saved=JSON.parse(sessionStorage.getItem(SS_KEY)||'null');
+  if(!saved) return;
+  const snap=await db.ref('rooms/SL-'+saved.code+'/state').once('value');
+  const existing=snap.val();
+  if(!existing||!existing.players||!existing.players.find(p=>p.id===saved.myId)||existing.phase==='over'){
+    sessionStorage.removeItem(SS_KEY); return;
+  }
+  myId=saved.myId; roomCode=saved.code; state=existing;
+  subscribeRoom(saved.code); subscribeChat(saved.code);
   render();
 })();
 </script>
