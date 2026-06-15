@@ -808,6 +808,7 @@ function guessPlayer(targetIdx){
   if(busy||!state||state.phase!=='chain'||state.chainFinder!==me)return;
   busy=true;
   const s=deepCopy(state);
+  s.roundPoints=s.roundPoints||{};
   if((s.foundPlayers||[]).includes(targetIdx)||targetIdx===me){busy=false;return;}
   const target=chainTarget(s);
   const tName=(s.players[targetIdx]||{name:'?'}).name;
