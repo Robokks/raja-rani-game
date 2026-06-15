@@ -426,7 +426,7 @@ function checkOfflineCurrentPlayer(){
         const s=_decState(curr);
         if(!s||!s.autoSkipAt)return;
         const nowCp=s.players[s.currentPlayer];
-        if(nowCp&&presenceMap[nowCp.id]){s.autoSkipAt=null;return _encState(deepCopy(s));}
+        if(nowCp&&presenceMap[nowCp.id]){s.autoSkipAt=null;s.version=(s.version||0)+1;return _encState(deepCopy(s));}
       });
     }
     return;
@@ -439,7 +439,7 @@ function checkOfflineCurrentPlayer(){
       if(!s||s.autoSkipAt||!s.dcProtect)return;
       const nowCp=s.players[s.currentPlayer];
       if(!nowCp||presenceMap[nowCp.id])return;
-      s.autoSkipAt=Date.now();
+      s.autoSkipAt=Date.now();s.version=(s.version||0)+1;
       return _encState(deepCopy(s));
     });
   }
@@ -459,7 +459,7 @@ function performAutoSkip(){
     s.pendingRoulette=null;s.rouletteColor=null;s.drewThisTurn=null;
     s.lastAutoSkippedId=cp.id;
     s.lastAction=`${cp.name} was auto-skipped (disconnected)`;
-    s.autoSkipAt=null;
+    s.autoSkipAt=null;s.version=(s.version||0)+1;
     const cpId=cp.id;
     checkMercy(s);
     const cpElim=s.players.some(p=>p.id===cpId&&p.eliminated);
@@ -1138,6 +1138,12 @@ function render(){
     else if(currentScreen()==='scr-home'){}
     else show('scr-lobby');
   } else if(s.phase==='play'){
+    // Auto-cancel swap if all targets eliminated — must be handled before renderGame
+    if(s.pendingSwapFrom===myId&&s.players.filter(p=>p.id!==myId&&!p.eliminated).length===0){
+      const ns=deepCopy(s);ns.pendingSwapFrom=null;
+      ns.lastAction='Swap cancelled (no eligible targets)';
+      advanceTurn(ns,1);writeRoom(ns);return;
+    }
     show('scr-game');renderGame(s);
   } else if(s.phase==='over'){
     clearCountdown();show('scr-over');renderOver(s);
@@ -1294,26 +1300,15 @@ function renderGame(s){
   // Swap overlay
   const swapOverlay=$('swap-overlay');
   if(s.pendingSwapFrom&&s.pendingSwapFrom===myId){
-    const eligibleSwap=s.players.filter(p=>p.id!==myId&&!p.eliminated);
-    if(eligibleSwap.length===0){
-      // No valid targets — auto-cancel swap and advance turn
-      const ns=deepCopy(state);
-      ns.pendingSwapFrom=null;
-      ns.lastAction='Swap cancelled (no eligible targets)';
-      advanceTurn(ns,1);
-      writeRoom(ns);
-      swapOverlay.classList.remove('show');
-    } else {
-      const sp=$('swap-players');sp.innerHTML='';
-      eligibleSwap.forEach(p=>{
-        const btn=document.createElement('button');
-        btn.className='swap-player-btn';
-        btn.innerHTML=`<span class="swap-av">${esc(p.avatar)}</span><span>${esc(p.name)}</span><span class="swap-count">🃏 ${(s.hands[p.id]||[]).length}</span>`;
-        btn.onclick=()=>chooseSwap(p.id);
-        sp.appendChild(btn);
-      });
-      swapOverlay.classList.add('show');
-    }
+    const sp=$('swap-players');sp.innerHTML='';
+    s.players.filter(p=>p.id!==myId&&!p.eliminated).forEach(p=>{
+      const btn=document.createElement('button');
+      btn.className='swap-player-btn';
+      btn.innerHTML=`<span class="swap-av">${esc(p.avatar)}</span><span>${esc(p.name)}</span><span class="swap-count">🃏 ${(s.hands[p.id]||[]).length}</span>`;
+      btn.onclick=()=>chooseSwap(p.id);
+      sp.appendChild(btn);
+    });
+    swapOverlay.classList.add('show');
   } else {
     swapOverlay.classList.remove('show');
   }
