@@ -987,6 +987,15 @@ function renderChain(s){
     d.innerHTML='<span class="cface">'+esc(av(p))+'</span><span class="cname">'+esc(p.name)+'</span><span class="crole">✓</span>';
     area.appendChild(d);
   });
+  // Show the current chooser as a non-clickable card
+  const fp=s.players[s.chainFinder];
+  if(fp){
+    const fd=document.createElement('div');
+    fd.className='candidate passive';
+    fd.style.cssText='border:2px solid var(--red);background:#fff8f0;';
+    fd.innerHTML='<span class="cface">'+esc(av(fp))+'</span><span class="cname">'+esc(fp.name)+(isMyTurn?' <small style="opacity:.5;">(you)</small>':'')+'</span><span class="cq" style="color:var(--red);font-size:15px;">🎯</span>';
+    area.appendChild(fd);
+  }
   for(let pi=0;pi<s.numPlayers;pi++){
     if((s.foundPlayers||[]).includes(pi))continue;
     if(pi===s.chainFinder)continue;
