@@ -263,6 +263,7 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
 
 <canvas id="confetti-canvas" style="display:none;position:fixed;inset:0;pointer-events:none;z-index:300;"></canvas>
 <div class="mychit" id="mychit" style="display:none;bottom:108px;"></div>
+<button id="host-reset-btn" onclick="hostEndGame()" style="display:none;position:fixed;top:10px;right:10px;z-index:200;background:rgba(58,42,24,.12);border:1.5px solid rgba(58,42,24,.25);border-radius:8px;padding:5px 10px;font-size:12px;font-weight:800;font-family:'Catamaran';cursor:pointer;color:var(--ink);">⚙ End</button>
 <div class="rxn-bar" id="rxn-bar">
   <button class="rxn-btn" onclick="sendReaction('😂')">😂</button>
   <button class="rxn-btn" onclick="sendReaction('❤️')">❤️</button>
@@ -847,6 +848,15 @@ function finalizeRound(s){
 }
 
 // ── Round flow ─────────────────────────────────────────────────────────
+async function hostEndGame(){
+  if(!isHost()||!state||busy)return;
+  if(!confirm('End game and go to results?'))return;
+  busy=true;
+  const s=deepCopy(state);
+  s.phase='over';
+  writeRoom(s);
+  busy=false;
+}
 async function hostNextRound(){
   if(!isHost()||!state||busy)return;
   busy=true;
@@ -869,6 +879,8 @@ function render(){
   const rxnPhases=['dice','mycard','declare','chain','result'];
   $('rxn-bar').style.display=rxnPhases.includes(s.phase)?'flex':'none';
   $('mychit').style.display='none';
+  const gamePhases=['dice','mycard','declare','chain','result'];
+  $('host-reset-btn').style.display=(isHost()&&gamePhases.includes(s.phase))?'block':'none';
   const phaseChanged=s.phase!==renderedPhase;
   renderedPhase=s.phase;
   switch(s.phase){
