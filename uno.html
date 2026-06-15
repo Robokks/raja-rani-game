@@ -346,7 +346,7 @@ let myAvSel=myAvatar;
 
 // ── State ─────────────────────────────────────────────────────────────
 let state=null,lastVer=0,roomCode='',busy=false;
-let presenceMap={},countdownInterval=null,presenceRef=null;
+let presenceMap={},countdownInterval=null,presenceRef=null,autoSkipToastVer=0;
 const AVATARS=['🐯','🦁','🐻','🐼','🐨','🦊','🐸','🐙','🦄','🐲','🦋','⭐'];
 const RNAMES=['SwiftTiger','BoldLion','BravePanda','CleverFox','LuckyDragon','WildNinja','EpicShark','SneakyOwl','MightyWolf','RoyalEagle','CoolBear','DarkPhoenix'];
 
@@ -393,6 +393,132 @@ function writeRoom(s){
 db.ref('.info/connected').on('value',snap=>{
   $('conn-banner').style.display=snap.val()===true?'none':'block';
 });
+
+// ── Presence & disconnection ──────────────────────────────────────────
+function setupPresence(code){
+  if(presenceRef)presenceRef.off();
+  const myPres=db.ref('rooms/UNO-'+code+'/presence/'+myId);
+  function heartbeat(){myPres.set({name:myName,ts:Date.now()});myPres.onDisconnect().remove();}
+  db.ref('.info/connected').on('value',snap=>{if(snap.val()===true)heartbeat();});
+  heartbeat();
+  presenceRef=db.ref('rooms/UNO-'+code+'/presence');
+  presenceRef.on('value',snap=>{
+    presenceMap=snap.val()||{};
+    if(state&&state.phase==='play'&&state.dcProtect)checkOfflineCurrentPlayer();
+    // Refresh presence badges without full re-render
+    document.querySelectorAll('[data-pres]').forEach(el=>{
+      const pid=el.getAttribute('data-pres');
+      el.textContent=presenceMap[pid]?'🟢':'🔴';
+    });
+  });
+}
+function isOnline(pid){return !!presenceMap[pid];}
+
+function checkOfflineCurrentPlayer(){
+  if(!state||state.phase!=='play'||!state.dcProtect)return;
+  const cp=state.players[state.currentPlayer];
+  if(!cp||cp.eliminated)return;
+  if(isOnline(cp.id)){
+    // Player came back — clear autoSkipAt
+    if(state.autoSkipAt){
+      db.ref('rooms/UNO-'+roomCode+'/state').transaction(curr=>{
+        if(!curr)return{};
+        const s=_decState(curr);
+        if(!s||!s.autoSkipAt)return;
+        const nowCp=s.players[s.currentPlayer];
+        if(nowCp&&presenceMap[nowCp.id]){s.autoSkipAt=null;return _encState(deepCopy(s));}
+      });
+    }
+    return;
+  }
+  // Offline — set autoSkipAt if not already set
+  if(!state.autoSkipAt){
+    db.ref('rooms/UNO-'+roomCode+'/state').transaction(curr=>{
+      if(!curr)return{};
+      const s=_decState(curr);
+      if(!s||s.autoSkipAt||!s.dcProtect)return;
+      const nowCp=s.players[s.currentPlayer];
+      if(!nowCp||presenceMap[nowCp.id])return;
+      s.autoSkipAt=Date.now();
+      return _encState(deepCopy(s));
+    });
+  }
+}
+
+function performAutoSkip(){
+  if(!roomCode)return;
+  db.ref('rooms/UNO-'+roomCode+'/state').transaction(curr=>{
+    if(!curr)return{};
+    const s=_decState(curr);
+    if(!s||!s.autoSkipAt||Date.now()-s.autoSkipAt<60000)return;
+    const cp=s.players[s.currentPlayer];if(!cp)return;
+    if(s.pendingDraw>0){drawCards(s,cp.id,s.pendingDraw);s.pendingDraw=0;}
+    else{drawCards(s,cp.id,1);}
+    s.players[s.currentPlayer].handCount=(s.hands[cp.id]||[]).length;
+    s.pendingColorPick=false;s.pendingSwapFrom=null;
+    s.pendingRoulette=null;s.rouletteColor=null;s.drewThisTurn=null;
+    s.lastAutoSkippedId=cp.id;
+    s.lastAction=`${cp.name} was auto-skipped (disconnected)`;
+    s.autoSkipAt=null;
+    checkMercy(s);
+    if(s.phase!=='over')advanceTurn(s,1);
+    return _encState(deepCopy(s));
+  });
+}
+
+function startCountdown(){
+  if(countdownInterval)return;
+  countdownInterval=setInterval(()=>{
+    if(!state||!state.autoSkipAt){clearCountdown();return;}
+    const elapsed=Date.now()-state.autoSkipAt;
+    const rem=Math.max(0,60-Math.floor(elapsed/1000));
+    document.querySelectorAll('.auto-skip-cd').forEach(el=>{el.textContent=`Auto-skip in ${rem}s`;});
+    if(elapsed>=60000){clearCountdown();performAutoSkip();}
+  },1000);
+}
+function clearCountdown(){if(countdownInterval){clearInterval(countdownInterval);countdownInterval=null;}}
+
+function kickDuringGame(pid){
+  if(!isHost())return;
+  const s=deepCopy(state);
+  const idx=s.players.findIndex(p=>p.id===pid);if(idx<0)return;
+  const p=s.players[idx];
+  s.kickedIds=s.kickedIds||[];s.kickedIds.push(pid);
+  s.players[idx].eliminated=true;
+  s.deck=shuffle((s.hands[pid]||[]).concat(s.deck));
+  s.hands[pid]=[];s.players[idx].handCount=0;
+  s.autoSkipAt=null;
+  s.lastAction=`${p.name} was removed from the game`;
+  const alive=s.players.filter(pl=>!pl.eliminated);
+  if(alive.length===1){s.winner=alive[0].id;s.phase='over';s.lastAction=`${alive[0].name} wins!`;}
+  else if(s.phase!=='over'){
+    let guard=0;
+    while(s.players[s.currentPlayer]&&s.players[s.currentPlayer].eliminated&&guard<s.players.length){
+      s.currentPlayer=((s.currentPlayer+s.direction)%s.players.length+s.players.length)%s.players.length;guard++;
+    }
+  }
+  writeRoom(s);
+}
+
+function cardCountLabel(n,showExact){
+  if(showExact)return`🃏 ${n}`;
+  if(n===0)return'🃏 —';
+  if(n<=4)return'🃏 Few';
+  if(n<=8)return'🃏 Some';
+  if(n<=14)return'🃏 Medium';
+  if(n<=24)return'🃏 Many';
+  return'🃏 Danger!';
+}
+
+function showToast(msg){
+  let t=document.getElementById('toast-msg');
+  if(!t){t=document.createElement('div');t.id='toast-msg';document.body.appendChild(t);}
+  t.textContent=msg;
+  t.style.cssText='position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(0);background:#3a2a18;color:#fdf6e3;padding:10px 20px;border-radius:20px;font-family:Catamaran,sans-serif;font-weight:800;font-size:13px;z-index:999;transition:opacity .6s;white-space:nowrap;';
+  t.style.opacity='1';
+  clearTimeout(t._t);
+  t._t=setTimeout(()=>{t.style.opacity='0';},2800);
+}
 
 // ── Room code gen ─────────────────────────────────────────────────────
 function genCode(){
@@ -444,13 +570,14 @@ async function createRoom(){
     currentPlayer:0,direction:1,currentColor:'red',
     pendingDraw:0,pendingColorPick:false,pendingSwapFrom:null,
     pendingRoulette:null,rouletteColor:null,drewThisTurn:null,
-    winner:null,lastAction:''
+    winner:null,lastAction:'',autoSkipAt:null,lastAutoSkippedId:null,
+    showExactCount:true,dcProtect:true
   };
   roomCode=code;
   await db.ref('rooms/UNO-'+code+'/state').set(_encState(deepCopy(s)));
   sessionStorage.setItem(SS_KEY,JSON.stringify({code,myId}));
   state=s;lastVer=0;
-  subscribeRoom(code);
+  subscribeRoom(code);setupPresence(code);
   renderLobby(s);show('scr-lobby');
 }
 
@@ -477,13 +604,15 @@ async function joinRoom(){
   roomCode=c;
   sessionStorage.setItem(SS_KEY,JSON.stringify({code:c,myId}));
   state=finalState;lastVer=finalState.version||0;
-  subscribeRoom(c);
+  subscribeRoom(c);setupPresence(c);
   renderLobby(finalState);show('scr-lobby');
 }
 
 // ── Lobby controls ────────────────────────────────────────────────────
 function setNumPlayers(n){if(!isHost())return;const s=deepCopy(state);s.numPlayers=n;writeRoom(s);}
 function setMode(m){if(!isHost())return;const s=deepCopy(state);s.mode=m;writeRoom(s);}
+function setShowExactCount(v){if(!isHost())return;const s=deepCopy(state);s.showExactCount=v;writeRoom(s);}
+function setDcProtect(v){if(!isHost())return;const s=deepCopy(state);s.dcProtect=v;writeRoom(s);}
 function copyCode(){
   navigator.clipboard&&navigator.clipboard.writeText(roomCode).catch(()=>{});
   const btn=$('copy-code-btn');btn.textContent='✅ Copied!';setTimeout(()=>{btn.textContent='📋 Copy code';},1500);
@@ -518,6 +647,32 @@ function renderLobby(s){
     const mc=$('mode-classic'),mn=$('mode-nomercv');
     if(mc)mc.classList.toggle('active',!nm);
     if(mn)mn.classList.toggle('active',nm);
+    // Card count display toggle
+    let ccEl=$('cc-toggle');
+    if(!ccEl){
+      ccEl=document.createElement('div');ccEl.id='cc-toggle';
+      ccEl.innerHTML=`<label style="margin-top:14px;">Card count display</label><div class="mode-picker">
+        <button class="mode-btn" id="cc-exact" onclick="setShowExactCount(true)">Exact (5)</button>
+        <button class="mode-btn" id="cc-hidden" onclick="setShowExactCount(false)">Hidden (Few…)</button>
+      </div>`;
+      $('lobby-host-settings').appendChild(ccEl);
+    }
+    const ccExact=$('cc-exact'),ccHidden=$('cc-hidden');
+    if(ccExact)ccExact.classList.toggle('active',s.showExactCount!==false);
+    if(ccHidden)ccHidden.classList.toggle('active',s.showExactCount===false);
+    // Disconnection protection toggle
+    let dcEl=$('dc-toggle');
+    if(!dcEl){
+      dcEl=document.createElement('div');dcEl.id='dc-toggle';
+      dcEl.innerHTML=`<label style="margin-top:14px;">Disconnection protection</label><div class="mode-picker">
+        <button class="mode-btn" id="dc-on" onclick="setDcProtect(true)">On 🟢</button>
+        <button class="mode-btn" id="dc-off" onclick="setDcProtect(false)">Off</button>
+      </div><div style="font-family:Catamaran;font-size:11px;font-weight:700;opacity:.6;margin-top:4px;line-height:1.5;">60s auto-skip if player disconnects</div>`;
+      $('lobby-host-settings').appendChild(dcEl);
+    }
+    const dcOn=$('dc-on'),dcOff=$('dc-off');
+    if(dcOn)dcOn.classList.toggle('active',s.dcProtect!==false);
+    if(dcOff)dcOff.classList.toggle('active',s.dcProtect===false);
     const canStart=s.players.length>=2;
     $('lobby-start').disabled=!canStart;
     $('lobby-start').textContent=canStart?`🎮 Start Game (${s.players.length}/${s.numPlayers})`:`Waiting… (${s.players.length}/${s.numPlayers})`;
@@ -957,7 +1112,7 @@ function rematch(){
   s.currentPlayer=0;s.direction=1;s.currentColor='red';
   s.pendingDraw=0;s.pendingColorPick=false;s.pendingSwapFrom=null;
   s.pendingRoulette=null;s.rouletteColor=null;s.drewThisTurn=null;
-  s.winner=null;s.lastAction='';
+  s.winner=null;s.lastAction='';s.autoSkipAt=null;s.lastAutoSkippedId=null;
   s.players.forEach(p=>{p.handCount=0;p.saidUno=false;p.eliminated=false;});
   writeRoom(s);
 }
@@ -966,6 +1121,14 @@ function rematch(){
 function render(){
   if(!state)return;
   const s=state;
+  // Toast: was I auto-skipped?
+  if(s.lastAutoSkippedId===myId&&s.version!==autoSkipToastVer){
+    autoSkipToastVer=s.version;
+    showToast('⏩ You were away — your turn was auto-skipped');
+  }
+  // Countdown management
+  if(s.phase==='play'&&s.autoSkipAt&&s.dcProtect){startCountdown();}
+  else{clearCountdown();}
   if(s.phase==='lobby'){
     renderLobby(s);
     if(currentScreen()!=='scr-lobby'&&currentScreen()!=='scr-home')show('scr-lobby');
@@ -974,7 +1137,7 @@ function render(){
   } else if(s.phase==='play'){
     show('scr-game');renderGame(s);
   } else if(s.phase==='over'){
-    show('scr-over');renderOver(s);
+    clearCountdown();show('scr-over');renderOver(s);
   }
 }
 
@@ -995,18 +1158,26 @@ function renderGame(s){
   const isEliminated=myPlayer&&myPlayer.eliminated;
 
   // Opponents
+  const showExact=s.showExactCount!==false;
+  const dcOn=s.dcProtect!==false;
   const opponents=s.players.filter(p=>p.id!==myId);
   let oppsHTML='';
   opponents.forEach(p=>{
     const isActive=s.players[s.currentPlayer]&&s.players[s.currentPlayer].id===p.id;
     const canCatch=(s.hands[p.id]||[]).length===1&&!p.saidUno&&!p.eliminated;
+    const online=isOnline(p.id);
+    const showCd=dcOn&&isActive&&!p.eliminated&&s.autoSkipAt&&!online;
+    const elapsed=showCd?Date.now()-s.autoSkipAt:0;
+    const cdSecs=showCd?Math.max(0,60-Math.floor(elapsed/1000)):0;
     oppsHTML+=`<div class="opp-card${isActive&&!p.eliminated?' active-opp':''}${p.eliminated?' eliminated':''}">
       <div class="opp-av">${esc(p.avatar)}</div>
-      <div class="opp-name">${esc(p.name)}</div>
-      <div class="opp-count">🃏 ${p.handCount}</div>
+      <div class="opp-name">${esc(p.name)} ${dcOn?`<span data-pres="${esc(p.id)}" style="font-size:10px;">${online?'🟢':'🔴'}</span>`:''}</div>
+      <div class="opp-count">${cardCountLabel(p.handCount,showExact)}</div>
       ${p.eliminated?'<div class="opp-elim-badge">OUT</div>':''}
       ${p.saidUno&&!p.eliminated?'<div class="opp-uno-badge">UNO!</div>':''}
+      ${showCd?`<div class="auto-skip-cd" style="font-family:Catamaran;font-size:10px;font-weight:800;color:#e74c3c;margin-top:2px;">Auto-skip in ${cdSecs}s</div>`:''}
       ${canCatch?`<button class="catch-uno-btn" onclick="catchUno('${esc(p.id)}')">Catch!</button>`:''}
+      ${isHost()&&!online&&!p.eliminated?`<button class="catch-uno-btn" style="background:#888;margin-top:2px;" onclick="kickDuringGame('${esc(p.id)}')">Kick</button>`:''}
     </div>`;
   });
 
@@ -1179,7 +1350,7 @@ function renderOver(s){
     roomCode=saved.code;
     lastVer=s.version||0;
     state=s;
-    subscribeRoom(saved.code);
+    subscribeRoom(saved.code);setupPresence(saved.code);
     render();
   }catch(e){console.error('Rejoin error:',e);}
 })();
