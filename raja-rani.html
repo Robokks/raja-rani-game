@@ -976,7 +976,7 @@ function renderChain(s){
   const tro=ROLE_DEFS[target];
   $('chain-finder-label').innerHTML=isMyTurn
     ?'<b>உங்க முறை!</b> Find <span style="color:var(--red);">'+tro.emoji+' '+tro.ta+'</span>'
-    :'👀 <b>Someone</b> is choosing…';
+    :'👀 <b>'+esc((s.players[s.chainFinder]||{name:'?'}).name)+'</b> is choosing…';
   const area=$('chain-candidates');area.innerHTML='';
   (s.foundPlayers||[]).forEach(pi=>{
     if(pi==null)return;
@@ -984,7 +984,7 @@ function renderChain(s){
     const ro=ROLE_DEFS[s.playerRoles[pi]];if(!ro)return;
     const d=document.createElement('div');
     d.className='candidate revealed';
-    d.innerHTML='<span class="cface">'+esc(av(p))+'</span><span class="cname">'+esc(p.name)+'</span><span class="crole">'+ro.emoji+' '+ro.ta+' ✓</span>';
+    d.innerHTML='<span class="cface">'+esc(av(p))+'</span><span class="cname">'+esc(p.name)+'</span><span class="crole">✓</span>';
     area.appendChild(d);
   });
   for(let pi=0;pi<s.numPlayers;pi++){
