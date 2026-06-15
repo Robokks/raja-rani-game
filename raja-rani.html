@@ -428,7 +428,7 @@ function _dec(b64){const s=atob(b64);const b=new Uint8Array(s.length);for(let i=
 let myId=localStorage.getItem('rr-pid');
 if(!myId){myId='p'+Math.random().toString(36).slice(2,10);localStorage.setItem('rr-pid',myId);}
 let myName='',roomCode=null,me=-1;
-let state=null,lastVer=-1,busy=false,mycardTimer=null,renderedPhase=null;
+let state=null,lastVer=-1,busy=false,mycardTimer=null,renderedPhase=null,myRoleThisRound=null;
 let chatCollapsed=true,unreadCount=0;
 let connLost=false;
 function onConnLost(){if(connLost)return;connLost=true;const b=$('conn-banner');if(b)b.style.display='block';}
@@ -964,6 +964,7 @@ function renderMycard(s,phaseChanged){
   if(me<0||!s.playerRoles){show('scr-home');return;}
   const ro=ROLE_DEFS[s.playerRoles[me]];
   if(!ro){show('scr-home');return;}
+  myRoleThisRound=s.playerRoles[me];
   $('mc-round').textContent='Round '+s.round+' / '+s.totalRounds;
   $('mc-emoji').textContent=ro.emoji;
   $('mc-ta').textContent=ro.ta;
@@ -1046,7 +1047,12 @@ function renderChain(s){
     area.appendChild(d);
   });
   renderLog();
-  $('mychit').style.display='none';show('scr-chain');
+  // Show the initial role (frozen at mycard phase) — don't reveal swapped roles
+  if(myRoleThisRound&&me>=0){
+    const ro=ROLE_DEFS[myRoleThisRound];const p=s.players[me];
+    if(ro&&p){const el=$('mychit');el.textContent=av(p)+' '+ro.emoji+' '+ro.ta;el.style.display='block';}
+  }
+  show('scr-chain');
 }
 
 function renderChainProgress(s){
