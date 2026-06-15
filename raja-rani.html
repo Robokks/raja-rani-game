@@ -681,15 +681,18 @@ async function joinRoom(){
   busy=true;
   $('home-err').textContent='Joining…';
   try{
-    // Pre-read to warm Firebase cache — transaction gets null on first run for unread paths
+    // Pre-read to verify room exists before entering the transaction
     const check=await readRoom(code);
     if(!check){$('home-err').textContent='Room இல்லை! Code சரியா இருக்கா?';busy=false;return;}
     if((check.kickedIds||[]).includes(myId)){$('home-err').textContent='You were removed from this room.';busy=false;return;}
     if(check.phase!=='lobby'&&!check.players.some(p=>p.id===myId)){$('home-err').textContent='Game already started.';busy=false;return;}
-    // Atomic transaction — cache now warm so curr will not be null
+    // Atomic transaction. Firebase JS SDK does not cache once('value') for transactions,
+    // so curr is null on the first call. Returning {} (not undefined) tells Firebase to
+    // fetch the real server value and retry — returning undefined would abort permanently.
     let finalState=null;
     await db.ref('rooms/'+code+'/state').transaction(curr=>{
-      if(!curr)return;
+      if(!curr)return {};
+      if(!Array.isArray(curr.players)||!curr.numPlayers)return;
       const alreadyIn=curr.players.some(p=>p.id===myId);
       if(!alreadyIn){
         if(curr.players.length>=curr.numPlayers)return;
@@ -701,7 +704,7 @@ async function joinRoom(){
       finalState=deepCopy(curr);
       return curr;
     });
-    if(!finalState){$('home-err').textContent='Room full — could not join.';busy=false;return;}
+    if(!finalState||!Array.isArray(finalState.players)){$('home-err').textContent='Room full — could not join.';busy=false;return;}
     _decRoles(finalState);
     roomCode=code;
     me=finalState.players.findIndex(p=>p.id===myId);
@@ -795,35 +798,39 @@ function declareRaja(){
 function guessPlayer(targetIdx){
   if(busy||!state||state.phase!=='chain'||state.chainFinder!==me)return;
   busy=true;
-  const s=deepCopy(state);
-  if((s.foundPlayers||[]).includes(targetIdx)||targetIdx===me){busy=false;return;}
-  const target=chainTarget(s);
-  const tName=(s.players[targetIdx]||{name:'?'}).name;
-  if(s.playerRoles[targetIdx]===target){
-    playSound('correct');
-    const ro=ROLE_DEFS[target];
-    postLog('✅ '+tName+' ▸ '+ro.emoji+' '+ro.ta+'!');
-    const pts=ROLE_DEFS[s.playerRoles[s.chainFinder]].pts;
-    s.roundPoints[s.chainFinder]=(s.roundPoints[s.chainFinder]||0)+pts;
-    s.foundPlayers=[...(s.foundPlayers||[]),targetIdx];
-    s.chainStep++;s.chainFinder=targetIdx;
-    if(s.chainStep===s.numPlayers-1)finalizeRound(s);
-    else writeRoom(s);
-  }else{
-    playSound('wrong');
-    postLog('🔀 Cards swapped!');
-    const tmp=s.playerRoles[s.chainFinder];
-    s.playerRoles[s.chainFinder]=s.playerRoles[targetIdx];
-    s.playerRoles[targetIdx]=tmp;
-    s.chainFinder=targetIdx;
-    writeRoom(s);
-  }
+  try{
+    const s=deepCopy(state);
+    if((s.foundPlayers||[]).includes(targetIdx)||targetIdx===me){busy=false;return;}
+    s.roundPoints=s.roundPoints||{};
+    const target=chainTarget(s);
+    const tName=(s.players[targetIdx]||{name:'?'}).name;
+    if(s.playerRoles[targetIdx]===target){
+      playSound('correct');
+      const ro=ROLE_DEFS[target];
+      postLog('✅ '+tName+' ▸ '+ro.emoji+' '+ro.ta+'!');
+      const pts=ROLE_DEFS[s.playerRoles[s.chainFinder]].pts;
+      s.roundPoints[s.chainFinder]=(s.roundPoints[s.chainFinder]||0)+pts;
+      s.foundPlayers=[...(s.foundPlayers||[]),targetIdx];
+      s.chainStep++;s.chainFinder=targetIdx;
+      if(s.chainStep===s.numPlayers-1)finalizeRound(s);
+      else writeRoom(s);
+    }else{
+      playSound('wrong');
+      postLog('🔀 Cards swapped!');
+      const tmp=s.playerRoles[s.chainFinder];
+      s.playerRoles[s.chainFinder]=s.playerRoles[targetIdx];
+      s.playerRoles[targetIdx]=tmp;
+      s.chainFinder=targetIdx;
+      writeRoom(s);
+    }
+  }catch(e){console.error('guessPlayer error:',e);}
   busy=false;
 }
 
 function finalizeRound(s){
   playSound('complete');
   postLog('🏆 Chain complete! Thirudan found — round over');
+  s.roundPoints=s.roundPoints||{};
   s.players.forEach((p,i)=>{p.score+=(s.roundPoints[i]||0);});
   s.lastResult=s.players.map((p,i)=>({
     playerIdx:i,name:p.name,roleKey:s.playerRoles[i],pts:s.roundPoints[i]||0,avatar:p.avatar||'🎮',
