@@ -81,7 +81,8 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
 .candidates{margin-top:12px;}
 .candidate{display:flex;align-items:center;gap:12px;background:var(--paper);border-radius:8px;padding:13px 14px;margin-top:10px;box-shadow:0 4px 0 var(--shadow);cursor:pointer;transition:transform .1s;}
 .candidate:active{transform:scale(.97);}
-.candidate.passive{cursor:default;}
+.candidate.passive{cursor:default;opacity:.75;}
+.candidate.tappable{border:2px solid var(--ink);}
 .candidate .cface{font-size:30px;flex-shrink:0;}
 .candidate .cinfo{display:flex;flex-direction:column;flex:1;gap:2px;}
 .candidate .cname{font-size:18px;font-weight:800;line-height:1.2;}
@@ -993,12 +994,37 @@ function renderChain(s){
   const target=chainTarget(s);
   const tro=ROLE_DEFS[target];
   $('chain-finder-label').innerHTML=isMyTurn
-    ?'<b>உங்க முறை!</b> Find <span style="color:var(--red);">'+tro.emoji+' '+tro.ta+'</span>'
-    :'👀 <b>'+esc((s.players[s.chainFinder]||{name:'?'}).name)+'</b> is choosing…';
+    ?'<b>உங்க முறை!</b> Tap a player below to guess <span style="color:var(--red);">'+tro.emoji+' '+tro.ta+'</span>'
+    :'👀 Waiting for <b>'+esc((s.players[s.chainFinder]||{name:'?'}).name)+'</b> to choose…';
   const area=$('chain-candidates');area.innerHTML='';
+
+  // 1. Clickable candidates FIRST so they're prominent
+  for(let pi=0;pi<s.numPlayers;pi++){
+    if((s.foundPlayers||[]).includes(pi))continue;
+    if(pi===s.chainFinder)continue;
+    const p=s.players[pi];if(!p)continue;
+    const offBadge=isOffline(p.id)?'<span class="offline-badge">offline</span>':'';
+    const d=document.createElement('div');
+    d.className='candidate'+(isMyTurn?' tappable':' passive');
+    d.innerHTML='<span class="cface">'+esc(av(p))+'</span><span class="cinfo"><span class="cname">'+esc(p.name)+offBadge+'</span><span class="csub">'+(!isMyTurn?'Unknown role':'Tap to guess')+'</span></span><span class="cq">?</span>';
+    if(isMyTurn)d.onclick=()=>guessPlayer(pi);
+    area.appendChild(d);
+  }
+
+  // 2. Chooser card (the active finder)
+  const fp=s.players[s.chainFinder];
+  if(fp){
+    const fd=document.createElement('div');
+    fd.className='candidate passive';
+    fd.style.cssText='border:2px solid var(--red);background:#fff8f0;margin-top:14px;';
+    fd.innerHTML='<span class="cface">'+esc(av(fp))+'</span><span class="cinfo"><span class="cname">'+esc(fp.name)+(isMyTurn?' <small style="opacity:.5;">(you)</small>':'')+'</span><span class="csub">🎯 '+(isMyTurn?'Your turn to choose':'Choosing…')+'</span></span>';
+    area.appendChild(fd);
+  }
+
+  // 3. Already-found players at bottom
   (s.foundPlayers||[]).forEach(pi=>{
     if(pi==null)return;
-    if(pi===s.chainFinder)return; // shown as the active chooser instead
+    if(pi===s.chainFinder)return;
     const p=s.players[pi];if(!p)return;
     const ro=ROLE_DEFS[s.playerRoles[pi]];if(!ro)return;
     const d=document.createElement('div');
@@ -1006,26 +1032,6 @@ function renderChain(s){
     d.innerHTML='<span class="cface">'+esc(av(p))+'</span><span class="cinfo"><span class="cname">'+esc(p.name)+'</span><span class="csub">'+ro.emoji+' '+ro.ta+'</span></span><span class="crole">✓</span>';
     area.appendChild(d);
   });
-  // Show the current chooser as a non-clickable card
-  const fp=s.players[s.chainFinder];
-  if(fp){
-    const fd=document.createElement('div');
-    fd.className='candidate passive';
-    fd.style.cssText='border:2px solid var(--red);background:#fff8f0;';
-    fd.innerHTML='<span class="cface">'+esc(av(fp))+'</span><span class="cinfo"><span class="cname">'+esc(fp.name)+(isMyTurn?' <small style="opacity:.5;">(you)</small>':'')+'</span><span class="csub">🎯 Choosing…</span></span>';
-    area.appendChild(fd);
-  }
-  for(let pi=0;pi<s.numPlayers;pi++){
-    if((s.foundPlayers||[]).includes(pi))continue;
-    if(pi===s.chainFinder)continue;
-    const p=s.players[pi];if(!p)continue;
-    const offBadge=isOffline(p.id)?'<span class="offline-badge">offline</span>':'';
-    const d=document.createElement('div');
-    d.className='candidate'+(isMyTurn?'':' passive');
-    d.innerHTML='<span class="cface">'+esc(av(p))+'</span><span class="cinfo"><span class="cname">'+esc(p.name)+offBadge+'</span><span class="csub">Unknown role</span></span><span class="cq">?</span>';
-    if(isMyTurn)d.onclick=()=>guessPlayer(pi);
-    area.appendChild(d);
-  }
   renderLog();
   showBadge(s);show('scr-chain');
 }
