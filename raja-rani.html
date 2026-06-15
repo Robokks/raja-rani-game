@@ -687,11 +687,19 @@ async function joinRoom(){
   busy=true;
   $('home-err').textContent='Joining…';
   try{
+    // Pre-read to populate Firebase local cache before the transaction
+    const snap=await db.ref('rooms/'+code+'/state').once('value');
+    const existing=snap.val();
+    if(!existing){$('home-err').textContent='Room இல்லை! Code சரியா இருக்கா?';busy=false;return;}
+    if((existing.kickedIds||[]).includes(myId)){$('home-err').textContent='You were removed from this room.';busy=false;return;}
+    if(existing.phase!=='lobby'&&!existing.players.some(p=>p.id===myId)){$('home-err').textContent='Game already started.';busy=false;return;}
+    if(existing.players.length>=existing.numPlayers&&!existing.players.some(p=>p.id===myId)){$('home-err').textContent='Room full ('+existing.numPlayers+'/'+existing.numPlayers+').';busy=false;return;}
+
+    // Atomic transaction — cache is warm so curr starts with real data
     let finalState=null,errMsg=null;
     await db.ref('rooms/'+code+'/state').transaction(curr=>{
-      // Reset on each retry — Firebase may retry the transaction
       errMsg=null;finalState=null;
-      if(!curr){errMsg='Room இல்லை! Code சரியா இருக்கா?';return;}
+      if(!curr)return {};
       if((curr.kickedIds||[]).includes(myId)){errMsg='You were removed from this room.';return;}
       const alreadyIn=curr.players.some(p=>p.id===myId);
       if(curr.phase!=='lobby'&&!alreadyIn){errMsg='Game already started.';return;}
