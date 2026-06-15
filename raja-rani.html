@@ -998,6 +998,7 @@ function renderChain(s){
   const area=$('chain-candidates');area.innerHTML='';
   (s.foundPlayers||[]).forEach(pi=>{
     if(pi==null)return;
+    if(pi===s.chainFinder)return; // shown as the active chooser instead
     const p=s.players[pi];if(!p)return;
     const ro=ROLE_DEFS[s.playerRoles[pi]];if(!ro)return;
     const d=document.createElement('div');
