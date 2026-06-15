@@ -760,7 +760,7 @@ function beginRound(s){
   s.phase='dice';s.playerRoles=null;s.diceValue=null;
   s.diceRoller=(s.round-1)%s.numPlayers;
   s.chainStep=0;s.chainFinder=null;s.declaredRajaIdx=null;
-  s.foundPlayers=[];s.roundPoints={};s.lastResult=null;
+  s.foundPlayers=[];s.doneFinderIdxs=[];s.foundRoles=[];s.roundPoints={};s.lastResult=null;
   postLog('🎮 Round '+s.round+' of '+s.totalRounds+' started');
   writeRoom(s);
 }
@@ -817,7 +817,9 @@ function guessPlayer(targetIdx){
   busy=true;
   const s=deepCopy(state);
   s.roundPoints=s.roundPoints||{};
-  if((s.foundPlayers||[]).includes(targetIdx)||targetIdx===me){busy=false;return;}
+  const _doneSet=new Set(s.doneFinderIdxs||[]);
+  const _foundRoleSet=new Set(s.foundRoles||[]);
+  if(_doneSet.has(targetIdx)||_foundRoleSet.has(s.playerRoles[targetIdx])||targetIdx===me){busy=false;return;}
   const target=chainTarget(s);
   const tName=(s.players[targetIdx]||{name:'?'}).name;
   if(s.playerRoles[targetIdx]===target){
@@ -826,6 +828,8 @@ function guessPlayer(targetIdx){
     postLog('✅ '+tName+' ▸ '+ro.emoji+' '+ro.ta+'!');
     const pts=ROLE_DEFS[s.playerRoles[s.chainFinder]].pts;
     s.roundPoints[s.chainFinder]=(s.roundPoints[s.chainFinder]||0)+pts;
+    s.doneFinderIdxs=[...(s.doneFinderIdxs||[]),s.chainFinder];
+    s.foundRoles=[...(s.foundRoles||[]),target];
     s.foundPlayers=[...(s.foundPlayers||[]),targetIdx];
     s.chainStep++;s.chainFinder=targetIdx;
     if(s.chainStep===s.numPlayers-1)finalizeRound(s);
@@ -999,9 +1003,12 @@ function renderChain(s){
   const area=$('chain-candidates');area.innerHTML='';
 
   // 1. Clickable candidates FIRST so they're prominent
+  const doneFinderSet=new Set(s.doneFinderIdxs||[]);
+  const foundRoleSet=new Set(s.foundRoles||[]);
   for(let pi=0;pi<s.numPlayers;pi++){
-    if((s.foundPlayers||[]).includes(pi))continue;
+    if(doneFinderSet.has(pi))continue;
     if(pi===s.chainFinder)continue;
+    if(foundRoleSet.has(s.playerRoles[pi]))continue;
     const p=s.players[pi];if(!p)continue;
     const offBadge=isOffline(p.id)?'<span class="offline-badge">offline</span>':'';
     const d=document.createElement('div');
@@ -1021,12 +1028,13 @@ function renderChain(s){
     area.appendChild(fd);
   }
 
-  // 3. Already-found players at bottom
-  (s.foundPlayers||[]).forEach(pi=>{
+  // 3. Already-found players at bottom (show the role they were found AS, not current swapped role)
+  (s.foundPlayers||[]).forEach((pi,fi)=>{
     if(pi==null)return;
     if(pi===s.chainFinder)return;
     const p=s.players[pi];if(!p)return;
-    const ro=ROLE_DEFS[s.playerRoles[pi]];if(!ro)return;
+    const roleKey=(s.foundRoles||[])[fi]||s.playerRoles[pi];
+    const ro=ROLE_DEFS[roleKey];if(!ro)return;
     const d=document.createElement('div');
     d.className='candidate revealed';
     d.innerHTML='<span class="cface">'+esc(av(p))+'</span><span class="cinfo"><span class="cname">'+esc(p.name)+'</span><span class="csub">'+ro.emoji+' '+ro.ta+'</span></span><span class="crole">✓</span>';
