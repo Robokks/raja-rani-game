@@ -785,9 +785,10 @@ function rollDice(){
 
 // ── My card ────────────────────────────────────────────────────────────
 function scheduleAdvance(s){
-  if(!isHost())return;
   clearTimeout(mycardTimer);
-  const delay=Math.max(400,3000-(Date.now()-s.ts));
+  const base=Math.max(400,3000-(Date.now()-s.ts));
+  // Stagger by player index so only one client writes; others skip if state already changed
+  const delay=base+(me>=0?me*300:0);
   mycardTimer=setTimeout(async()=>{
     if(!state||state.phase!=='mycard')return;
     const ns=deepCopy(state);ns.phase='declare';writeRoom(ns);
