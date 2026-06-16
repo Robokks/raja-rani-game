@@ -324,7 +324,6 @@ let myName=localStorage.getItem('biz-name')||'';
 let myAvatar=localStorage.getItem('biz-avatar')||AVATARS[0];
 let lastVer=0;
 let busy=false;
-let pendingCardAction=null;
 
 // ── Utils ────────────────────────────────────────────────────────────────────
 function $(id){return document.getElementById(id);}
@@ -357,6 +356,7 @@ function subscribeRoom(code){
     if(!s)return;
     if(s.version<=lastVer)return;
     lastVer=s.version;
+    s.props=s.props||{};
     state=s;
     render();
   });
@@ -446,9 +446,13 @@ async function joinRoom(){
     curr.ts=Date.now();
     return curr;
   });
-  roomCode=code;
   const snap2=await db.ref('rooms/BIZ-'+code+'/state').once('value');
-  state=snap2.val();lastVer=state.version;
+  const finalState=snap2.val();
+  if(!finalState||!finalState.players.find(p=>p.id===myId)){
+    $('home-err').textContent='Room is full — could not join';return;
+  }
+  finalState.props=finalState.props||{};
+  roomCode=code;state=finalState;lastVer=finalState.version;
   sessionStorage.setItem(SS_KEY,JSON.stringify({code,myId}));
   subscribeRoom(code);showScreen('scr-lobby');render();
 }
@@ -546,7 +550,7 @@ function rollDice(){
         s.lastAction+=` Moved to ${TILES[newPos].name}.`;
         resolveTile(s,s.currentPlayer);
       } else {
-        s.lastAction=cp.name+` is in Jail (turn ${cp.jailTurns}/3). Roll doubles or pay fine.`;
+        s.lastAction=cp.name+` is in Jail — turn ${cp.jailTurns} of 3. Roll doubles or pay fine.`;
         s.pending=null;
       }
     }
@@ -680,6 +684,11 @@ function buyProperty(){
   const p=s.players[pidx];
   const tileIdx=s.pending.tileIdx;
   const tile=TILES[tileIdx];
+  if(p.money<tile.price){
+    s.pending=null;
+    s.lastAction=p.name+' can\'t afford '+tile.name+'!';
+    writeRoom(s);busy=false;closeOverlay('ov-prop');return;
+  }
   p.money-=tile.price;
   s.props[tileIdx]={ownerId:pidx,houses:0};
   s.lastAction=p.name+' bought '+tile.name+' for '+fmtMoney(tile.price)+'!';
@@ -812,10 +821,12 @@ function openBuildMenu(){
       return pd&&pd.ownerId===pidx;
     });
     if(!ownsAll)return;
+    const minH=Math.min(...ginfo.tiles.map(ti=>(state.props[ti]?.houses||0)));
     ginfo.tiles.forEach(ti=>{
       const pd=state.props[ti];
       const houses=(pd&&pd.houses)||0;
       if(houses>=3)return;
+      if(houses>minH)return;
       found=true;
       const tile=TILES[ti];
       const d=document.createElement('div');
@@ -1003,7 +1014,7 @@ function renderActionCard(){
   $('ac-msg').textContent=state.lastAction||'';
   const jailEl=$('ac-jail');
   if(cp.jailTurns>0){
-    jailEl.textContent='In Jail ('+cp.jailTurns+'/3)';
+    jailEl.textContent='🔒 Jail — turn '+cp.jailTurns+' of 3';
   } else {
     jailEl.textContent='';
   }
@@ -1023,7 +1034,11 @@ function renderActionButtons(){
   btns.innerHTML='';
   if(!isMyTurn())return;
   const cp=curPlayer();
-  if(!cp||cp.bankrupt)return;
+  if(!cp)return;
+  if(cp.bankrupt){
+    if(state.hasRolled&&!state.pending) addBtn(btns,'⏭ End Turn','green',()=>endTurn());
+    return;
+  }
 
   const pending=state.pending;
 
@@ -1093,7 +1108,7 @@ function renderPlayerPanels(){
         <div class="pp-name">${esc(p.name)}${p.id===myId?' <span style="font-size:11px;color:var(--red);">(You)</span>':''}</div>
         <div class="pp-money">${fmtMoney(p.money)}</div>
         ${p.bankrupt?'<div class="pp-status">BANKRUPT</div>':''}
-        ${p.jailTurns>0?'<div class="pp-status">In Jail ('+p.jailTurns+'/3)</div>':''}
+        ${p.jailTurns>0?'<div class="pp-status">🔒 Jail turn '+p.jailTurns+'/3</div>':''}
         ${propsHtml?'<div class="pp-props">'+propsHtml+'</div>':''}
       </div>`;
     pp.appendChild(div);
@@ -1262,6 +1277,7 @@ function animateDice(d1,d2){
     const s=snap.val();
     if(!s){sessionStorage.removeItem(SS_KEY);return;}
     if(!s.players.find(p=>p.id===myId)){sessionStorage.removeItem(SS_KEY);return;}
+    s.props=s.props||{};
     roomCode=code;state=s;lastVer=s.version;
     subscribeRoom(code);
     render();
