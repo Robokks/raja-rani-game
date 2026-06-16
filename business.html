@@ -1115,10 +1115,12 @@ function renderPendingOverlay(){
     $('oc-emoji').textContent=card.emoji;
     $('oc-text').textContent=card.text;
     openOverlay('ov-card');
-  } else if(pending.type==='bankrupt'){
+  } else if(pending.type==='bankrupt'&&isMyTurn()){
     const p=state.players[pending.playerIdx];
     $('ob-name').textContent=p?p.name:'Player';
     openOverlay('ov-bankrupt');
+  } else {
+    closeOverlay('ov-prop');closeOverlay('ov-card');closeOverlay('ov-bankrupt');
   }
 }
 
