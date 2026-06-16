@@ -141,6 +141,9 @@ let bulls=[],eBulls=[],parts=[],enems=[],stars=[];
 let eDir=1,eMvTimer=0,eMvInterval=900,eFireTimer=0,comboTimer=0;
 let flashMsg='',flashT=0;
 
+// Init stars immediately so menu has background
+initStars();
+
 // ─── Stars ────────────────────────────────────────────────────────────────────
 function initStars(){
   stars=Array.from({length:130},()=>({
@@ -357,6 +360,20 @@ function update(dt,ts){
 function glow(color,blur){X.shadowColor=color;X.shadowBlur=blur;}
 function noGlow(){X.shadowColor='transparent';X.shadowBlur=0;}
 
+// Cross-browser rounded rect (replaces X.roundRect which is newer API)
+function rrect(x,y,w,h,r){
+  X.moveTo(x+r,y);
+  X.lineTo(x+w-r,y);
+  X.quadraticCurveTo(x+w,y,x+w,y+r);
+  X.lineTo(x+w,y+h-r);
+  X.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  X.lineTo(x+r,y+h);
+  X.quadraticCurveTo(x,y+h,x,y+h-r);
+  X.lineTo(x,y+r);
+  X.quadraticCurveTo(x,y,x+r,y);
+  X.closePath();
+}
+
 function drawStars(ts){
   stars.forEach(s=>{
     const t=.5+.5*Math.sin(ts/900+s.ph);
@@ -446,7 +463,7 @@ function drawEnemy(e,ts){
   } else if(e.row===1){
     // Crab shape
     X.beginPath();
-    X.roundRect(-e.w/2,-e.h/2,e.w,e.h,4);
+    rrect(-e.w/2,-e.h/2,e.w,e.h,4);
     X.fill();X.stroke();
     // Claws
     X.fillStyle=e.colors[0];
@@ -475,11 +492,11 @@ function drawEnemy(e,ts){
   } else {
     // Robot
     X.beginPath();
-    X.roundRect(-e.w/2,-e.h/2,e.w,e.h,3);
+    rrect(-e.w/2,-e.h/2,e.w,e.h,3);
     X.fill();X.stroke();
     // Visor
     X.fillStyle='rgba(0,0,0,.6)';
-    X.beginPath();X.roundRect(-7,-7,14,6,2);X.fill();
+    X.beginPath();rrect(-7,-7,14,6,2);X.fill();
     X.fillStyle=e.colors[2]||'#fff';
     X.beginPath();X.arc(-3,-4,2,0,Math.PI*2);X.fill();
     X.beginPath();X.arc(3,-4,2,0,Math.PI*2);X.fill();
