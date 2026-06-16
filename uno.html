@@ -333,7 +333,9 @@ function _decState(o){
   if(!o)return o;
   const s=Object.assign({},o);
   if(typeof s.hands==='string'){try{s.hands=JSON.parse(_dec(s.hands));}catch{s.hands={};}}
-  if(!s.hands)s.hands={};
+  if(!s.hands||typeof s.hands!=='object')s.hands={};
+  // Firebase converts empty arrays [] to null — restore them
+  Object.keys(s.hands).forEach(pid=>{if(!Array.isArray(s.hands[pid]))s.hands[pid]=[];});
   return s;
 }
 
@@ -975,17 +977,20 @@ function chooseColor(color){
 
 // ── Choose swap ───────────────────────────────────────────────────────
 function chooseSwap(targetId){
+  if(busy)return;
   if(!state.pendingSwapFrom||state.pendingSwapFrom!==myId)return;
+  busy=true;
   const s=deepCopy(state);
-  const myH=[...s.hands[myId]],theirH=[...s.hands[targetId]];
+  const myH=[...(s.hands[myId]||[])],theirH=[...(s.hands[targetId]||[])];
   s.hands[myId]=theirH;s.hands[targetId]=myH;
   const mi=s.players.findIndex(p=>p.id===myId),ti=s.players.findIndex(p=>p.id===targetId);
   s.players[mi].handCount=theirH.length;s.players[ti].handCount=myH.length;
   s.pendingSwapFrom=null;
-  s.lastAction=`${s.players[mi].name} swapped hands with ${s.players[ti].name}!`;
+  s.lastAction=`🔀 ${s.players[mi].name} swapped hands with ${s.players[ti].name}!`;
   advanceTurn(s,1);
   $('swap-overlay').classList.remove('show');
   writeRoom(s);
+  busy=false;
 }
 
 // ── Draw card ─────────────────────────────────────────────────────────
@@ -1198,8 +1203,13 @@ function renderGame(s){
     turnHTML=`<div class="turn-banner my-turn">Your turn — pick a color!</div>`;
   } else if(isMT&&s.pendingRoulette===myId){
     turnHTML=`<div class="turn-banner my-turn">Your turn — Roulette draw coming!</div>`;
+  } else if(isMT&&s.pendingSwapFrom===myId){
+    turnHTML=`<div class="turn-banner my-turn">Your turn — choose who to swap with!</div>`;
   } else if(isMT){
     turnHTML=`<div class="turn-banner my-turn">Your turn!</div>`;
+  } else if(s.pendingSwapFrom){
+    const swapper=s.players.find(p=>p.id===s.pendingSwapFrom);
+    turnHTML=`<div class="turn-banner">🔀 ${swapper?esc(swapper.name):'Someone'} is choosing who to swap with…</div>`;
   } else {
     const cp=s.players[s.currentPlayer];
     turnHTML=`<div class="turn-banner">${cp?esc(cp.avatar)+' '+esc(cp.name)+"'s turn":''}</div>`;
