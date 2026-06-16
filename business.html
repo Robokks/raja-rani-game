@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Business | Raja Rani Games</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+Thambi+2:wght@500;700;800&family=Catamaran:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--kraft:#d9b98a;--paper:#fdf6e3;--ink:#3a2a18;--red:#b3322b;--green:#2e6e4e;--gold:#d49a2a;--shadow:rgba(58,42,24,.25);
+  --brown:#8B5E3C;--sky:#4A90D9;--pink:#E91E8C;--orange:#E67E22;--prop-red:#C0392B;}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{min-height:100%;}
+body{font-family:'Baloo Thambi 2','Catamaran',sans-serif;background:var(--kraft);background-image:radial-gradient(circle at 20% 10%,rgba(255,255,255,.25),transparent 40%),radial-gradient(circle at 80% 90%,rgba(0,0,0,.08),transparent 45%);color:var(--ink);display:flex;flex-direction:column;align-items:center;min-height:100%;padding:12px 10px 60px;user-select:none;}
+.screen{display:none;width:100%;max-width:480px;animation:fadein .3s ease;}
+.screen.active{display:block;}
+@keyframes fadein{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+h1{text-align:center;font-weight:800;font-size:28px;color:var(--red);text-shadow:1px 2px 0 rgba(255,255,255,.5);margin-top:6px;}
+.sub{text-align:center;font-family:'Catamaran';font-size:13px;font-weight:600;opacity:.7;margin-top:2px;letter-spacing:2px;text-transform:uppercase;}
+.err{text-align:center;color:var(--red);font-weight:700;margin-top:8px;min-height:20px;font-size:14px;}
+.panel{background:var(--paper);border-radius:6px;box-shadow:0 6px 0 var(--shadow),0 10px 24px rgba(0,0,0,.12);padding:20px 18px;margin-top:14px;position:relative;}
+.panel::before{content:"";position:absolute;inset:6px;border:1.5px dashed rgba(58,42,24,.25);border-radius:4px;pointer-events:none;}
+label{font-family:'Catamaran';font-size:12px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;opacity:.65;display:block;margin:12px 0 4px;}
+input[type=text]{width:100%;padding:10px 12px;font-family:'Baloo Thambi 2';font-size:18px;font-weight:700;border:2px solid rgba(58,42,24,.3);border-radius:6px;background:#fffdf6;color:var(--ink);outline:none;}
+input[type=text]:focus{border-color:var(--red);}
+input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-size:24px;}
+.btn{display:block;width:100%;margin-top:12px;padding:13px 0;font-family:'Baloo Thambi 2';font-size:18px;font-weight:800;background:var(--red);color:#fff;border:none;border-radius:8px;cursor:pointer;box-shadow:0 5px 0 #7e1f1a;transition:transform .08s,box-shadow .08s;}
+.btn:active{transform:translateY(4px);box-shadow:0 1px 0 #7e1f1a;}
+.btn.green{background:var(--green);box-shadow:0 5px 0 #1c4732;}
+.btn.green:active{box-shadow:0 1px 0 #1c4732;}
+.btn.gold{background:var(--gold);box-shadow:0 5px 0 #9a6e1a;}
+.btn.gold:active{box-shadow:0 1px 0 #9a6e1a;}
+.btn.ghost{background:transparent;color:var(--ink);box-shadow:none;border:2px solid rgba(58,42,24,.4);font-size:15px;padding:9px 0;}
+.btn:disabled{opacity:.5;pointer-events:none;}
+.btn.sm{font-size:14px;padding:9px 0;margin-top:8px;}
+.waiting{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:14px;font-weight:700;opacity:.7;}
+.dotpulse{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ink);animation:pulse 1s infinite alternate;}
+.dotpulse:nth-child(2){animation-delay:.2s;}.dotpulse:nth-child(3){animation-delay:.4s;}
+@keyframes pulse{from{opacity:.2;transform:scale(.7);}to{opacity:1;transform:scale(1);}}
+.roomcode{font-size:40px;font-weight:800;letter-spacing:10px;text-align:center;color:var(--ink);background:#fffdf6;border:2px dashed rgba(58,42,24,.35);border-radius:8px;padding:8px 0;margin-top:8px;}
+.player-list{margin-top:10px;}
+.pl-row{display:flex;align-items:center;gap:10px;background:#fffdf6;border-radius:6px;padding:9px 12px;margin-top:7px;font-weight:700;font-size:15px;border:1.5px solid rgba(58,42,24,.15);}
+.pl-row.empty{opacity:.45;font-weight:600;border-style:dashed;}
+.pl-tag{font-family:'Catamaran';font-size:11px;font-weight:800;letter-spacing:1px;background:var(--gold);color:#fff;padding:2px 7px;border-radius:10px;white-space:nowrap;}
+.np-picker{display:flex;gap:6px;margin-top:8px;}
+.np-btn{flex:1;padding:9px 4px;font-family:'Baloo Thambi 2';font-size:16px;font-weight:800;border:2px solid rgba(58,42,24,.3);border-radius:8px;background:#fffdf6;color:var(--ink);cursor:pointer;}
+.np-btn.active{background:var(--ink);color:var(--kraft);border-color:var(--ink);}
+.avatar-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}
+.av-opt{font-size:26px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:8px;border:2px solid transparent;cursor:pointer;background:#fffdf6;transition:transform .1s;}
+.av-opt:active{transform:scale(.88);}
+.av-opt.selected{border-color:var(--red);background:#fce8e7;transform:scale(1.1);}
+.back-link{display:block;text-align:center;font-family:'Catamaran';font-size:13px;font-weight:700;color:var(--ink);opacity:.55;margin-top:14px;text-decoration:none;letter-spacing:1px;}
+
+/* ── BOARD ── */
+#biz-board{display:grid;grid-template-columns:repeat(7,1fr);grid-template-rows:repeat(7,1fr);width:100%;aspect-ratio:1/1;border:2.5px solid var(--ink);border-radius:6px;overflow:hidden;background:#fffdf6;margin-top:10px;position:relative;}
+.tile{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;border:1px solid rgba(58,42,24,.2);font-size:6px;font-weight:700;padding:1px;overflow:hidden;cursor:pointer;}
+.tile:active{background:rgba(58,42,24,.06);}
+.tile-color{position:absolute;top:0;left:0;right:0;height:6px;}
+.tile-name{font-size:5.5px;font-weight:800;text-align:center;line-height:1.2;color:var(--ink);padding:0 1px;}
+.tile-price{font-size:5px;font-weight:700;color:var(--green);text-align:center;}
+.tile-corner{font-size:7px;font-weight:800;text-align:center;line-height:1.2;color:var(--ink);}
+.tile-tokens{display:flex;flex-wrap:wrap;gap:1px;justify-content:center;padding:1px;margin-top:1px;}
+.token-dot{width:8px;height:8px;border-radius:50%;border:1.5px solid rgba(255,255,255,.8);flex-shrink:0;}
+.tile-houses{display:flex;gap:1px;justify-content:center;margin-top:1px;}
+.house-dot{width:5px;height:5px;background:var(--green);border-radius:1px;}
+.center-panel{grid-row:2/7;grid-column:2/7;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4px;background:rgba(253,246,227,.9);position:relative;}
+.center-title{font-size:13px;font-weight:800;color:var(--red);text-align:center;line-height:1.2;}
+.center-sub{font-family:'Catamaran';font-size:9px;font-weight:800;letter-spacing:2px;text-transform:uppercase;opacity:.5;margin-top:2px;text-align:center;}
+
+/* ── ACTION CARD ── */
+.action-card{background:var(--paper);border-radius:8px;box-shadow:0 4px 0 var(--shadow);padding:10px 14px;margin-top:8px;}
+.ac-turn{font-size:14px;font-weight:800;color:var(--red);}
+.ac-msg{font-family:'Catamaran';font-size:13px;font-weight:700;opacity:.75;margin-top:3px;min-height:18px;}
+.dice-display{display:flex;gap:8px;align-items:center;margin-top:6px;}
+.die{font-size:30px;line-height:1;}
+@keyframes diceShake{0%{transform:rotate(-20deg) scale(1.4);}25%{transform:rotate(15deg) scale(.9);}50%{transform:rotate(-12deg) scale(1.2);}75%{transform:rotate(8deg) scale(.96);}100%{transform:rotate(0) scale(1);}}
+.die.rolling{animation:diceShake .15s ease infinite;}
+
+/* ── ACTION BUTTONS ── */
+.action-btns{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+.action-btns .btn{flex:1;min-width:80px;margin-top:0;padding:10px 4px;font-size:13px;}
+
+/* ── PLAYER PANELS ── */
+.player-panels{margin-top:8px;display:flex;flex-direction:column;gap:6px;}
+.pp{background:var(--paper);border-radius:6px;padding:9px 12px;box-shadow:0 3px 0 var(--shadow);border:2px solid transparent;display:flex;align-items:flex-start;gap:8px;}
+.pp.active-p{border-color:var(--gold);background:#fffce8;}
+.pp.bankrupt-p{opacity:.45;}
+.pp-av{font-size:22px;line-height:1;}
+.pp-info{flex:1;}
+.pp-name{font-weight:800;font-size:14px;}
+.pp-money{font-size:13px;font-weight:700;color:var(--green);}
+.pp-props{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;}
+.prop-chip{width:12px;height:12px;border-radius:3px;position:relative;}
+.prop-chip-house{position:absolute;top:-2px;right:-2px;width:5px;height:5px;background:var(--green);border-radius:1px;border:1px solid rgba(0,0,0,.3);}
+.pp-status{font-family:'Catamaran';font-size:11px;font-weight:700;color:var(--red);}
+
+/* ── OVERLAYS ── */
+.overlay{position:fixed;inset:0;background:rgba(40,28,10,.85);z-index:300;display:none;flex-direction:column;align-items:center;justify-content:center;padding:16px;}
+.overlay.show{display:flex;animation:fadein .2s ease;}
+.ov-box{background:var(--paper);border-radius:14px;padding:20px 18px;width:100%;max-width:380px;box-shadow:0 14px 0 var(--shadow),0 20px 48px rgba(0,0,0,.4);}
+.ov-box h2{font-size:19px;font-weight:800;margin-bottom:10px;}
+.ov-color{height:10px;border-radius:4px;margin-bottom:10px;}
+.rent-table{width:100%;border-collapse:collapse;margin-top:8px;font-size:13px;}
+.rent-table td{padding:5px 6px;border-bottom:1px dashed rgba(58,42,24,.18);}
+.rent-table td:last-child{text-align:right;font-weight:700;color:var(--green);}
+.card-emoji{font-size:40px;text-align:center;margin:10px 0;}
+.card-text{font-size:16px;font-weight:700;text-align:center;margin-bottom:14px;}
+.bankrupt-box{text-align:center;padding:10px 0;}
+.bankrupt-emoji{font-size:50px;}
+.winner-box{text-align:center;}
+.winner-emoji{font-size:60px;}
+.score-table{width:100%;border-collapse:collapse;margin-top:12px;}
+.score-table td{padding:7px 8px;font-weight:700;font-size:14px;border-bottom:1.5px dashed rgba(58,42,24,.2);}
+.score-table td:last-child{text-align:right;font-weight:800;color:var(--green);}
+.score-table tr.winner-row td{color:var(--red);}
+
+#conn-banner{display:none;position:fixed;top:0;left:0;right:0;background:var(--red);color:#fff;font-family:'Baloo Thambi 2';font-size:13px;font-weight:700;text-align:center;padding:7px;z-index:9999;letter-spacing:.5px;}
+</style>
+</head>
+<body>
+<div id="conn-banner">&#x26A1; Connection lost &mdash; reconnecting&hellip;</div>
+
+<!-- HOME -->
+<div class="screen active" id="scr-home">
+  <div style="text-align:center;font-size:42px;margin-top:6px;">🏦</div>
+  <h1>Business</h1>
+  <div class="sub">Multiplayer Board Game</div>
+  <div class="panel">
+    <label>Your Name</label>
+    <input type="text" id="home-name" maxlength="14" placeholder="Name" autocomplete="off">
+    <label>Pick Your Token</label>
+    <div class="avatar-grid" id="avatar-grid"></div>
+    <button class="btn" onclick="createRoom()">&#x2795; Create Room</button>
+    <label style="margin-top:16px;">Join with Room Code</label>
+    <input type="text" class="code" id="home-code" maxlength="4" placeholder="ABCD" autocomplete="off"
+      autocapitalize="characters" autocorrect="off" spellcheck="false"
+      oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,'')">
+    <button class="btn green" onclick="joinRoom()">&#x1F6AA; Join Room</button>
+    <div class="err" id="home-err"></div>
+  </div>
+  <a class="back-link" href="index.html">&#x2190; All Games</a>
+</div>
+
+<!-- LOBBY -->
+<div class="screen" id="scr-lobby">
+  <div style="text-align:center;font-size:32px;margin-top:4px;">🏦</div>
+  <h1>Business</h1>
+  <div class="sub">Lobby</div>
+  <div class="panel">
+    <div style="text-align:center;font-family:'Catamaran';font-size:13px;font-weight:700;opacity:.65;">Room Code — share with friends:</div>
+    <div class="roomcode" id="lobby-code">----</div>
+    <button class="btn ghost sm" onclick="copyCode()">&#x1F4CB; Copy Code</button>
+    <div id="lobby-host-settings" style="display:none;">
+      <label>Number of Players</label>
+      <div class="np-picker" id="np-picker">
+        <button class="np-btn" onclick="setNumPlayers(2)">2</button>
+        <button class="np-btn" onclick="setNumPlayers(3)">3</button>
+        <button class="np-btn active" onclick="setNumPlayers(4)">4</button>
+        <button class="np-btn" onclick="setNumPlayers(5)">5</button>
+      </div>
+    </div>
+    <div class="player-list" id="lobby-players"></div>
+    <button class="btn gold" id="lobby-start" onclick="hostStart()" style="display:none;" disabled>Start Game</button>
+    <div class="waiting" id="lobby-wait">
+      <span class="dotpulse"></span><span class="dotpulse"></span><span class="dotpulse"></span>
+      <span style="margin-left:4px;font-size:13px;">Waiting for players&hellip;</span>
+    </div>
+    <div class="err" id="lobby-err"></div>
+  </div>
+  <button class="btn ghost" onclick="leaveRoom()" style="margin-top:10px;">&#x2190; Leave</button>
+</div>
+
+<!-- GAME -->
+<div class="screen" id="scr-game">
+  <div id="biz-board"></div>
+
+  <div class="action-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <div class="ac-turn" id="ac-turn">—</div>
+      <div id="ac-jail" style="font-family:'Catamaran';font-size:12px;font-weight:700;color:var(--red);"></div>
+    </div>
+    <div class="ac-msg" id="ac-msg"></div>
+    <div class="dice-display" id="dice-display" style="display:none;">
+      <span class="die" id="die1">⚀</span>
+      <span class="die" id="die2">⚀</span>
+      <span style="font-family:'Catamaran';font-size:13px;font-weight:700;opacity:.65;" id="dice-sum"></span>
+    </div>
+  </div>
+
+  <div class="action-btns" id="action-btns"></div>
+
+  <div class="player-panels" id="player-panels"></div>
+</div>
+
+<!-- OVER -->
+<div class="screen" id="scr-over">
+  <div class="panel">
+    <div class="winner-box" id="over-winner"></div>
+    <table class="score-table" id="over-scores"></table>
+    <button class="btn gold" id="over-again" onclick="playAgain()" style="display:none;">&#x1F503; Play Again</button>
+    <button class="btn ghost" onclick="leaveRoom()" style="margin-top:8px;">&#x1F3E0; Home</button>
+  </div>
+</div>
+
+<!-- OVERLAYS -->
+<div class="overlay" id="ov-prop">
+  <div class="ov-box">
+    <h2 id="op-name">Property</h2>
+    <div class="ov-color" id="op-color"></div>
+    <div id="op-owner" style="font-family:'Catamaran';font-size:13px;font-weight:700;margin-bottom:6px;"></div>
+    <table class="rent-table" id="op-rent"></table>
+    <div id="op-houses" style="margin-top:8px;font-family:'Catamaran';font-size:13px;font-weight:700;"></div>
+    <div id="op-btns" style="margin-top:12px;"></div>
+  </div>
+</div>
+
+<div class="overlay" id="ov-card">
+  <div class="ov-box" style="text-align:center;">
+    <h2 id="oc-title">Chance</h2>
+    <div class="card-emoji" id="oc-emoji">🎴</div>
+    <div class="card-text" id="oc-text"></div>
+    <button class="btn" onclick="confirmCard()">OK</button>
+  </div>
+</div>
+
+<div class="overlay" id="ov-bankrupt">
+  <div class="ov-box">
+    <div class="bankrupt-box">
+      <div class="bankrupt-emoji">💸</div>
+      <h2 id="ob-name" style="margin-top:8px;"></h2>
+      <div style="font-family:'Catamaran';font-size:15px;font-weight:700;margin-top:6px;opacity:.7;">is bankrupt!</div>
+      <button class="btn" style="margin-top:16px;" onclick="closeBankrupt()">Continue</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ov-build">
+  <div class="ov-box">
+    <h2>Build Houses</h2>
+    <div id="ob-list" style="margin-top:10px;"></div>
+    <button class="btn ghost" onclick="closeOverlay('ov-build')" style="margin-top:12px;">Close</button>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script>
+// ── Constants ────────────────────────────────────────────────────────────────
+const SS_KEY='biz-room';
+const _FBCFG={apiKey:"AIzaSyAQ0l788yLKmfWIJ6Ok88k2TcwdD6XA1n4",authDomain:"raja-rani-game-ffecd.firebaseapp.com",databaseURL:"https://raja-rani-game-ffecd-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"raja-rani-game-ffecd"};
+
+const AVATARS=['🏠','🚗','🎩','👒','🐕','🚢'];
+const COLORS=['#e74c3c','#3498db','#2ecc71','#9b59b6','#e67e22'];
+
+// Board tile definitions
+const TILES=[
+  {idx:0,type:'go',name:'GO'},
+  {idx:1,type:'prop',name:'Chennai',group:'brown',price:600,rent:[60,200,500,900]},
+  {idx:2,type:'chest',name:'Community Chest'},
+  {idx:3,type:'prop',name:'Madurai',group:'brown',price:800,rent:[80,250,600,1000]},
+  {idx:4,type:'tax',name:'Income Tax',amount:2000},
+  {idx:5,type:'transport',name:'Bus Stop',price:1500,rent:500},
+  {idx:6,type:'jail',name:'Jail'},
+  {idx:7,type:'prop',name:'Bengaluru',group:'sky',price:1000,rent:[100,350,900,1500]},
+  {idx:8,type:'chance',name:'Chance'},
+  {idx:9,type:'prop',name:'Kolkata',group:'sky',price:1000,rent:[100,350,900,1500]},
+  {idx:10,type:'prop',name:'Delhi',group:'sky',price:1200,rent:[120,450,1100,1800]},
+  {idx:11,type:'utility',name:'Water Works',price:1500},
+  {idx:12,type:'parking',name:'Free Parking'},
+  {idx:13,type:'prop',name:'Pune',group:'pink',price:1400,rent:[150,500,1400,2200]},
+  {idx:14,type:'prop',name:'Hyderabad',group:'pink',price:1400,rent:[150,500,1400,2200]},
+  {idx:15,type:'chest',name:'Community Chest'},
+  {idx:16,type:'prop',name:'Jaipur',group:'pink',price:1600,rent:[180,600,1600,2500]},
+  {idx:17,type:'prop',name:'Goa',group:'orange',price:1800,rent:[200,750,1800,3000]},
+  {idx:18,type:'gotojail',name:'Go to Jail'},
+  {idx:19,type:'prop',name:'Ahmedabad',group:'orange',price:1800,rent:[200,750,1800,3000]},
+  {idx:20,type:'prop',name:'Surat',group:'orange',price:2000,rent:[220,850,2000,3300]},
+  {idx:21,type:'prop',name:'Mum Sub',group:'red',price:2200,rent:[250,900,2200,3800]},
+  {idx:22,type:'chance',name:'Chance'},
+  {idx:23,type:'prop',name:'Mumbai',group:'red',price:2600,rent:[300,1100,2600,4500]},
+];
+
+const GROUPS={
+  brown:{tiles:[1,3],houseCost:500,color:'#8B5E3C',cssVar:'--brown'},
+  sky:{tiles:[7,9,10],houseCost:500,color:'#4A90D9',cssVar:'--sky'},
+  pink:{tiles:[13,14,16],houseCost:1000,color:'#E91E8C',cssVar:'--pink'},
+  orange:{tiles:[17,19,20],houseCost:1000,color:'#E67E22',cssVar:'--orange'},
+  red:{tiles:[21,23],houseCost:1500,color:'#C0392B',cssVar:'--prop-red'},
+};
+
+// Grid positions [row, col] (1-indexed)
+const TILE_POS=[
+  [7,1],[7,2],[7,3],[7,4],[7,5],[7,6],[7,7],
+  [6,7],[5,7],[4,7],[3,7],[2,7],[1,7],
+  [1,6],[1,5],[1,4],[1,3],[1,2],[1,1],
+  [2,1],[3,1],[4,1],[5,1],[6,1]
+];
+
+const CHANCE_CARDS=[
+  {text:'Advance to GO. Collect ₹2,000!',emoji:'🏁',type:'goto',target:0},
+  {text:'Go to Jail! Do not pass GO.',emoji:'👮',type:'jail'},
+  {text:'Pay bank fine ₹1,000.',emoji:'💸',type:'pay',amount:1000},
+  {text:'Collect ₹1,500 dividend.',emoji:'💰',type:'collect',amount:1500},
+  {text:'Move back 3 spaces.',emoji:'⬅️',type:'back',steps:3},
+  {text:'Collect ₹500 from bank.',emoji:'🏦',type:'collect',amount:500},
+];
+
+const CHEST_CARDS=[
+  {text:'Bank pays you ₹2,000!',emoji:'🏦',type:'collect',amount:2000},
+  {text:'Pay hospital fees ₹1,000.',emoji:'🏥',type:'pay',amount:1000},
+  {text:'Advance to GO. Collect ₹2,000!',emoji:'🏁',type:'goto',target:0},
+  {text:'Pay school fees ₹500.',emoji:'📚',type:'pay',amount:500},
+  {text:'Collect ₹750 insurance.',emoji:'🛡️',type:'collect',amount:750},
+  {text:'Pay tax surcharge ₹800.',emoji:'📋',type:'pay',amount:800},
+];
+
+const DICE_FACES=['⚀','⚁','⚂','⚃','⚄','⚅'];
+const START_MONEY=15000;
+const GO_SALARY=2000;
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let db,roomRef,roomCode,state;
+let myId=localStorage.getItem('biz-id')||(()=>{const id='p'+Math.random().toString(36).slice(2,8);localStorage.setItem('biz-id',id);return id;})();
+let myName=localStorage.getItem('biz-name')||'';
+let myAvatar=localStorage.getItem('biz-avatar')||AVATARS[0];
+let lastVer=0;
+let busy=false;
+let pendingCardAction=null;
+
+// ── Utils ────────────────────────────────────────────────────────────────────
+function $(id){return document.getElementById(id);}
+function deepCopy(o){return JSON.parse(JSON.stringify(o));}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function randCode(){return Array.from({length:4},()=>'ABCDEFGHJKLMNPQRSTUVWXYZ'[Math.floor(Math.random()*23)]).join('');}
+function fmtMoney(n){return '₹'+Number(n).toLocaleString('en-IN');}
+function groupColor(g){return GROUPS[g]?GROUPS[g].color:'#999';}
+
+// ── Firebase ─────────────────────────────────────────────────────────────────
+if(!firebase.apps.length)firebase.initializeApp(_FBCFG);
+db=firebase.database();
+db.ref('.info/connected').on('value',snap=>{
+  $('conn-banner').style.display=(snap.val()||!roomCode)?'none':'block';
+});
+
+function writeRoom(s){
+  s.version=(s.version||0)+1;
+  s.ts=Date.now();
+  db.ref('rooms/BIZ-'+roomCode+'/state').set(s);
+  state=s;
+  render();
+}
+
+function subscribeRoom(code){
+  if(roomRef)roomRef.off();
+  roomRef=db.ref('rooms/BIZ-'+code+'/state');
+  roomRef.on('value',snap=>{
+    const s=snap.val();
+    if(!s)return;
+    if(s.version<=lastVer)return;
+    lastVer=s.version;
+    state=s;
+    render();
+  });
+}
+
+// ── Home screen ───────────────────────────────────────────────────────────────
+(function initHome(){
+  const nameInp=$('home-name');
+  nameInp.value=myName;
+  nameInp.addEventListener('input',()=>{myName=nameInp.value.trim();localStorage.setItem('biz-name',myName);});
+  const grid=$('avatar-grid');
+  AVATARS.forEach(av=>{
+    const d=document.createElement('div');
+    d.className='av-opt'+(av===myAvatar?' selected':'');
+    d.textContent=av;
+    d.onclick=()=>{
+      myAvatar=av;
+      localStorage.setItem('biz-avatar',av);
+      grid.querySelectorAll('.av-opt').forEach(x=>x.classList.remove('selected'));
+      d.classList.add('selected');
+    };
+    grid.appendChild(d);
+  });
+})();
+
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  $(id).classList.add('active');
+}
+
+function isHost(){
+  if(!state||!state.players)return false;
+  const alive=state.players.filter(p=>!p.bankrupt);
+  return alive.length>0&&alive[0].id===myId;
+}
+
+function setNumPlayers(n){
+  if(!isHost()||!state)return;
+  const s=deepCopy(state);s.numPlayers=n;writeRoom(s);
+}
+
+function copyCode(){
+  if(roomCode)navigator.clipboard.writeText(roomCode).catch(()=>{});
+}
+
+// ── Create / Join ─────────────────────────────────────────────────────────────
+async function createRoom(){
+  myName=$('home-name').value.trim();
+  if(!myName){$('home-err').textContent='Enter your name';return;}
+  localStorage.setItem('biz-name',myName);
+  const code=randCode();
+  roomCode=code;
+  const s=makeInitialState(code);
+  s.players=[{id:myId,name:myName,avatar:myAvatar,money:START_MONEY,pos:0,jailTurns:0,bankrupt:false,doublesCount:0}];
+  await db.ref('rooms/BIZ-'+code+'/state').set(s);
+  sessionStorage.setItem(SS_KEY,JSON.stringify({code,myId}));
+  state=s;lastVer=s.version;
+  subscribeRoom(code);
+  showScreen('scr-lobby');
+  render();
+}
+
+async function joinRoom(){
+  myName=$('home-name').value.trim();
+  if(!myName){$('home-err').textContent='Enter your name';return;}
+  const code=$('home-code').value.trim().toUpperCase();
+  if(code.length!==4){$('home-err').textContent='Enter a 4-letter code';return;}
+  localStorage.setItem('biz-name',myName);
+  $('home-err').textContent='';
+  const snap=await db.ref('rooms/BIZ-'+code+'/state').once('value');
+  const existing=snap.val();
+  if(!existing){$('home-err').textContent='Room not found';return;}
+  if(existing.phase!=='lobby'){$('home-err').textContent='Game already started';return;}
+  if(existing.players.find(p=>p.id===myId)){
+    roomCode=code;state=existing;lastVer=existing.version;
+    sessionStorage.setItem(SS_KEY,JSON.stringify({code,myId}));
+    subscribeRoom(code);showScreen('scr-lobby');render();return;
+  }
+  if(existing.players.length>=existing.numPlayers){$('home-err').textContent='Room is full';return;}
+  const newPlayer={id:myId,name:myName,avatar:myAvatar,money:START_MONEY,pos:0,jailTurns:0,bankrupt:false,doublesCount:0};
+  await db.ref('rooms/BIZ-'+code+'/state').transaction(curr=>{
+    if(!curr)return;
+    if(curr.players.find(p=>p.id===myId))return curr;
+    if(curr.players.length>=curr.numPlayers)return;
+    curr.players.push(newPlayer);
+    curr.version=(curr.version||0)+1;
+    curr.ts=Date.now();
+    return curr;
+  });
+  roomCode=code;
+  const snap2=await db.ref('rooms/BIZ-'+code+'/state').once('value');
+  state=snap2.val();lastVer=state.version;
+  sessionStorage.setItem(SS_KEY,JSON.stringify({code,myId}));
+  subscribeRoom(code);showScreen('scr-lobby');render();
+}
+
+function makeInitialState(code){
+  return {
+    code,phase:'lobby',numPlayers:4,
+    players:[],
+    props:{},
+    currentPlayer:0,
+    dice:null,
+    hasRolled:false,
+    doublesCount:0,
+    pending:null,
+    lastAction:'Welcome to Business!',
+    winner:null,
+    version:1,
+    ts:Date.now(),
+    chanceIdx:0,
+    chestIdx:0,
+  };
+}
+
+function leaveRoom(){
+  if(roomRef)roomRef.off();
+  roomCode=null;state=null;lastVer=0;
+  sessionStorage.removeItem(SS_KEY);
+  showScreen('scr-home');
+}
+
+async function hostStart(){
+  if(!isHost()||!state)return;
+  if(state.players.length<state.numPlayers){$('lobby-err').textContent='Need more players';return;}
+  const s=deepCopy(state);
+  s.phase='play';
+  s.currentPlayer=0;
+  s.hasRolled=false;
+  s.doublesCount=0;
+  s.dice=null;
+  s.pending=null;
+  s.lastAction='Game started! '+s.players[0].name+'\'s turn.';
+  writeRoom(s);
+}
+
+async function playAgain(){
+  if(!isHost()||!state)return;
+  const s=makeInitialState(roomCode);
+  s.players=state.players.map(p=>({
+    id:p.id,name:p.name,avatar:p.avatar,
+    money:START_MONEY,pos:0,jailTurns:0,bankrupt:false,doublesCount:0
+  }));
+  s.numPlayers=state.numPlayers;
+  writeRoom(s);
+}
+
+// ── Game Logic ────────────────────────────────────────────────────────────────
+function myPlayerIdx(){
+  if(!state||!state.players)return -1;
+  return state.players.findIndex(p=>p.id===myId);
+}
+function curPlayer(){return state.players[state.currentPlayer];}
+function isMyTurn(){return curPlayer()&&curPlayer().id===myId;}
+
+function rollDice(){
+  if(!isMyTurn()||state.hasRolled||busy)return;
+  if(state.pending)return;
+  busy=true;
+  const d1=Math.ceil(Math.random()*6);
+  const d2=Math.ceil(Math.random()*6);
+  const isDoubles=d1===d2;
+  const s=deepCopy(state);
+  s.dice=[d1,d2];
+  s.hasRolled=true;
+  const cp=s.players[s.currentPlayer];
+
+  // animate dice
+  animateDice(d1,d2);
+
+  // jail handling
+  if(cp.jailTurns>0){
+    if(isDoubles){
+      cp.jailTurns=0;
+      s.doublesCount=0;
+      const newPos=movePlayer(s,s.currentPlayer,d1+d2);
+      s.lastAction=cp.name+' rolled doubles and escaped Jail! Moved to '+TILES[newPos].name+'.';
+      resolveTile(s,s.currentPlayer);
+    } else {
+      cp.jailTurns++;
+      if(cp.jailTurns>3){
+        // must pay
+        cp.money-=500;
+        cp.jailTurns=0;
+        s.lastAction=cp.name+' paid ₹500 fine and left Jail.';
+        const newPos=movePlayer(s,s.currentPlayer,d1+d2);
+        s.lastAction+=` Moved to ${TILES[newPos].name}.`;
+        resolveTile(s,s.currentPlayer);
+      } else {
+        s.lastAction=cp.name+` is in Jail (turn ${cp.jailTurns}/3). Roll doubles or pay fine.`;
+        s.pending=null;
+      }
+    }
+    writeRoom(s);busy=false;return;
+  }
+
+  // doubles tracking
+  if(isDoubles){
+    s.doublesCount=(s.doublesCount||0)+1;
+    if(s.doublesCount>=3){
+      // go to jail
+      cp.pos=6;cp.jailTurns=1;s.doublesCount=0;
+      s.lastAction=cp.name+' rolled 3 doubles in a row! Go to Jail!';
+      s.pending=null;
+      writeRoom(s);busy=false;return;
+    }
+  } else {
+    s.doublesCount=0;
+  }
+
+  const newPos=movePlayer(s,s.currentPlayer,d1+d2);
+  s.lastAction=cp.name+' rolled '+(d1+d2)+'. Moved to '+TILES[newPos].name+'.';
+  resolveTile(s,s.currentPlayer);
+  writeRoom(s);
+  busy=false;
+}
+
+function movePlayer(s,pidx,steps){
+  const p=s.players[pidx];
+  const oldPos=p.pos;
+  const newPos=(oldPos+steps)%24;
+  p.pos=newPos;
+  // passed GO (but not landing on it — landing is handled by resolveTile)
+  if(newPos!==0&&(newPos<oldPos||(oldPos+steps)>=24)){
+    p.money+=GO_SALARY;
+    s.lastAction=(s.lastAction||'')+' Passed GO! +'+fmtMoney(GO_SALARY)+'.';
+  }
+  return newPos;
+}
+
+function resolveTile(s,pidx){
+  const p=s.players[pidx];
+  const tile=TILES[p.pos];
+  s.pending=null;
+
+  if(tile.type==='go'){
+    // already handled pass GO; landing on GO gives salary too
+    p.money+=GO_SALARY;
+    s.lastAction=p.name+' landed on GO! Collect '+fmtMoney(GO_SALARY)+'.';
+  } else if(tile.type==='tax'){
+    p.money-=tile.amount;
+    s.lastAction=p.name+' paid Income Tax of '+fmtMoney(tile.amount)+'.';
+    checkBankruptcy(s,pidx);
+  } else if(tile.type==='jail'){
+    s.lastAction=p.name+' is Just Visiting Jail.';
+  } else if(tile.type==='gotojail'){
+    p.pos=6;p.jailTurns=1;
+    s.lastAction=p.name+' is sent to Jail!';
+  } else if(tile.type==='parking'){
+    s.lastAction=p.name+' landed on Free Parking. Nothing happens.';
+  } else if(tile.type==='chance'){
+    const card=CHANCE_CARDS[s.chanceIdx%CHANCE_CARDS.length];
+    s.chanceIdx++;
+    s.pending={type:'card',cardType:'chance',card};
+    s.lastAction=p.name+' drew a Chance card.';
+  } else if(tile.type==='chest'){
+    const card=CHEST_CARDS[s.chestIdx%CHEST_CARDS.length];
+    s.chestIdx++;
+    s.pending={type:'card',cardType:'chest',card};
+    s.lastAction=p.name+' drew a Community Chest card.';
+  } else if(tile.type==='prop'||tile.type==='transport'||tile.type==='utility'){
+    const propData=s.props[p.pos];
+    if(!propData){
+      // unowned - offer to buy
+      s.pending={type:'buy',tileIdx:p.pos};
+    } else if(propData.ownerId===pidx){
+      s.lastAction=p.name+' owns this property. Safe!';
+    } else {
+      // pay rent
+      const owner=s.players[propData.ownerId];
+      const rent=calcRent(s,p.pos,propData,s.dice?s.dice[0]+s.dice[1]:2);
+      s.pending={type:'rent',tileIdx:p.pos,amount:rent,toPlayer:propData.ownerId};
+      s.lastAction=p.name+' must pay '+fmtMoney(rent)+' rent to '+owner.name+'.';
+    }
+  }
+}
+
+function calcRent(s,tileIdx,propData,diceTotal){
+  const tile=TILES[tileIdx];
+  if(tile.type==='transport') return 500;
+  if(tile.type==='utility') return diceTotal*6;
+  if(tile.type==='prop'){
+    const houses=propData.houses||0;
+    const rent=tile.rent[houses];
+    // monopoly bonus: own all in group, no houses
+    if(houses===0){
+      const g=GROUPS[tile.group];
+      const ownerIdx=propData.ownerId;
+      const ownsAll=g.tiles.every(ti=>{
+        const pd=s.props[ti];
+        return pd&&pd.ownerId===ownerIdx;
+      });
+      if(ownsAll) return rent*2;
+    }
+    return rent;
+  }
+  return 0;
+}
+
+function checkBankruptcy(s,pidx){
+  const p=s.players[pidx];
+  if(p.money<0){
+    p.bankrupt=true;
+    p.money=0;
+    // return all properties to bank
+    Object.keys(s.props).forEach(k=>{
+      if(s.props[k].ownerId===pidx){
+        delete s.props[k];
+      }
+    });
+    s.lastAction=p.name+' is bankrupt!';
+    s.pending={type:'bankrupt',playerIdx:pidx};
+  }
+}
+
+function buyProperty(){
+  if(!isMyTurn()||!state.pending||state.pending.type!=='buy'||busy)return;
+  busy=true;
+  const s=deepCopy(state);
+  const pidx=s.currentPlayer;
+  const p=s.players[pidx];
+  const tileIdx=s.pending.tileIdx;
+  const tile=TILES[tileIdx];
+  p.money-=tile.price;
+  s.props[tileIdx]={ownerId:pidx,houses:0};
+  s.lastAction=p.name+' bought '+tile.name+' for '+fmtMoney(tile.price)+'!';
+  s.pending=null;
+  checkBankruptcy(s,pidx);
+  writeRoom(s);busy=false;
+  closeOverlay('ov-prop');
+}
+
+function skipBuy(){
+  if(!isMyTurn()||!state.pending||state.pending.type!=='buy'||busy)return;
+  busy=true;
+  const s=deepCopy(state);
+  s.lastAction=s.players[s.currentPlayer].name+' skipped buying '+TILES[s.pending.tileIdx].name+'.';
+  s.pending=null;
+  writeRoom(s);busy=false;
+  closeOverlay('ov-prop');
+}
+
+function payRent(){
+  if(!isMyTurn()||!state.pending||state.pending.type!=='rent'||busy)return;
+  busy=true;
+  const s=deepCopy(state);
+  const pidx=s.currentPlayer;
+  const p=s.players[pidx];
+  const {amount,toPlayer}=s.pending;
+  p.money-=amount;
+  s.players[toPlayer].money+=amount;
+  s.lastAction=p.name+' paid '+fmtMoney(amount)+' rent to '+s.players[toPlayer].name+'.';
+  s.pending=null;
+  checkBankruptcy(s,pidx);
+  writeRoom(s);busy=false;
+  closeOverlay('ov-prop');
+}
+
+function confirmCard(){
+  if(!isMyTurn()||!state.pending||state.pending.type!=='card'||busy)return;
+  busy=true;
+  const s=deepCopy(state);
+  const pidx=s.currentPlayer;
+  const p=s.players[pidx];
+  const card=s.pending.card;
+  s.pending=null;
+
+  if(card.type==='collect'){
+    p.money+=card.amount;
+    s.lastAction=p.name+' collected '+fmtMoney(card.amount)+'!';
+  } else if(card.type==='pay'){
+    p.money-=card.amount;
+    s.lastAction=p.name+' paid '+fmtMoney(card.amount)+'.';
+    checkBankruptcy(s,pidx);
+  } else if(card.type==='goto'){
+    p.pos=card.target;
+    // resolveTile handles GO salary for landing on tile 0
+    s.lastAction=p.name+' advanced to GO! Collect '+fmtMoney(GO_SALARY)+'!';
+    resolveTile(s,pidx);
+  } else if(card.type==='jail'){
+    p.pos=6;p.jailTurns=1;
+    s.lastAction=p.name+' is sent to Jail!';
+  } else if(card.type==='back'){
+    const newPos=(p.pos-card.steps+24)%24;
+    p.pos=newPos;
+    s.lastAction=p.name+' moved back '+card.steps+' spaces to '+TILES[newPos].name+'.';
+    resolveTile(s,pidx);
+  }
+
+  if(!s.pending) {
+    // card done, no new pending
+  }
+  closeOverlay('ov-card');
+  writeRoom(s);busy=false;
+}
+
+function payJailFine(){
+  if(!isMyTurn()||!curPlayer()||curPlayer().jailTurns<=0||state.hasRolled||busy)return;
+  busy=true;
+  const s=deepCopy(state);
+  const p=s.players[s.currentPlayer];
+  p.money-=500;
+  p.jailTurns=0;
+  s.lastAction=p.name+' paid ₹500 fine and is out of Jail!';
+  checkBankruptcy(s,s.currentPlayer);
+  writeRoom(s);busy=false;
+}
+
+function endTurn(){
+  if(!isMyTurn()||busy)return;
+  if(state.pending)return;
+  busy=true;
+  const s=deepCopy(state);
+  const isDoubles=s.dice&&s.dice[0]===s.dice[1]&&s.players[s.currentPlayer].jailTurns===0;
+  if(isDoubles&&s.doublesCount>0){
+    // extra turn for doubles
+    s.hasRolled=false;
+    s.dice=null;
+    s.lastAction=s.players[s.currentPlayer].name+' rolled doubles — extra turn!';
+  } else {
+    // next player
+    s.doublesCount=0;
+    s.hasRolled=false;
+    s.dice=null;
+    let next=s.currentPlayer;
+    let tries=0;
+    do{
+      next=(next+1)%s.players.length;
+      tries++;
+    }while(s.players[next].bankrupt&&tries<s.players.length);
+    s.currentPlayer=next;
+    s.lastAction=s.players[next].name+'\'s turn.';
+  }
+  // check win
+  const alive=s.players.filter(p=>!p.bankrupt);
+  if(alive.length===1){
+    s.phase='over';s.winner=s.players.indexOf(alive[0]);
+    s.lastAction=alive[0].name+' wins!';
+  }
+  writeRoom(s);busy=false;
+}
+
+function openBuildMenu(){
+  if(!isMyTurn()||busy)return;
+  const pidx=myPlayerIdx();
+  if(pidx<0)return;
+  const list=$('ob-list');
+  list.innerHTML='';
+  let found=false;
+  Object.entries(GROUPS).forEach(([gname,ginfo])=>{
+    const ownsAll=ginfo.tiles.every(ti=>{
+      const pd=state.props[ti];
+      return pd&&pd.ownerId===pidx;
+    });
+    if(!ownsAll)return;
+    ginfo.tiles.forEach(ti=>{
+      const pd=state.props[ti];
+      const houses=(pd&&pd.houses)||0;
+      if(houses>=3)return;
+      found=true;
+      const tile=TILES[ti];
+      const d=document.createElement('div');
+      d.style='display:flex;align-items:center;gap:10px;background:#fffdf6;border-radius:6px;padding:8px 12px;margin-bottom:8px;border:1.5px solid rgba(58,42,24,.15);';
+      d.innerHTML=`<span style="width:12px;height:12px;background:${ginfo.color};border-radius:3px;flex-shrink:0;display:inline-block;"></span>
+        <span style="flex:1;font-weight:700;font-size:14px;">${tile.name}</span>
+        <span style="font-family:'Catamaran';font-size:13px;font-weight:700;opacity:.65;">${houses}/3 🏠</span>
+        <button onclick="buildHouse(${ti})" style="background:var(--green);color:#fff;border:none;border-radius:6px;padding:6px 12px;font-family:'Baloo Thambi 2';font-size:13px;font-weight:800;cursor:pointer;">Build (${fmtMoney(ginfo.houseCost)})</button>`;
+      list.appendChild(d);
+    });
+  });
+  if(!found){
+    list.innerHTML='<div style="font-family:\'Catamaran\';font-size:14px;font-weight:700;opacity:.6;text-align:center;padding:16px;">Own all properties in a group to build houses.</div>';
+  }
+  openOverlay('ov-build');
+}
+
+function buildHouse(tileIdx){
+  if(!isMyTurn()||busy)return;
+  busy=true;
+  const pidx=myPlayerIdx();
+  const s=deepCopy(state);
+  const pd=s.props[tileIdx];
+  if(!pd||pd.ownerId!==pidx){busy=false;return;}
+  const tile=TILES[tileIdx];
+  const ginfo=GROUPS[tile.group];
+  if((pd.houses||0)>=3){busy=false;return;}
+  const p=s.players[pidx];
+  if(p.money<ginfo.houseCost){
+    busy=false;
+    alert('Not enough money!');
+    return;
+  }
+  p.money-=ginfo.houseCost;
+  pd.houses=(pd.houses||0)+1;
+  s.lastAction=p.name+' built a house on '+tile.name+'!';
+  closeOverlay('ov-build');
+  writeRoom(s);busy=false;
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function render(){
+  if(!state)return;
+  if(state.phase==='lobby'){renderLobby();showScreen('scr-lobby');}
+  else if(state.phase==='play'){renderGame();showScreen('scr-game');}
+  else if(state.phase==='over'){renderOver();showScreen('scr-over');}
+}
+
+function renderLobby(){
+  $('lobby-code').textContent=state.code;
+  const host=isHost();
+  $('lobby-host-settings').style.display=host?'block':'none';
+  if(host){
+    const btns=document.querySelectorAll('#np-picker .np-btn');
+    [2,3,4,5].forEach((v,i)=>{if(btns[i])btns[i].classList.toggle('active',v===state.numPlayers);});
+  }
+  const list=$('lobby-players');
+  list.innerHTML='';
+  for(let i=0;i<state.numPlayers;i++){
+    const p=state.players[i];
+    const row=document.createElement('div');
+    row.className='pl-row'+(p?'':' empty');
+    if(p){
+      row.innerHTML=`<span style="font-size:22px;">${esc(p.avatar)}</span>
+        <span>${esc(p.name)}</span>
+        ${i===0?'<span class="pl-tag">HOST</span>':''}
+        ${p.id===myId?'<span class="pl-tag" style="background:var(--green);">YOU</span>':''}`;
+    } else {
+      row.innerHTML='<span style="opacity:.5;">Waiting for player '+(i+1)+'…</span>';
+    }
+    list.appendChild(row);
+  }
+  const startBtn=$('lobby-start');
+  const wait=$('lobby-wait');
+  if(host){
+    startBtn.style.display='block';
+    startBtn.disabled=state.players.length<state.numPlayers;
+    startBtn.textContent=state.players.length<state.numPlayers?'Waiting for players… ('+state.players.length+'/'+state.numPlayers+')':'Start Game';
+    wait.style.display='none';
+  } else {
+    startBtn.style.display='none';
+    wait.style.display='flex';
+  }
+}
+
+function renderGame(){
+  renderBoard();
+  renderActionCard();
+  renderActionButtons();
+  renderPlayerPanels();
+  renderPendingOverlay();
+}
+
+function renderBoard(){
+  const board=$('biz-board');
+  board.innerHTML='';
+  // Center panel
+  const center=document.createElement('div');
+  center.className='center-panel';
+  center.style='grid-row:2/7;grid-column:2/7;';
+  center.innerHTML='<div class="center-title">🏦 Business</div><div class="center-sub">Buy · Build · Win</div>';
+  board.appendChild(center);
+
+  TILES.forEach((tile,idx)=>{
+    const [row,col]=TILE_POS[idx];
+    const el=document.createElement('div');
+    el.className='tile';
+    el.style=`grid-row:${row};grid-column:${col};`;
+    el.onclick=()=>showTileInfo(idx);
+
+    // color band
+    if(tile.group){
+      const band=document.createElement('div');
+      band.className='tile-color';
+      band.style='background:'+groupColor(tile.group)+';';
+      el.appendChild(band);
+    }
+
+    // corner tiles
+    if([0,6,12,18].includes(idx)){
+      el.innerHTML+='<div class="tile-corner">'+getTileIcon(tile)+'</div>';
+    } else {
+      el.innerHTML+=`<div class="tile-name">${esc(tile.name)}</div>`;
+      if(tile.price){
+        el.innerHTML+=`<div class="tile-price">${fmtMoney(tile.price)}</div>`;
+      }
+    }
+
+    // ownership indicator
+    const propData=state.props[idx];
+    if(propData){
+      const owner=state.players[propData.ownerId];
+      if(owner){
+        const bar=document.createElement('div');
+        bar.style=`height:3px;background:${COLORS[propData.ownerId%COLORS.length]};position:absolute;bottom:12px;left:0;right:0;`;
+        el.appendChild(bar);
+      }
+      // houses
+      if(propData.houses>0){
+        const hw=document.createElement('div');
+        hw.className='tile-houses';
+        hw.style='position:absolute;bottom:3px;left:0;right:0;justify-content:center;';
+        for(let h=0;h<propData.houses;h++){
+          const hd=document.createElement('div');
+          hd.className='house-dot';
+          hw.appendChild(hd);
+        }
+        el.appendChild(hw);
+      }
+    }
+
+    // player tokens
+    const tokensHere=state.players.filter(p=>!p.bankrupt&&p.pos===idx);
+    if(tokensHere.length>0){
+      const tw=document.createElement('div');
+      tw.className='tile-tokens';
+      tw.style='position:absolute;top:'+(tile.group?'7px':'2px')+';left:0;right:0;justify-content:center;';
+      tokensHere.forEach(p=>{
+        const pidx=state.players.indexOf(p);
+        const dot=document.createElement('div');
+        dot.className='token-dot';
+        dot.style='background:'+COLORS[pidx%COLORS.length]+';';
+        tw.appendChild(dot);
+      });
+      el.appendChild(tw);
+    }
+
+    board.appendChild(el);
+  });
+}
+
+function getTileIcon(tile){
+  if(tile.type==='go') return '🏁<br>GO';
+  if(tile.type==='jail') return '🔒<br>Jail';
+  if(tile.type==='parking') return '🅿️<br>Free';
+  if(tile.type==='gotojail') return '👮<br>Go Jail';
+  return tile.name;
+}
+
+function renderActionCard(){
+  const cp=curPlayer();
+  if(!cp)return;
+  const isMe=cp.id===myId;
+  $('ac-turn').textContent=(isMe?'Your turn':''+cp.avatar+' '+cp.name+'\'s turn')+(cp.bankrupt?' (bankrupt)':'');
+  $('ac-msg').textContent=state.lastAction||'';
+  const jailEl=$('ac-jail');
+  if(cp.jailTurns>0){
+    jailEl.textContent='In Jail ('+cp.jailTurns+'/3)';
+  } else {
+    jailEl.textContent='';
+  }
+  const dd=$('dice-display');
+  if(state.dice){
+    dd.style.display='flex';
+    $('die1').textContent=DICE_FACES[state.dice[0]-1];
+    $('die2').textContent=DICE_FACES[state.dice[1]-1];
+    $('dice-sum').textContent='= '+(state.dice[0]+state.dice[1])+(state.dice[0]===state.dice[1]?' 🎉 Doubles!':'');
+  } else {
+    dd.style.display='none';
+  }
+}
+
+function renderActionButtons(){
+  const btns=$('action-btns');
+  btns.innerHTML='';
+  if(!isMyTurn())return;
+  const cp=curPlayer();
+  if(!cp||cp.bankrupt)return;
+
+  const pending=state.pending;
+
+  if(!state.hasRolled&&!pending){
+    // Roll phase
+    if(cp.jailTurns>0){
+      addBtn(btns,'🎲 Roll (Doubles to Escape)','',()=>rollDice());
+      addBtn(btns,'💳 Pay ₹500 Fine','ghost',()=>payJailFine());
+    } else {
+      addBtn(btns,'🎲 Roll Dice','',()=>rollDice());
+      // Build button
+      addBtn(btns,'🏠 Build House','gold',()=>openBuildMenu());
+    }
+  }
+
+  if(pending){
+    if(pending.type==='buy'){
+      const tile=TILES[pending.tileIdx];
+      addBtn(btns,'🏠 Buy '+tile.name+' ('+fmtMoney(tile.price)+')','green',()=>buyProperty());
+      addBtn(btns,'⏭ Skip','ghost',()=>skipBuy());
+    } else if(pending.type==='rent'){
+      addBtn(btns,'💸 Pay Rent '+fmtMoney(pending.amount),'',()=>payRent());
+    } else if(pending.type==='bankrupt'){
+      addBtn(btns,'Continue','ghost',()=>{
+        const s=deepCopy(state);s.pending=null;writeRoom(s);
+      });
+    }
+  }
+
+  if(state.hasRolled&&!pending){
+    addBtn(btns,'🏠 Build House','gold',()=>openBuildMenu());
+    addBtn(btns,'⏭ End Turn','green',()=>endTurn());
+  }
+}
+
+function addBtn(container,text,cls,fn){
+  const b=document.createElement('button');
+  b.className='btn'+(cls?' '+cls:'');
+  b.innerHTML=text;
+  b.onclick=fn;
+  container.appendChild(b);
+}
+
+function renderPlayerPanels(){
+  const pp=$('player-panels');
+  pp.innerHTML='';
+  state.players.forEach((p,pidx)=>{
+    const isActive=pidx===state.currentPlayer&&!p.bankrupt;
+    const div=document.createElement('div');
+    div.className='pp'+(isActive?' active-p':'')+(p.bankrupt?' bankrupt-p':'');
+    // owned props
+    const ownedProps=Object.entries(state.props)
+      .filter(([,pd])=>pd.ownerId===pidx)
+      .map(([ti])=>parseInt(ti));
+    let propsHtml='';
+    ownedProps.forEach(ti=>{
+      const t=TILES[ti];
+      const pd=state.props[ti];
+      const color=t.group?groupColor(t.group):(t.type==='transport'?'#7f8c8d':'#16a085');
+      propsHtml+=`<div class="prop-chip" style="background:${color};" title="${t.name}">`;
+      if(pd.houses>0) propsHtml+=`<div class="prop-chip-house"></div>`;
+      propsHtml+=`</div>`;
+    });
+    div.innerHTML=`
+      <div class="pp-av">${esc(p.avatar)}</div>
+      <div class="pp-info">
+        <div class="pp-name">${esc(p.name)}${p.id===myId?' <span style="font-size:11px;color:var(--red);">(You)</span>':''}</div>
+        <div class="pp-money">${fmtMoney(p.money)}</div>
+        ${p.bankrupt?'<div class="pp-status">BANKRUPT</div>':''}
+        ${p.jailTurns>0?'<div class="pp-status">In Jail ('+p.jailTurns+'/3)</div>':''}
+        ${propsHtml?'<div class="pp-props">'+propsHtml+'</div>':''}
+      </div>`;
+    pp.appendChild(div);
+  });
+}
+
+function renderPendingOverlay(){
+  const pending=state.pending;
+  if(!pending){closeOverlay('ov-prop');closeOverlay('ov-card');return;}
+
+  if(pending.type==='buy'&&isMyTurn()){
+    showPropOverlay(pending.tileIdx,true);
+  } else if(pending.type==='rent'&&isMyTurn()){
+    showPropOverlay(pending.tileIdx,false,pending.amount);
+  } else if(pending.type==='card'&&isMyTurn()){
+    const card=pending.card;
+    const isChance=pending.cardType==='chance';
+    $('oc-title').textContent=isChance?'🎴 Chance':'📦 Community Chest';
+    $('oc-emoji').textContent=card.emoji;
+    $('oc-text').textContent=card.text;
+    openOverlay('ov-card');
+  } else if(pending.type==='bankrupt'){
+    const p=state.players[pending.playerIdx];
+    $('ob-name').textContent=p?p.name:'Player';
+    openOverlay('ov-bankrupt');
+  }
+}
+
+function showTileInfo(tileIdx){
+  const tile=TILES[tileIdx];
+  if(tile.type!=='prop'&&tile.type!=='transport'&&tile.type!=='utility')return;
+  showPropOverlay(tileIdx,false,null,true);
+}
+
+function showPropOverlay(tileIdx,canBuy,rentAmount,infoOnly){
+  const tile=TILES[tileIdx];
+  const propData=state.props[tileIdx];
+  const owned=propData!=null;
+  const pidx=myPlayerIdx();
+
+  $('op-name').textContent=tile.name;
+  const colorDiv=$('op-color');
+  if(tile.group){
+    colorDiv.style.background=groupColor(tile.group);
+    colorDiv.style.display='block';
+  } else {
+    colorDiv.style.display='none';
+  }
+
+  const ownerEl=$('op-owner');
+  if(owned){
+    const owner=state.players[propData.ownerId];
+    ownerEl.textContent='Owner: '+(owner?owner.avatar+' '+owner.name:'Bank');
+  } else {
+    ownerEl.textContent='Unowned — Price: '+fmtMoney(tile.price);
+  }
+
+  // rent table
+  const rt=$('op-rent');
+  rt.innerHTML='';
+  if(tile.type==='prop'){
+    const rows=[
+      ['Base rent',tile.rent[0]],
+      ['1 House',tile.rent[1]],
+      ['2 Houses',tile.rent[2]],
+      ['3 Houses',tile.rent[3]],
+      ['Monopoly bonus','×2 base'],
+    ];
+    rows.forEach(([label,val])=>{
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td>${label}</td><td>${typeof val==='number'?fmtMoney(val):val}</td>`;
+      rt.appendChild(tr);
+    });
+  } else if(tile.type==='transport'){
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>Rent</td><td>${fmtMoney(500)}</td>`;
+    rt.appendChild(tr);
+  } else if(tile.type==='utility'){
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>Rent</td><td>Dice × 6</td>`;
+    rt.appendChild(tr);
+  }
+
+  const housesEl=$('op-houses');
+  if(owned&&tile.type==='prop'){
+    housesEl.textContent='Houses: '+(propData.houses||0)+'/3';
+  } else {
+    housesEl.textContent='';
+  }
+
+  const btnsEl=$('op-btns');
+  btnsEl.innerHTML='';
+  if(infoOnly){
+    addBtn(btnsEl,'Close','ghost',()=>closeOverlay('ov-prop'));
+  } else if(canBuy&&isMyTurn()){
+    addBtn(btnsEl,'🏠 Buy ('+fmtMoney(tile.price)+')','green',()=>buyProperty());
+    addBtn(btnsEl,'Skip','ghost',()=>skipBuy());
+  } else if(rentAmount!==null&&rentAmount!==undefined&&isMyTurn()){
+    addBtn(btnsEl,'💸 Pay Rent '+fmtMoney(rentAmount),'',()=>payRent());
+  } else {
+    addBtn(btnsEl,'Close','ghost',()=>closeOverlay('ov-prop'));
+  }
+
+  openOverlay('ov-prop');
+}
+
+function renderOver(){
+  const winner=state.winner!==null?state.players[state.winner]:null;
+  const ow=$('over-winner');
+  if(winner){
+    ow.innerHTML=`<div class="winner-emoji">${esc(winner.avatar)}</div>
+      <div style="font-size:22px;font-weight:800;margin-top:8px;">${esc(winner.name)} Wins!</div>
+      <div style="font-family:'Catamaran';font-size:14px;font-weight:700;opacity:.65;margin-top:4px;">🏆 Champion</div>`;
+  }
+  const st=$('over-scores');
+  st.innerHTML='';
+  const sorted=[...state.players].sort((a,b)=>b.money-a.money);
+  sorted.forEach((p,i)=>{
+    const isWinner=p.id===(winner&&winner.id);
+    const tr=document.createElement('tr');
+    tr.className=isWinner?'winner-row':'';
+    tr.innerHTML=`<td>${isWinner?'🏆':'#'+(i+1)} ${esc(p.avatar)} ${esc(p.name)}</td><td>${fmtMoney(p.money)}</td>`;
+    st.appendChild(tr);
+  });
+  $('over-again').style.display=isHost()?'block':'none';
+}
+
+// ── Overlay helpers ───────────────────────────────────────────────────────────
+function openOverlay(id){
+  // close others first
+  ['ov-prop','ov-card','ov-bankrupt','ov-build'].forEach(o=>{
+    if(o!==id) $(o).classList.remove('show');
+  });
+  $(id).classList.add('show');
+}
+function closeOverlay(id){$(id).classList.remove('show');}
+
+function closeBankrupt(){
+  closeOverlay('ov-bankrupt');
+  if(isMyTurn()&&state.pending&&state.pending.type==='bankrupt'){
+    const s=deepCopy(state);s.pending=null;writeRoom(s);
+  }
+}
+
+// ── Dice animation ────────────────────────────────────────────────────────────
+function animateDice(d1,d2){
+  const el1=$('die1'),el2=$('die2');
+  if(!el1||!el2)return;
+  $('dice-display').style.display='flex';
+  el1.classList.add('rolling');el2.classList.add('rolling');
+  setTimeout(()=>{
+    el1.classList.remove('rolling');el2.classList.remove('rolling');
+    el1.textContent=DICE_FACES[d1-1];el2.textContent=DICE_FACES[d2-1];
+  },500);
+}
+
+// ── Session restore ───────────────────────────────────────────────────────────
+(async function restoreSession(){
+  const saved=JSON.parse(sessionStorage.getItem(SS_KEY)||'null');
+  if(!saved)return;
+  const {code}=saved;
+  try{
+    const snap=await db.ref('rooms/BIZ-'+code+'/state').once('value');
+    const s=snap.val();
+    if(!s){sessionStorage.removeItem(SS_KEY);return;}
+    if(!s.players.find(p=>p.id===myId)){sessionStorage.removeItem(SS_KEY);return;}
+    roomCode=code;state=s;lastVer=s.version;
+    subscribeRoom(code);
+    render();
+  }catch(e){sessionStorage.removeItem(SS_KEY);}
+})();
+</script>
+</body>
+</html>
