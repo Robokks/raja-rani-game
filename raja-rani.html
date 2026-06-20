@@ -649,7 +649,7 @@ function launchConfetti(){
   canvas.width=window.innerWidth;canvas.height=window.innerHeight;
   canvas.style.display='block';
   const ctx=canvas.getContext('2d');
-  const colors=['#d49a2a','#b3322b','#2e6e4e','#f5d76e','#fff','#e8a0a0'];
+  const colors=['#ff6b6b','#4ade80','#fbbf24','#60a5fa','#c084fc','#fff'];
   const pieces=Array.from({length:140},()=>({
     x:Math.random()*canvas.width,y:Math.random()*canvas.height-canvas.height,
     w:7+Math.random()*9,h:4+Math.random()*5,
@@ -1108,9 +1108,9 @@ function showJailAnimation(s){
   const old=document.getElementById('jail-anim');if(old)old.remove();
   const ov=document.createElement('div');
   ov.id='jail-anim';
-  ov.style.cssText='position:fixed;inset:0;z-index:998;background:rgba(6,3,0,.94);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;overflow:hidden;animation:jailIn .35s ease-out;';
+  ov.style.cssText='position:fixed;inset:0;z-index:998;background:rgba(6,8,28,.96);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;overflow:hidden;animation:jailIn .35s ease-out;';
   const barCount=9;
-  const barHtml=Array.from({length:barCount},()=>'<div style="flex:1;background:linear-gradient(180deg,#5a3a00,#c8890a 40%,#5a3a00);margin:0 4px;border-radius:0 0 6px 6px;"></div>').join('');
+  const barHtml=Array.from({length:barCount},()=>'<div style="flex:1;background:linear-gradient(180deg,#0d1035,#60a5fa 40%,#0d1035);margin:0 4px;border-radius:0 0 6px 6px;opacity:.85;"></div>').join('');
   ov.innerHTML=
     '<div style="position:absolute;top:0;left:0;right:0;height:100%;display:flex;animation:jailBarsDown .65s .25s ease-in both;z-index:3;pointer-events:none;">'+barHtml+'</div>'
     +'<div style="font-size:52px;animation:policeLight .6s infinite;z-index:4;margin-bottom:4px;">🚨</div>'
