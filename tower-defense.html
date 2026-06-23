@@ -699,7 +699,12 @@ function updateProjectiles(dt) {
 // ============================================================
 function createEnemy(type, waveNum) {
   const def = {...ENEMY_DEFS[type]};
-  if (type === 'boss') def.hp = 1000 + waveNum * 200;
+  // Scale HP 28% per wave, speed 5% per wave — cumulative per wave
+  const hpScale  = 1 + (waveNum - 1) * 0.28;
+  const spdScale = 1 + (waveNum - 1) * 0.05;
+  def.hp    = Math.round(def.hp * hpScale);
+  def.speed = def.speed * spdScale;
+  if (type === 'boss') def.hp = Math.round((2500 + waveNum * 700) * hpScale);
   const e = {
     ...def,
     type,
@@ -732,7 +737,7 @@ function updateEnemies(dt) {
           if (other === e || other.dead) continue;
           const dx = other.x - e.x, dy = other.y - e.y;
           if (Math.sqrt(dx*dx+dy*dy) < 60) {
-            other.hp = Math.min(other.maxHp, other.hp + 2.5);
+            other.hp = Math.min(other.maxHp, other.hp + 2.5 + wave * 0.6);
           }
         }
       }
@@ -804,29 +809,37 @@ function killEnemy(e) {
 // ============================================================
 function buildWave(n) {
   const q = [];
-  const count = 8 + (n-1)*2;
 
-  for (let i = 0; i < count; i++) {
-    q.push('runner');
+  // Runners: always present, ratio shrinks over time
+  const runners = Math.max(4, Math.round(14 + (n-1)*2.5 - n*0.8));
+  for (let i = 0; i < runners; i++) q.push('runner');
+
+  // Tanks from wave 2, ramp up quickly
+  if (n >= 2) {
+    const tanks = Math.floor((n - 1) * 1.8);
+    for (let i = 0; i < tanks; i++) q.push('tank');
   }
 
-  if (n % 5 === 0) { // Boss
-    q.push('boss');
-  }
-  if (n >= 3 && n % 3 === 0) {
-    for (let i = 0; i < Math.floor(n/3); i++) q.push('tank');
-  }
-  if (n >= 4) {
-    const speederCount = Math.floor((n-3)*1.5);
-    for (let i = 0; i < speederCount; i++) {
-      q.splice(Math.floor(Math.random()*q.length), 0, 'speeder');
+  // Speeders from wave 3, lots of them
+  if (n >= 3) {
+    const speeders = Math.floor((n - 2) * 2.5);
+    for (let i = 0; i < speeders; i++) {
+      q.splice(Math.floor(Math.random() * q.length), 0, 'speeder');
     }
   }
-  if (n >= 6) {
-    const healerCount = Math.floor((n-5));
-    for (let i = 0; i < healerCount; i++) {
-      q.splice(Math.floor(Math.random()*q.length), 0, 'healer');
+
+  // Healers from wave 5, scale fast
+  if (n >= 5) {
+    const healers = Math.floor((n - 4) * 1.8);
+    for (let i = 0; i < healers; i++) {
+      q.splice(Math.floor(Math.random() * q.length), 0, 'healer');
     }
+  }
+
+  // Boss every 5 waves — multiple bosses in later waves
+  if (n % 5 === 0) {
+    const bossCount = Math.floor(n / 5); // 1 at wave5, 2 at wave10, 3 at 15, 4 at 20
+    for (let i = 0; i < bossCount; i++) q.push('boss');
   }
 
   return q;
@@ -864,7 +877,7 @@ function updateWave(dt) {
   if (spawnTimer <= 0 && spawnQueue.length > 0) {
     const type = spawnQueue.shift();
     enemies.push(createEnemy(type, wave));
-    spawnTimer = 1.5;
+    spawnTimer = Math.max(0.4, 1.5 - wave * 0.055); // 1.5s at wave 1 → 0.4s at wave 20
   }
 
   if (spawnQueue.length === 0 && enemies.length === 0) {
@@ -874,7 +887,7 @@ function updateWave(dt) {
       winGame();
       return;
     }
-    breakTimer = 8;
+    breakTimer = 6;
     document.getElementById('startBtn').disabled = false;
     document.getElementById('startBtn').textContent = `Next Wave (8s)`;
     updateSidebar();
