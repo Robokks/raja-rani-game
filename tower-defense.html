@@ -281,10 +281,49 @@ body{
 const COLS = 14, ROWS = 10, CW = 40, CH = 42;
 const CANVAS_W = 560, CANVAS_H = 420;
 
-// Path waypoints [col, row]
-const PATH_WPS = [
-  [-1,1],[3,1],[3,4],[9,4],[9,7],[4,7],[4,9],[14,9]
-];
+// Procedural path generator — new map every page load / game start
+function generatePath() {
+  const minRow = 1, maxRow = ROWS - 2;
+  const wps = [];
+
+  // Random entry row on left side
+  let row = minRow + Math.floor(Math.random() * (maxRow - minRow + 1));
+  wps.push([-1, row]);
+  wps.push([1, row]);
+
+  // 3–5 zigzag turns crossing the grid
+  const numTurns = 3 + Math.floor(Math.random() * 3);
+  const colBudget = COLS - 3; // cols 1..COLS-2 available
+  const baseStep = Math.floor(colBudget / numTurns);
+
+  let col = 1;
+  for (let i = 0; i < numTurns; i++) {
+    // Pick a new row at least 2 away from current
+    let newRow, tries = 0;
+    do {
+      newRow = minRow + Math.floor(Math.random() * (maxRow - minRow + 1));
+      tries++;
+    } while (Math.abs(newRow - row) < 2 && tries < 20);
+    if (tries >= 20) newRow = row <= (ROWS >> 1) ? maxRow : minRow;
+
+    // Vertical segment (same col, new row)
+    wps.push([col, newRow]);
+    row = newRow;
+
+    // Horizontal segment (advance col to the right)
+    const remaining = numTurns - i - 1;
+    const maxAdvance = colBudget - (col - 1) - remaining * 2;
+    const advance = baseStep + Math.floor(Math.random() * 2);
+    col = Math.min(COLS - 2 - remaining * 2, col + Math.max(2, advance));
+    if (i < numTurns - 1) wps.push([col, row]);
+  }
+
+  // Always end on the right edge
+  wps.push([COLS, row]);
+  return wps;
+}
+
+let PATH_WPS = generatePath();
 
 const TOWER_DEFS = {
   arrow:  {name:'Arrow Tower',  cost:50,  dmg:15,  range:120, rate:1.2,  splash:0,   slow:0,    color:'#60a5fa', sellRatio:0.5},
@@ -340,7 +379,6 @@ function buildPath() {
     y: r * CH + CH/2
   }));
 
-  // Mark path cells
   pathCells = new Set();
   for (let i = 0; i < PATH_WPS.length - 1; i++) {
     let [c0,r0] = PATH_WPS[i];
@@ -381,6 +419,8 @@ function setupUI() {
 
 function handleStartBtn() {
   if (state === 'menu') {
+    PATH_WPS = generatePath();
+    buildPath();
     state = 'build';
     wave = 0;
     gold = 150; lives = 20; score = 0;
@@ -391,6 +431,8 @@ function handleStartBtn() {
   } else if (state === 'build') {
     startWave();
   } else if (state === 'gameover' || state === 'win') {
+    PATH_WPS = generatePath();
+    buildPath();
     state = 'menu';
     gold = 150; lives = 20; wave = 0; score = 0;
     towers = []; enemies = []; projectiles = []; particles = []; floatingTexts = [];
