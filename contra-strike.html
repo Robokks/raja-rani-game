@@ -429,6 +429,7 @@ class GameScene extends Phaser.Scene{
     this.setupColliders();
 
     this.cameras.main.setBounds(0,0,WW,GH);
+    this.physics.world.setBounds(0,0,WW,GH);
     this.cameras.main.startFollow(this.p1.sp,true,.12,.12);
     this.cameras.main.setFollowOffset(-80,0);
 
