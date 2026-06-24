@@ -5,16 +5,83 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>CONTRA STRIKE</title>
 <style>
-* { margin:0; padding:0; box-sizing:border-box; }
-html,body { width:100%; height:100%; background:#000; overflow:hidden; }
-#game-container { width:100%; height:100%; }
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html,body { width:100%; height:100%; background:#000; overflow:hidden; touch-action:none; }
+#game-container { width:100%; height:100%; position:relative; }
 canvas { display:block; }
+
+/* ── Mobile virtual controls ── */
+#mc { display:none; position:fixed; inset:0; pointer-events:none; z-index:100; }
+@media (hover:none) and (pointer:coarse){ #mc { display:block; } }
+
+/* Left side: D-pad */
+#dpad { position:absolute; bottom:24px; left:20px; display:flex; gap:6px; pointer-events:auto; }
+.mc-btn {
+  width:64px; height:64px; border-radius:50%;
+  border:2px solid rgba(255,255,255,.3);
+  background:rgba(20,30,20,.55);
+  color:#cfe; font-size:26px; font-weight:bold;
+  display:flex; align-items:center; justify-content:center;
+  backdrop-filter:blur(4px);
+  user-select:none; -webkit-user-select:none;
+  transition:background .1s;
+}
+.mc-btn:active, .mc-btn.pressed { background:rgba(60,120,60,.75); }
+
+/* Right side: action buttons */
+#actbtns { position:absolute; bottom:24px; right:20px; display:flex; flex-direction:column; gap:8px; align-items:flex-end; pointer-events:auto; }
+#btn-shoot { width:76px; height:76px; background:rgba(120,30,30,.6); border-color:rgba(255,80,80,.5); font-size:28px; }
+#btn-jump  { width:64px; height:64px; background:rgba(30,60,120,.6); border-color:rgba(80,140,255,.5); font-size:26px; }
+#btn-weapon { width:52px; height:52px; font-size:18px; background:rgba(80,60,20,.6); border-color:rgba(255,200,80,.4); border-radius:10px; }
 </style>
 </head>
 <body>
 <div id="game-container"></div>
+
+<!-- Mobile virtual controls -->
+<div id="mc">
+  <div id="dpad">
+    <button class="mc-btn" id="btn-left">◀</button>
+    <button class="mc-btn" id="btn-right">▶</button>
+  </div>
+  <div id="actbtns">
+    <div style="display:flex;gap:8px;align-items:flex-end;">
+      <button class="mc-btn" id="btn-weapon">⚔</button>
+      <button class="mc-btn" id="btn-jump">▲</button>
+    </div>
+    <button class="mc-btn" id="btn-shoot">🔴</button>
+  </div>
+</div>
 <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
 <script>
+// ─── Mobile touch state ─────────────────────────────────────────────────────
+const TOUCH = { left:false, right:false, jump:false, shoot:false };
+
+function bindMCBtn(id, key){
+  const el=document.getElementById(id);
+  if(!el) return;
+  const press  =e=>{ e.preventDefault(); TOUCH[key]=true;  el.classList.add('pressed');    };
+  const release=e=>{ e.preventDefault(); TOUCH[key]=false; el.classList.remove('pressed'); };
+  el.addEventListener('touchstart',press,  {passive:false});
+  el.addEventListener('touchend',  release,{passive:false});
+  el.addEventListener('touchcancel',release,{passive:false});
+  // also mouse for desktop testing
+  el.addEventListener('mousedown', press);
+  el.addEventListener('mouseup',   release);
+}
+bindMCBtn('btn-left',  'left');
+bindMCBtn('btn-right', 'right');
+bindMCBtn('btn-jump',  'jump');
+bindMCBtn('btn-shoot', 'shoot');
+
+// Cycle weapons on tap
+(function(){
+  const el=document.getElementById('btn-weapon');
+  if(!el) return;
+  el.addEventListener('touchstart',e=>{ e.preventDefault(); window._cycleMobileWeapon&&window._cycleMobileWeapon(); },{passive:false});
+  el.addEventListener('click',()=>{ window._cycleMobileWeapon&&window._cycleMobileWeapon(); });
+})();
+
 // ─── Pixel palette ──────────────────────────────────────────────────────────
 const PAL = {
   // player
@@ -607,9 +674,18 @@ class GameScene extends Phaser.Scene {
     this.keys.four.on('down',()=>this.switchWeapon(3));
 
     this.jumpPressed=false;
+    this._touchJumpWas=false;
     this.keys.space.on('down',()=>{this.jumpPressed=true;});
     this.keys.up.on('down',()=>{this.jumpPressed=true;});
     this.keys.w.on('down',()=>{this.jumpPressed=true;});
+
+    // Mobile weapon cycle
+    let mwIdx=0;
+    window._cycleMobileWeapon=()=>{
+      const order=[0,1,2,3];
+      mwIdx=(mwIdx+1)%4;
+      this.switchWeapon(order[mwIdx]);
+    };
   }
 
   setupColliders(){
@@ -939,18 +1015,24 @@ class GameScene extends Phaser.Scene {
     // Check ground
     if(p.body.blocked.down) p.isOnGround=true;
 
-    // Horizontal
-    if(k.left.isDown||k.a.isDown){
+    // Horizontal (keyboard OR touch)
+    const goLeft =k.left.isDown||k.a.isDown||TOUCH.left;
+    const goRight=k.right.isDown||k.d.isDown||TOUCH.right;
+    if(goLeft){
       p.setVelocityX(-speed);
       p.flipX=true; p.facingRight=false; moving=true;
-    } else if(k.right.isDown||k.d.isDown){
+    } else if(goRight){
       p.setVelocityX(speed);
       p.flipX=false; p.facingRight=true; moving=true;
     } else {
       p.setVelocityX(0);
     }
 
-    // Jump
+    // Jump — keyboard fires on keydown (edge); touch: detect rising edge
+    const touchJumpNow=TOUCH.jump;
+    if(touchJumpNow && !this._touchJumpWas) this.jumpPressed=true;
+    this._touchJumpWas=touchJumpNow;
+
     if(this.jumpPressed){
       this.jumpPressed=false;
       if(p.isOnGround){
@@ -959,8 +1041,8 @@ class GameScene extends Phaser.Scene {
       }
     }
 
-    // Shoot (Z or X)
-    if(k.z.isDown||k.x.isDown){
+    // Shoot (keyboard Z/X OR touch shoot button)
+    if(k.z.isDown||k.x.isDown||TOUCH.shoot){
       this.shoot();
     }
 
