@@ -13,46 +13,94 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;}
   font-family:monospace;font-size:20px;align-items:center;justify-content:center;
   text-align:center;z-index:999;line-height:2;}
 #mc{display:none;position:fixed;inset:0;pointer-events:none;z-index:100;}
-@media(hover:none)and(pointer:coarse){#mc{display:block;}}
-@media(hover:none)and(pointer:coarse)and(orientation:portrait){
+@media(orientation:portrait) and (max-width:900px){
   #rot{display:flex;}#gc,#mc{display:none!important;}}
-#dpad{position:absolute;bottom:14px;left:10px;
-  display:grid;grid-template-columns:52px 52px 52px;grid-template-rows:52px 52px;gap:4px;
-  pointer-events:auto;}
-#acts{position:absolute;bottom:14px;right:10px;display:flex;gap:10px;align-items:flex-end;pointer-events:auto;}
-.mb{border-radius:8px;border:2px solid rgba(255,255,255,.35);
-  background:rgba(0,0,0,.45);color:#fff;font-size:16px;font-weight:bold;
-  display:flex;align-items:center;justify-content:center;
-  user-select:none;-webkit-user-select:none;}
-.mb.on{background:rgba(255,255,255,.3);}
-#dU{grid-column:2;grid-row:1;}
-#dL{grid-column:1;grid-row:2;}
-#dD{grid-column:2;grid-row:2;}
-#dR{grid-column:3;grid-row:2;}
-.db{width:52px;height:52px;}
-#bJ{width:64px;height:64px;border-radius:50%;background:rgba(200,50,50,.5);border-color:rgba(255,120,120,.6);font-size:20px;}
-#bS{width:64px;height:64px;border-radius:50%;background:rgba(50,50,200,.5);border-color:rgba(120,120,255,.6);font-size:20px;}
+/* Virtual joystick */
+#joy-base{position:absolute;bottom:16px;left:16px;width:130px;height:130px;
+  border-radius:50%;background:rgba(255,255,255,.07);border:2px solid rgba(255,255,255,.18);
+  pointer-events:auto;touch-action:none;box-shadow:0 0 24px rgba(0,0,0,.45);}
+#joy-base.active{border-color:rgba(100,180,255,.5);background:rgba(100,180,255,.1);}
+#joy-knob{position:absolute;width:54px;height:54px;border-radius:50%;top:50%;left:50%;
+  transform:translate(-50%,-50%);pointer-events:none;
+  background:radial-gradient(circle at 36% 30%,rgba(255,255,255,.55),rgba(200,220,255,.12));
+  border:2px solid rgba(255,255,255,.38);box-shadow:0 4px 14px rgba(0,0,0,.65);}
+#joy-base.active #joy-knob{box-shadow:0 0 14px rgba(120,190,255,.7),0 4px 14px rgba(0,0,0,.6);}
+.ja{position:absolute;color:rgba(255,255,255,.28);font-size:11px;line-height:1;
+  pointer-events:none;font-family:monospace;}
+.jau{top:5px;left:50%;transform:translateX(-50%);}
+.jad{bottom:5px;left:50%;transform:translateX(-50%);}
+.jal{left:5px;top:50%;transform:translateY(-50%);}
+.jar{right:5px;top:50%;transform:translateY(-50%);}
+/* Action buttons */
+#acts{position:absolute;bottom:16px;right:12px;width:185px;height:120px;pointer-events:none;}
+.act-btn{position:absolute;border-radius:50%;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;pointer-events:auto;touch-action:none;
+  user-select:none;-webkit-user-select:none;border:3px solid rgba(255,255,255,.22);
+  box-shadow:0 6px 20px rgba(0,0,0,.55),inset 0 1px 2px rgba(255,255,255,.2);
+  transition:transform .07s,box-shadow .07s;color:#fff;}
+.act-btn.on{transform:scale(.88)!important;box-shadow:0 2px 6px rgba(0,0,0,.5)!important;}
+.act-btn b{font-family:monospace;font-size:11px;font-weight:bold;display:block;letter-spacing:.5px;}
+.act-btn em{font-style:normal;font-family:monospace;font-size:8px;opacity:.5;margin-top:2px;}
+#bJ{width:68px;height:68px;bottom:20px;right:92px;
+  background:radial-gradient(circle at 38% 32%,#60a5fa,#1d4ed8);
+  border-color:rgba(147,197,253,.4);}
+#bS{width:78px;height:78px;bottom:0;right:0;
+  background:radial-gradient(circle at 38% 32%,#f87171,#b91c1c);
+  border-color:rgba(252,165,165,.4);}
 </style>
 </head>
 <body>
 <div id="rot">📱 Rotate to Landscape<br>to play <b>CONTRA</b></div>
 <div id="gc"></div>
 <div id="mc">
-  <div id="dpad">
-    <div class="mb db" id="dU">▲</div>
-    <div class="mb db" id="dL">◀</div>
-    <div class="mb db" id="dD">▼</div>
-    <div class="mb db" id="dR">▶</div>
+  <div id="joy-base">
+    <div id="joy-knob"></div>
+    <span class="ja jau">▲</span>
+    <span class="ja jad">▼</span>
+    <span class="ja jal">◀</span>
+    <span class="ja jar">▶</span>
   </div>
   <div id="acts">
-    <div class="mb" id="bJ">B</div>
-    <div class="mb" id="bS">A</div>
+    <div class="act-btn" id="bJ"><b>JUMP</b><em>B</em></div>
+    <div class="act-btn" id="bS"><b>FIRE</b><em>A</em></div>
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
 <script>
 // ── Touch ────────────────────────────────────────────────────────────────────
 const TC={u:false,d:false,l:false,r:false,j:false,s:false};
+// Virtual joystick
+const _jb=document.getElementById('joy-base');
+const _jk=document.getElementById('joy-knob');
+let _jActive=false,_jId=null,_jBx=0,_jBy=0;
+function _jS(e){
+  e.preventDefault();if(_jActive)return;
+  const t=e.changedTouches[0];
+  const r=_jb.getBoundingClientRect();
+  _jActive=true;_jId=t.identifier;_jBx=r.left+r.width/2;_jBy=r.top+r.height/2;
+  _jb.classList.add('active');_jM(e);
+}
+function _jM(e){
+  e.preventDefault();if(!_jActive)return;
+  const ts=e.changedTouches;let t=null;
+  for(let i=0;i<ts.length;i++)if(ts[i].identifier===_jId){t=ts[i];break;}
+  if(!t)return;
+  const dx=t.clientX-_jBx,dy=t.clientY-_jBy;
+  const dist=Math.hypot(dx,dy),mx=Math.min(dist,48);
+  const a=dist>0?Math.atan2(dy,dx):0;
+  _jk.style.transform=`translate(calc(-50% + ${(Math.cos(a)*mx).toFixed(1)}px),calc(-50% + ${(Math.sin(a)*mx).toFixed(1)}px))`;
+  const D=20;TC.l=dx<-D;TC.r=dx>D;TC.u=dy<-D;TC.d=dy>D;
+}
+function _jE(e){
+  e.preventDefault();_jActive=false;_jId=null;
+  TC.l=TC.r=TC.u=TC.d=false;
+  _jk.style.transform='translate(-50%,-50%)';_jb.classList.remove('active');
+}
+_jb.addEventListener('touchstart',_jS,{passive:false});
+_jb.addEventListener('touchmove',_jM,{passive:false});
+_jb.addEventListener('touchend',_jE,{passive:false});
+_jb.addEventListener('touchcancel',_jE,{passive:false});
+// Action buttons
 function tb(id,k){
   const el=document.getElementById(id);if(!el)return;
   const on=e=>{e.preventDefault();TC[k]=true;el.classList.add('on');};
@@ -61,7 +109,11 @@ function tb(id,k){
   el.addEventListener('touchend',off,{passive:false});
   el.addEventListener('touchcancel',off,{passive:false});
 }
-tb('dU','u');tb('dD','d');tb('dL','l');tb('dR','r');tb('bJ','j');tb('bS','s');
+tb('bJ','j');tb('bS','s');
+// Show controls on touch devices (more reliable than CSS media query)
+if('ontouchstart' in window||navigator.maxTouchPoints>0){
+  document.getElementById('mc').style.display='block';
+}
 
 // ── Audio ────────────────────────────────────────────────────────────────────
 let _ac=null,muted=false;
@@ -300,12 +352,19 @@ class TitleScene extends Phaser.Scene{
       stroke:'#7f1d1d',strokeThickness:4}).setOrigin(.5);
     this.add.text(W/2,90,'NES  REMAKE',{fontFamily:'monospace',fontSize:15,color:'#fbbf24'}).setOrigin(.5);
 
-    const bl=this.add.text(W/2,150,'PRESS  ENTER  OR  TAP',{fontFamily:'monospace',fontSize:14,color:'#fff'}).setOrigin(.5);
-    this.tweens.add({targets:bl,alpha:0,duration:500,yoyo:true,repeat:-1});
+    // 1P / 2P touch buttons
+    const mkBtn=(x,y,w,label,col,cb)=>{
+      const bg=this.add.rectangle(x,y,w,34,col,.9).setInteractive({useHandCursor:true}).setDepth(5);
+      this.add.text(x,y,label,{fontFamily:'monospace',fontSize:13,color:'#fff',stroke:'#000',strokeThickness:2}).setOrigin(.5).setDepth(6);
+      bg.on('pointerover',()=>bg.setAlpha(1));
+      bg.on('pointerout',()=>bg.setAlpha(.9));
+      bg.on('pointerdown',cb);
+      return bg;
+    };
+    mkBtn(W/2-68,155,120,'▶ 1 PLAYER',0x1d4ed8,()=>this.go(1));
+    mkBtn(W/2+68,155,120,'▶ 2 PLAYERS',0x7c3aed,()=>this.go(2));
 
-    this.add.text(W/2,180,'1  PLAYER   ←ENTER       2  PLAYERS   ←2',
-      {fontFamily:'monospace',fontSize:11,color:'#aaa'}).setOrigin(.5);
-    this.add.text(W/2,200,
+    this.add.text(W/2,193,
       'KONAMI CODE:  ↑↑↓↓←→←→ B A  =  30 LIVES',
       {fontFamily:'monospace',fontSize:10,color:'#4ade80'}).setOrigin(.5);
 
@@ -335,7 +394,7 @@ class TitleScene extends Phaser.Scene{
 
     this.input.keyboard.on('keydown-RETURN',()=>this.go(1));
     this.input.keyboard.on('keydown-TWO',()=>this.go(2));
-    this.input.once('pointerdown',()=>this.go(1));
+    this.input.keyboard.on('keydown-ONE',()=>this.go(1));
   }
   go(np){
     this.registry.set('numPlayers',np);
