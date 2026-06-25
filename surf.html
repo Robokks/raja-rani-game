@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Surf</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#0078D4}
+#wrap{position:relative;width:100%;height:100%}
+iframe{
+  position:absolute;inset:0;
+  width:100%;height:100%;
+  border:none;display:block;
+}
+#fallback{
+  display:none;
+  position:absolute;inset:0;
+  flex-direction:column;align-items:center;justify-content:center;
+  background:#0078D4;color:#fff;font-family:'Segoe UI',system-ui,sans-serif;
+  text-align:center;padding:24px;
+}
+#fallback h1{font-size:2rem;margin-bottom:12px}
+#fallback p{font-size:1rem;opacity:.8;margin-bottom:24px;max-width:480px}
+#fallback a{
+  color:#fff;background:rgba(255,255,255,.2);
+  padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:600;
+  border:2px solid rgba(255,255,255,.5);
+}
+#fallback a:hover{background:rgba(255,255,255,.35)}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <iframe
+    id="gf"
+    src="https://rbeesley.github.io/MicrosoftEdge-SURF/"
+    allowfullscreen
+    allow="fullscreen"
+    title="Microsoft Edge Surf Game"
+  ></iframe>
+  <div id="fallback">
+    <h1>🏄 Surf</h1>
+    <p>The game couldn't load in this frame. Open it directly in a new tab.</p>
+    <a href="https://rbeesley.github.io/MicrosoftEdge-SURF/" target="_blank" rel="noopener">
+      Open Surf Game ↗
+    </a>
+  </div>
+</div>
+<script>
+// If iframe is blocked by X-Frame-Options, show fallback
+const fr = document.getElementById('gf');
+const fb = document.getElementById('fallback');
+fr.addEventListener('error', () => {
+  fr.style.display = 'none';
+  fb.style.display = 'flex';
+});
+// Fallback timer — if load takes too long and page is blank
+let loaded = false;
+fr.addEventListener('load', () => { loaded = true; });
+setTimeout(() => {
+  if (!loaded) { fr.style.display='none'; fb.style.display='flex'; }
+}, 8000);
+</script>
+</body>
+</html>
