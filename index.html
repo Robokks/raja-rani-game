@@ -2,547 +2,926 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <title>Game Zone</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Russo+One&family=Chakra+Petch:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#07071a;
-  --card:#0e0e28;
-  --card-h:#141432;
-  --border:rgba(255,255,255,.08);
-  --border-h:rgba(255,255,255,.18);
-  --text:#f0f0ff;
-  --dim:rgba(240,240,255,.6);
-  --muted:rgba(240,240,255,.35);
-  --r:14px;
+  --bg:#09091a;
+  --card:#0d0d22;
+  --card-h:#121230;
+  --border:rgba(255,255,255,.06);
+  --border-h:rgba(255,255,255,.16);
+  --text:#e8e8ff;
+  --dim:rgba(232,232,255,.6);
+  --muted:rgba(232,232,255,.35);
+  --nav-h:58px;
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{min-height:100%;background:var(--bg)}
-body{font-family:'Inter',system-ui,sans-serif;color:var(--text)}
+html{scroll-behavior:smooth}
+body{
+  font-family:'Chakra Petch',system-ui,sans-serif;
+  background:var(--bg);
+  background-image:
+    linear-gradient(rgba(255,255,255,.022) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.022) 1px,transparent 1px);
+  background-size:48px 48px;
+  color:var(--text);
+  min-height:100vh;
+  padding-top:var(--nav-h);
+}
+/* subtle CRT scanline overlay */
+body::after{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:9000;
+  background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.04) 3px,rgba(0,0,0,.04) 4px);
+}
 
-/* ── Starfield canvas ── */
-#bg{position:fixed;inset:0;z-index:0;pointer-events:none}
-
-/* ── Layout ── */
-.wrap{position:relative;z-index:1;max-width:960px;margin:0 auto;padding:0 16px 64px}
+/* ── Nav ── */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:1000;
+  height:var(--nav-h);
+  background:rgba(9,9,26,.92);
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  border-bottom:1px solid rgba(255,255,255,.08);
+  display:flex;align-items:center;
+  padding:0 20px;gap:12px;
+}
+.nav-logo{
+  font-family:'Russo One',sans-serif;
+  font-size:18px;letter-spacing:1px;
+  color:#fff;
+  text-shadow:0 0 18px rgba(160,120,255,.7);
+  white-space:nowrap;margin-right:8px;
+}
+.nav-logo span{color:#a78bfa}
+.filter-tabs{display:flex;gap:6px;flex:1;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+.filter-tabs::-webkit-scrollbar{display:none}
+.ftab{
+  font-family:'Chakra Petch',sans-serif;font-size:12px;font-weight:600;
+  letter-spacing:.6px;text-transform:uppercase;
+  padding:6px 14px;border-radius:20px;border:1px solid var(--border);
+  background:transparent;color:var(--muted);cursor:pointer;
+  transition:background .15s,color .15s,border-color .15s;
+  white-space:nowrap;
+}
+.ftab:hover{background:rgba(255,255,255,.06);color:var(--dim)}
+.ftab.active{
+  background:rgba(167,139,250,.18);
+  border-color:rgba(167,139,250,.5);
+  color:#c4b5fd;
+}
+.fab{
+  margin-left:auto;flex-shrink:0;
+  width:36px;height:36px;border-radius:50%;
+  background:rgba(255,255,255,.06);
+  border:1px solid var(--border-h);
+  font-size:16px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .15s,transform .15s;
+}
+.fab:hover{background:rgba(255,255,255,.12);transform:rotate(20deg)}
 
 /* ── Hero ── */
 .hero{
   text-align:center;
-  padding:56px 16px 40px;
-}
-.hero-badge{
-  display:inline-flex;align-items:center;gap:6px;
-  background:rgba(99,50,220,.22);border:1px solid rgba(140,100,255,.3);
-  border-radius:20px;padding:5px 14px;
-  font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;
-  color:rgba(180,160,255,.85);margin-bottom:18px;
+  padding:48px 16px 32px;
 }
 .hero h1{
-  font-size:clamp(40px,9vw,80px);font-weight:900;line-height:1;
-  background:linear-gradient(135deg,#fff 20%,rgba(180,150,255,.9) 60%,rgba(100,120,255,.8) 100%);
+  font-family:'Russo One',sans-serif;
+  font-size:clamp(36px,8vw,72px);
+  letter-spacing:2px;
+  background:linear-gradient(135deg,#fff 30%,#a78bfa 65%,#818cf8 100%);
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
-  margin-bottom:10px;
+  text-shadow:none;
+  line-height:1;margin-bottom:12px;
 }
-.hero-sub{font-size:15px;font-weight:500;color:var(--dim);margin-bottom:24px}
-.hero-stats{
-  display:inline-flex;gap:24px;
-  background:rgba(255,255,255,.04);border:1px solid var(--border);
-  border-radius:40px;padding:10px 24px;
+.hero-glow{
+  position:relative;display:inline-block;
 }
-.hero-stat{text-align:center}
-.hero-stat .n{font-size:20px;font-weight:800;color:var(--text)}
-.hero-stat .l{font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
+.hero-glow::after{
+  content:attr(data-text);
+  position:absolute;inset:0;
+  font-family:'Russo One',sans-serif;
+  font-size:inherit;letter-spacing:2px;
+  background:none;
+  -webkit-background-clip:unset;-webkit-text-fill-color:rgba(139,92,246,.35);
+  filter:blur(14px);
+  pointer-events:none;
+}
+.hero-sub{
+  font-size:14px;font-weight:500;color:var(--dim);
+  letter-spacing:1px;margin-bottom:24px;
+}
+.hero-chips{
+  display:inline-flex;gap:10px;flex-wrap:wrap;justify-content:center;
+}
+.chip{
+  font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;
+  padding:5px 14px;border-radius:20px;
+  background:rgba(255,255,255,.05);border:1px solid var(--border-h);
+  color:var(--dim);
+}
+.chip.mp{background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.3);color:#fca5a5}
+.chip.sp{background:rgba(139,92,246,.12);border-color:rgba(139,92,246,.3);color:#c4b5fd}
+.chip.free{background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.25);color:#86efac}
 
-/* ── Section heading ── */
-.section{margin-top:40px}
+/* ── Section ── */
+.section{max-width:1200px;margin:0 auto;padding:0 16px 64px}
 .section-head{
   display:flex;align-items:center;gap:12px;
-  margin-bottom:16px;
+  margin-bottom:20px;
 }
-.section-head h2{font-size:13px;font-weight:800;letter-spacing:2.5px;text-transform:uppercase;color:var(--muted)}
+.section-head h2{
+  font-family:'Russo One',sans-serif;
+  font-size:11px;letter-spacing:3px;text-transform:uppercase;
+  color:var(--muted);white-space:nowrap;
+}
 .section-line{flex:1;height:1px;background:var(--border)}
-.section-count{
-  font-size:11px;font-weight:700;letter-spacing:1px;
-  background:rgba(255,255,255,.06);border:1px solid var(--border);
-  border-radius:20px;padding:3px 10px;color:var(--muted);
-}
 
-/* ── Game grid ── */
-.grid{
+/* ── Grid ── */
+.game-grid{
   display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr));
-  gap:12px;
+  grid-template-columns:repeat(auto-fill,minmax(min(100%,230px),1fr));
+  gap:14px;
 }
 
-/* ── Game card ── */
+/* ── Card ── */
 .card{
   display:flex;flex-direction:column;
   text-decoration:none;color:inherit;
   background:var(--card);
   border:1px solid var(--border);
-  border-radius:var(--r);
+  border-radius:10px;
   overflow:hidden;
-  transition:transform .18s cubic-bezier(.34,1.56,.64,1),
-             box-shadow .18s,border-color .18s,background .18s;
-  position:relative;
-}
-.card::before{
-  content:"";
-  position:absolute;top:0;left:0;right:0;height:3px;
-  background:var(--ac,#8b5cf6);
-  opacity:.85;
+  cursor:pointer;
+  transition:transform .2s cubic-bezier(.34,1.56,.64,1),
+             box-shadow .2s,border-color .2s,background .2s;
 }
 .card:hover{
   background:var(--card-h);
-  border-color:var(--border-h);
-  transform:translateY(-3px);
-  box-shadow:0 16px 40px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.06),
-             0 8px 16px color-mix(in srgb, var(--ac,#8b5cf6) 20%, transparent);
+  border-color:color-mix(in srgb,var(--ac,#a78bfa) 55%,transparent);
+  transform:translateY(-4px);
+  box-shadow:
+    0 12px 32px color-mix(in srgb,var(--ac,#a78bfa) 22%,transparent),
+    0 0 0 1px color-mix(in srgb,var(--ac,#a78bfa) 40%,transparent),
+    0 0 40px color-mix(in srgb,var(--ac,#a78bfa) 10%,transparent);
 }
 .card:active{transform:scale(.97)}
 
-.card-body{display:flex;gap:14px;padding:16px 16px 12px}
-.card-icon{
-  width:48px;height:48px;flex-shrink:0;
-  background:color-mix(in srgb,var(--ac,#8b5cf6) 18%,rgba(255,255,255,.04));
-  border:1px solid color-mix(in srgb,var(--ac,#8b5cf6) 35%,transparent);
-  border-radius:12px;
-  display:flex;align-items:center;justify-content:center;
-  font-size:26px;line-height:1;
+/* thumbnail wrapper keeps 16:9 */
+.card-thumb{
+  position:relative;
+  width:100%;
+  aspect-ratio:16/9;
+  overflow:hidden;background:#060615;
 }
-.card-info{flex:1;min-width:0}
-.card-name{font-size:16px;font-weight:800;line-height:1.15;color:var(--text)}
-.card-ta{font-size:11px;font-weight:500;color:var(--muted);margin-top:2px}
-.card-desc{
-  font-size:12px;line-height:1.5;color:var(--dim);
-  padding:0 16px 12px;
+.card-thumb canvas{
+  width:100%;height:100%;display:block;
 }
-.card-foot{
-  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
-  padding:0 16px 14px;
+/* category badge over thumbnail */
+.card-cat{
+  position:absolute;top:8px;left:8px;
+  font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;
+  padding:3px 8px;border-radius:12px;
+  backdrop-filter:blur(8px);
 }
-.badge{
-  font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;
-  padding:3px 8px;border-radius:20px;
-}
-.badge-online{
-  background:color-mix(in srgb,var(--ac,#8b5cf6) 22%,transparent);
-  color:color-mix(in srgb,var(--ac,#8b5cf6) 100%,#fff 20%);
-  border:1px solid color-mix(in srgb,var(--ac,#8b5cf6) 40%,transparent);
-}
-.badge-grey{background:rgba(255,255,255,.07);color:var(--muted);border:1px solid var(--border)}
+.cat-mp{background:rgba(239,68,68,.75);color:#fff}
+.cat-sp{background:rgba(139,92,246,.75);color:#fff}
 
-.play-btn{
-  margin:0 12px 12px;padding:10px;
-  background:color-mix(in srgb,var(--ac,#8b5cf6) 85%,#000 15%);
-  border-radius:8px;
-  text-align:center;font-size:13px;font-weight:800;letter-spacing:.4px;color:#fff;
-  transition:filter .15s,box-shadow .15s;
-  box-shadow:0 4px 14px color-mix(in srgb,var(--ac,#8b5cf6) 30%,transparent);
+.card-body{padding:10px 12px 12px;flex:1;display:flex;flex-direction:column;gap:6px}
+.card-name{
+  font-family:'Russo One',sans-serif;
+  font-size:14px;letter-spacing:.4px;
+  color:var(--text);line-height:1.2;
 }
-.card:hover .play-btn{filter:brightness(1.12)}
-
-/* ── Firebase button ── */
-.fab{
-  position:fixed;bottom:20px;right:16px;z-index:200;
-  background:rgba(14,14,40,.9);backdrop-filter:blur(16px);
-  border:1px solid var(--border-h);border-radius:50%;
-  width:44px;height:44px;font-size:18px;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
-  box-shadow:0 4px 20px rgba(0,0,0,.5);
-  transition:background .15s,transform .15s;
+.card-ta{font-size:10px;color:var(--muted);margin-top:1px}
+.card-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:2px}
+.tag{
+  font-size:9px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;
+  padding:2px 7px;border-radius:10px;
+  background:rgba(255,255,255,.06);border:1px solid var(--border);
+  color:var(--muted);
 }
-.fab:hover{background:rgba(25,25,60,.95);transform:scale(1.08)}
+.card-play{
+  margin:4px 0 0;padding:8px;
+  background:color-mix(in srgb,var(--ac,#a78bfa) 90%,#000 10%);
+  border-radius:6px;
+  text-align:center;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;
+  color:#fff;
+  box-shadow:0 3px 12px color-mix(in srgb,var(--ac,#a78bfa) 28%,transparent);
+  transition:filter .15s;
+}
+.card:hover .card-play{filter:brightness(1.15)}
 
-/* ── Modal ── */
-.mo{display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.7);
-  backdrop-filter:blur(10px);align-items:flex-start;justify-content:center;
-  padding:16px;overflow-y:auto}
+/* hide/show for filter */
+.card.hidden{display:none}
+
+/* ── Firebase modal ── */
+.mo{display:none;position:fixed;inset:0;z-index:2000;
+  background:rgba(0,0,0,.72);backdrop-filter:blur(12px);
+  align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto}
 .mo.open{display:flex}
 .mo-panel{
-  background:rgba(10,10,28,.95);
-  backdrop-filter:blur(32px);
+  background:rgba(10,10,26,.96);
   border:1px solid rgba(255,255,255,.14);
-  border-radius:16px;width:100%;max-width:480px;
-  box-shadow:0 24px 64px rgba(0,0,0,.7);
-  overflow:hidden;margin:auto;
+  border-radius:14px;width:100%;max-width:480px;
+  box-shadow:0 24px 64px rgba(0,0,0,.7);overflow:hidden;margin:auto;
 }
 .mo-head{
-  background:rgba(255,255,255,.05);border-bottom:1px solid var(--border);
+  background:rgba(255,255,255,.04);border-bottom:1px solid rgba(255,255,255,.07);
   padding:14px 16px;display:flex;align-items:center;justify-content:space-between;
 }
-.mo-head h2{font-size:15px;font-weight:700}
-.mo-close{background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;padding:0 4px}
+.mo-head h2{font-family:'Russo One',sans-serif;font-size:14px;letter-spacing:.5px}
+.mo-close{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:0 4px}
 .mo-close:hover{color:var(--text)}
 .mo-body{padding:14px}
-.mo-status{font-size:12px;font-weight:600;margin-bottom:12px;color:var(--muted)}
+.mo-status{font-size:11px;font-weight:600;margin-bottom:12px;color:var(--muted);letter-spacing:.5px}
 .mo-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
 .mo-actions button{
-  font-family:'Inter',sans-serif;font-size:12px;font-weight:700;
-  border:1px solid var(--border);border-radius:8px;padding:7px 12px;cursor:pointer;
+  font-family:'Chakra Petch',sans-serif;font-size:11px;font-weight:700;letter-spacing:.5px;
+  border:1px solid var(--border);border-radius:7px;padding:7px 11px;cursor:pointer;
 }
-.b-refresh{background:rgba(74,222,128,.15);color:#4ade80;border-color:rgba(74,222,128,.25)}
-.b-all{background:rgba(255,255,255,.07);color:var(--dim)}
-.b-del{background:rgba(255,107,107,.15);color:#ff6b6b;border-color:rgba(255,107,107,.25)}
-.b-old{background:rgba(251,191,36,.12);color:#fbbf24;border-color:rgba(251,191,36,.25)}
+.b-refresh{background:rgba(34,197,94,.14);color:#86efac;border-color:rgba(34,197,94,.3)}
+.b-all{background:rgba(255,255,255,.06);color:var(--dim);border-color:var(--border)}
+.b-del{background:rgba(239,68,68,.14);color:#fca5a5;border-color:rgba(239,68,68,.3)}
+.b-old{background:rgba(251,191,36,.12);color:#fde68a;border-color:rgba(251,191,36,.3)}
 .room-list{display:flex;flex-direction:column;gap:6px;max-height:52vh;overflow-y:auto}
 .room{
-  background:rgba(255,255,255,.04);border:1px solid var(--border);
-  border-radius:10px;padding:10px 12px;
+  background:rgba(255,255,255,.03);border:1px solid var(--border);
+  border-radius:8px;padding:10px 12px;
   display:flex;align-items:center;gap:10px;cursor:pointer;
 }
-.room:hover{background:rgba(255,255,255,.07)}
-.room input[type=checkbox]{width:16px;height:16px;cursor:pointer;flex-shrink:0;accent-color:#a78bfa}
-.room-code{font-size:15px;font-weight:800;letter-spacing:2px;flex-shrink:0}
-.room-info{flex:1;font-size:12px;font-weight:500;color:var(--dim);line-height:1.5}
-.ph{display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;padding:2px 7px;border-radius:20px;margin-left:6px}
-.ph-lobby{background:rgba(74,222,128,.2);color:#4ade80}
-.ph-active{background:rgba(96,165,250,.2);color:#60a5fa}
+.room:hover{background:rgba(255,255,255,.06)}
+.room input[type=checkbox]{width:15px;height:15px;cursor:pointer;flex-shrink:0;accent-color:#a78bfa}
+.room-code{font-family:'Russo One',sans-serif;font-size:14px;letter-spacing:2px;flex-shrink:0}
+.room-info{flex:1;font-size:11px;font-weight:500;color:var(--dim);line-height:1.5}
+.ph{display:inline-block;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;padding:2px 7px;border-radius:10px;margin-left:6px}
+.ph-lobby{background:rgba(34,197,94,.2);color:#86efac}
+.ph-active{background:rgba(96,165,250,.2);color:#93c5fd}
 .ph-over{background:rgba(255,255,255,.1);color:var(--muted)}
-.room-empty{text-align:center;padding:32px;color:var(--muted);font-size:14px}
-.mo-log{margin-top:10px;font-size:12px;font-weight:600;color:#4ade80;min-height:18px}
+.room-empty{text-align:center;padding:28px;color:var(--muted);font-size:13px}
+.mo-log{margin-top:8px;font-size:11px;font-weight:600;color:#86efac;min-height:16px;letter-spacing:.3px}
+
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 </style>
 </head>
 <body>
 
-<canvas id="bg"></canvas>
+<!-- ── Nav ── -->
+<nav>
+  <div class="nav-logo">GAME<span>ZONE</span></div>
+  <div class="filter-tabs">
+    <button class="ftab active" data-f="all">All Games</button>
+    <button class="ftab" data-f="multi">🌐 Multiplayer</button>
+    <button class="ftab" data-f="solo">🕹️ Single Player</button>
+  </div>
+  <button class="fab" onclick="openCtrl()" title="Room Manager" aria-label="Firebase room manager">⚙️</button>
+</nav>
 
-<div class="wrap">
+<!-- ── Hero ── -->
+<div class="hero">
+  <h1><span class="hero-glow" data-text="GAME ZONE">GAME ZONE</span></h1>
+  <p class="hero-sub">No install · No login · Play instantly</p>
+  <div class="hero-chips">
+    <span class="chip mp">8 Multiplayer</span>
+    <span class="chip sp">6 Single Player</span>
+    <span class="chip free">100% Free</span>
+  </div>
+</div>
 
-  <!-- ── Hero ── -->
-  <div class="hero">
-    <div class="hero-badge">🎮 Game Zone</div>
-    <h1>Play Together</h1>
-    <p class="hero-sub">14 games · No install · No login needed</p>
-    <div class="hero-stats">
-      <div class="hero-stat"><div class="n">8</div><div class="l">Multiplayer</div></div>
-      <div class="hero-stat"><div class="n">6</div><div class="l">Single&nbsp;Player</div></div>
-      <div class="hero-stat"><div class="n">0</div><div class="l">Downloads</div></div>
-    </div>
+<!-- ── All Games Grid ── -->
+<div class="section">
+  <div class="section-head">
+    <h2>🌐 Multiplayer</h2>
+    <div class="section-line"></div>
+  </div>
+  <div class="game-grid" id="grid-multi">
+
+    <a class="card" href="raja-rani.html" data-cat="multi" style="--ac:#f59e0b" aria-label="Raja Rani">
+      <div class="card-thumb"><canvas id="th-raja" width="320" height="180"></canvas><span class="card-cat cat-mp">Online</span></div>
+      <div class="card-body">
+        <div class="card-name">Raja Rani</div>
+        <div class="card-ta">ராஜா ராணி</div>
+        <div class="card-tags"><span class="tag">2–6P</span><span class="tag">Tamil</span><span class="tag">Bluffing</span></div>
+        <div class="card-play">▶ Play Now</div>
+      </div>
+    </a>
+
+    <a class="card" href="bluff.html" data-cat="multi" style="--ac:#ef4444" aria-label="Bluff">
+      <div class="card-thumb"><canvas id="th-bluff" width="320" height="180"></canvas><span class="card-cat cat-mp">Online</span></div>
+      <div class="card-body">
+        <div class="card-name">Bluff</div>
+        <div class="card-ta">பொய் சொல்லு!</div>
+        <div class="card-tags"><span class="tag">2–6P</span><span class="tag">Cards</span><span class="tag">Deception</span></div>
+        <div class="card-play">▶ Play Now</div>
+      </div>
+    </a>
+
+    <a class="card" href="sus.html" data-cat="multi" style="--ac:#8b5cf6" aria-label="Sus">
+      <div class="card-thumb"><canvas id="th-sus" width="320" height="180"></canvas><span class="card-cat cat-mp">Online</span></div>
+      <div class="card-body">
+        <div class="card-name">Sus!</div>
+        <div class="card-ta">யார் ஒற்றன்?</div>
+        <div class="card-tags"><span class="tag">4–8P</span><span class="tag">Deduction</span></div>
+        <div class="card-play">▶ Play Now</div>
+      </div>
+    </a>
+
+    <a class="card" href="uno.html" data-cat="multi" style="--ac:#f97316" aria-label="UNO">
+      <div class="card-thumb"><canvas id="th-uno" width="320" height="180"></canvas><span class="card-cat cat-mp">Online</span></div>
+      <div class="card-body">
+        <div class="card-name">UNO</div>
+        <div class="card-ta">கார்டு கட்ட வா!</div>
+        <div class="card-tags"><span class="tag">2–6P</span><span class="tag">Cards</span></div>
+        <div class="card-play">▶ Play Now</div>
+      </div>
+    </a>
+
+    <a class="card" href="ludo.html" data-cat="multi" style="--ac:#22c55e" aria-label="Ludo">
+      <div class="card-thumb"><canvas id="th-ludo" width="320" height="180"></canvas><span class="card-cat cat-mp">Online</span></div>
+      <div class="card-body">
+        <div class="card-name">Ludo</div>
+        <div class="card-ta">பார்சி விளையாட்டு</div>
+        <div class="card-tags"><span class="tag">2–4P</span><span class="tag">Board</span></div>
+        <div class="card-play">▶ Play Now</div>
+      </div>
+    </a>
+
+    <a class="card" href="tambola.html" data-cat="multi" style="--ac:#ec4899" aria-label="Tambola">
+      <div class="card-thumb"><canvas id="th-tambola" width="320" height="180"></canvas><span class="card-cat cat-mp">Online</span></div>
+      <div class="card-body">
+        <div class="card-name">Tambola</div>
+        <div class="card-ta">தம்போலா / ஹவுஸி</div>
+        <div class="card-tags"><span class="tag">2–8P</span><span class="tag">Bingo</span></div>
+        <div class="card-play">▶ Play Now</div>
+      </div>
+    </a>
+
+    <a class="card" href="snakes.html" data-cat="multi" style="--ac:#84cc16" aria-label="Snakes and Ladders">
+      <div class="card-thumb"><canvas id="th-snakes" width="320" height="180"></canvas><span class="card-cat cat-mp">Online</span></div>
+      <div class="card-body">
+        <div class="card-name">Snakes &amp; Ladders</div>
+        <div class="card-ta">பாம்பு மற்றும் ஏணி</div>
+        <div class="card-tags"><span class="tag">2–4P</span><span class="tag">Board</span></div>
+        <div class="card-play">▶ Play Now</div>
+      </div>
+    </a>
+
+    <a class="card" href="business.html" data-cat="multi" style="--ac:#3b82f6" aria-label="Business">
+      <div class="card-thumb"><canvas id="th-biz" width="320" height="180"></canvas><span class="card-cat cat-mp">Online</span></div>
+      <div class="card-body">
+        <div class="card-name">Business</div>
+        <div class="card-ta">வியாபாரம்</div>
+        <div class="card-tags"><span class="tag">2–5P</span><span class="tag">Board</span></div>
+        <div class="card-play">▶ Play Now</div>
+      </div>
+    </a>
+
   </div>
 
-  <!-- ── Online Multiplayer ── -->
-  <div class="section">
-    <div class="section-head">
-      <h2>🌐 Online Multiplayer</h2>
-      <div class="section-line"></div>
-      <div class="section-count">8 games</div>
-    </div>
-    <div class="grid">
-
-      <a class="card" href="raja-rani.html" style="--ac:#f59e0b">
-        <div class="card-body">
-          <div class="card-icon">👑</div>
-          <div class="card-info">
-            <div class="card-name">Raja Rani</div>
-            <div class="card-ta">ராஜா ராணி</div>
-          </div>
-        </div>
-        <div class="card-desc">Find the chain of roles before the thief escapes. Bluff, guess, and outsmart your friends.</div>
-        <div class="card-foot">
-          <span class="badge badge-online">Online</span>
-          <span class="badge badge-grey">2–6 players</span>
-          <span class="badge badge-grey">Tamil</span>
-        </div>
-        <div class="play-btn">▶ Play Now</div>
-      </a>
-
-      <a class="card" href="bluff.html" style="--ac:#ef4444">
-        <div class="card-body">
-          <div class="card-icon">🃏</div>
-          <div class="card-info">
-            <div class="card-name">Bluff</div>
-            <div class="card-ta">பொய் சொல்லு!</div>
-          </div>
-        </div>
-        <div class="card-desc">Play cards face-down and declare the rank — but you can lie! Call out bluffers before they empty their hand.</div>
-        <div class="card-foot">
-          <span class="badge badge-online">Online</span>
-          <span class="badge badge-grey">2–6 players</span>
-          <span class="badge badge-grey">Cards</span>
-        </div>
-        <div class="play-btn">▶ Play Now</div>
-      </a>
-
-      <a class="card" href="sus.html" style="--ac:#8b5cf6">
-        <div class="card-body">
-          <div class="card-icon">🕵️</div>
-          <div class="card-info">
-            <div class="card-name">Sus!</div>
-            <div class="card-ta">யார் ஒற்றன்?</div>
-          </div>
-        </div>
-        <div class="card-desc">Hidden impostors among the crew — discuss, vote, and eliminate before they outnumber you.</div>
-        <div class="card-foot">
-          <span class="badge badge-online">Online</span>
-          <span class="badge badge-grey">4–8 players</span>
-          <span class="badge badge-grey">Deduction</span>
-        </div>
-        <div class="play-btn">▶ Play Now</div>
-      </a>
-
-      <a class="card" href="uno.html" style="--ac:#f97316">
-        <div class="card-body">
-          <div class="card-icon">🎴</div>
-          <div class="card-info">
-            <div class="card-name">UNO</div>
-            <div class="card-ta">கார்டு கட்ட வா!</div>
-          </div>
-        </div>
-        <div class="card-desc">Match colors and numbers, stack Draw 2s, play Wilds — shout UNO when you're down to one card!</div>
-        <div class="card-foot">
-          <span class="badge badge-online">Online</span>
-          <span class="badge badge-grey">2–6 players</span>
-          <span class="badge badge-grey">Cards</span>
-        </div>
-        <div class="play-btn">▶ Play Now</div>
-      </a>
-
-      <a class="card" href="ludo.html" style="--ac:#22c55e">
-        <div class="card-body">
-          <div class="card-icon">🎲</div>
-          <div class="card-info">
-            <div class="card-name">Ludo</div>
-            <div class="card-ta">பார்சி விளையாட்டு</div>
-          </div>
-        </div>
-        <div class="card-desc">Roll the dice, race your 4 tokens home — land on opponents to send them back to start!</div>
-        <div class="card-foot">
-          <span class="badge badge-online">Online</span>
-          <span class="badge badge-grey">2–4 players</span>
-          <span class="badge badge-grey">Board</span>
-        </div>
-        <div class="play-btn">▶ Play Now</div>
-      </a>
-
-      <a class="card" href="tambola.html" style="--ac:#ec4899">
-        <div class="card-body">
-          <div class="card-icon">🎟️</div>
-          <div class="card-info">
-            <div class="card-name">Tambola</div>
-            <div class="card-ta">தம்போலா / ஹவுஸி</div>
-          </div>
-        </div>
-        <div class="card-desc">Host calls numbers 1–90, players mark their tickets — claim Early Five, rows, or Full House!</div>
-        <div class="card-foot">
-          <span class="badge badge-online">Online</span>
-          <span class="badge badge-grey">2–8 players</span>
-          <span class="badge badge-grey">Bingo</span>
-        </div>
-        <div class="play-btn">▶ Play Now</div>
-      </a>
-
-      <a class="card" href="snakes.html" style="--ac:#84cc16">
-        <div class="card-body">
-          <div class="card-icon">🐍</div>
-          <div class="card-info">
-            <div class="card-name">Snakes &amp; Ladders</div>
-            <div class="card-ta">பாம்பு மற்றும் ஏணி</div>
-          </div>
-        </div>
-        <div class="card-desc">Race to square 100 — climb ladders to leap ahead, dodge snakes that send you sliding back!</div>
-        <div class="card-foot">
-          <span class="badge badge-online">Online</span>
-          <span class="badge badge-grey">2–4 players</span>
-          <span class="badge badge-grey">Board</span>
-        </div>
-        <div class="play-btn">▶ Play Now</div>
-      </a>
-
-      <a class="card" href="business.html" style="--ac:#3b82f6">
-        <div class="card-body">
-          <div class="card-icon">🏦</div>
-          <div class="card-info">
-            <div class="card-name">Business</div>
-            <div class="card-ta">வியாபாரம்</div>
-          </div>
-        </div>
-        <div class="card-desc">Buy properties across India, collect rent, build houses and drive your rivals to bankruptcy!</div>
-        <div class="card-foot">
-          <span class="badge badge-online">Online</span>
-          <span class="badge badge-grey">2–5 players</span>
-          <span class="badge badge-grey">Board</span>
-        </div>
-        <div class="play-btn">▶ Play Now</div>
-      </a>
-
-    </div>
+  <div class="section-head" style="margin-top:40px">
+    <h2>🕹️ Single Player</h2>
+    <div class="section-line"></div>
   </div>
+  <div class="game-grid" id="grid-solo">
 
-  <!-- ── Single Player ── -->
-  <div class="section">
-    <div class="section-head">
-      <h2>🕹️ Single Player</h2>
-      <div class="section-line"></div>
-      <div class="section-count">6 games</div>
-    </div>
-    <div class="grid">
+    <a class="card" href="surf.html" data-cat="solo" style="--ac:#06b6d4" aria-label="Edge Surf">
+      <div class="card-thumb"><canvas id="th-surf" width="320" height="180"></canvas><span class="card-cat cat-sp">Offline</span></div>
+      <div class="card-body">
+        <div class="card-name">Edge Surf</div>
+        <div class="card-ta">அலை சர்ஃபிங்</div>
+        <div class="card-tags"><span class="tag">Endless</span><span class="tag">Real Game</span></div>
+        <div class="card-play">▶ Play Now</div>
+      </div>
+    </a>
 
-      <a class="card" href="surf.html" style="--ac:#06b6d4">
-        <div class="card-body">
-          <div class="card-icon">🏄</div>
-          <div class="card-info">
-            <div class="card-name">Edge Surf</div>
-            <div class="card-ta">அலை சர்ஃபிங்</div>
-          </div>
-        </div>
-        <div class="card-desc">The real Microsoft Edge surf game — ride waves, jump rocks, duck under birds, grab shields and boosts!</div>
-        <div class="card-foot">
-          <span class="badge badge-online">Offline</span>
-          <span class="badge badge-grey">1 player</span>
-          <span class="badge badge-grey">Endless</span>
-        </div>
-        <div class="play-btn">▶ Play Now</div>
-      </a>
+    <a class="card" href="contra-3d.html" data-cat="solo" style="--ac:#10b981" aria-label="Contra 3D">
+      <div class="card-thumb"><canvas id="th-c3d" width="320" height="180"></canvas><span class="card-cat cat-sp">Offline</span></div>
+      <div class="card-body">
+        <div class="card-name">Contra 3D</div>
+        <div class="card-ta">கான்ட்ரா 3D யுத்தம்</div>
+        <div class="card-tags"><span class="tag">WebGL</span><span class="tag">Action</span></div>
+        <div class="card-play">▶ Play Now</div>
+      </div>
+    </a>
 
-      <a class="card" href="contra-3d.html" style="--ac:#10b981">
-        <div class="card-body">
-          <div class="card-icon">🔫</div>
-          <div class="card-info">
-            <div class="card-name">Contra 3D</div>
-            <div class="card-ta">கான்ட்ரா 3D யுத்தம்</div>
-          </div>
-        </div>
-        <div class="card-desc">Three.js WebGL port — 3D voxel characters, bloom glow bullets, and a 3-phase boss fight!</div>
-        <div class="card-foot">
-          <span class="badge badge-online">Offline</span>
-          <span class="badge badge-grey">1 player</span>
-          <span class="badge badge-grey">WebGL</span>
-        </div>
-        <div class="play-btn">▶ Play Now</div>
-      </a>
+    <a class="card" href="contra-strike.html" data-cat="solo" style="--ac:#f97316" aria-label="Contra Strike">
+      <div class="card-thumb"><canvas id="th-cs" width="320" height="180"></canvas><span class="card-cat cat-sp">Offline</span></div>
+      <div class="card-body">
+        <div class="card-name">Contra Strike</div>
+        <div class="card-ta">கான்ட்ரா யுத்தம்</div>
+        <div class="card-tags"><span class="tag">Run&amp;Gun</span><span class="tag">Action</span></div>
+        <div class="card-play">▶ Play Now</div>
+      </div>
+    </a>
 
-      <a class="card" href="contra-strike.html" style="--ac:#f97316">
-        <div class="card-body">
-          <div class="card-icon">🪖</div>
-          <div class="card-info">
-            <div class="card-name">Contra Strike</div>
-            <div class="card-ta">கான்ட்ரா யுத்தம்</div>
-          </div>
-        </div>
-        <div class="card-desc">Side-scrolling run & gun — sprint through jungle bases, grab spread shots and destroy the boss mech!</div>
-        <div class="card-foot">
-          <span class="badge badge-online">Offline</span>
-          <span class="badge badge-grey">1 player</span>
-          <span class="badge badge-grey">Action</span>
-        </div>
-        <div class="play-btn">▶ Play Now</div>
-      </a>
+    <a class="card" href="tower-defense.html" data-cat="solo" style="--ac:#a855f7" aria-label="Tower Defense">
+      <div class="card-thumb"><canvas id="th-td" width="320" height="180"></canvas><span class="card-cat cat-sp">Offline</span></div>
+      <div class="card-body">
+        <div class="card-name">Tower Defense</div>
+        <div class="card-ta">கோட்டை காவல்</div>
+        <div class="card-tags"><span class="tag">Strategy</span><span class="tag">20 Waves</span></div>
+        <div class="card-play">▶ Play Now</div>
+      </div>
+    </a>
 
-      <a class="card" href="tower-defense.html" style="--ac:#a855f7">
-        <div class="card-body">
-          <div class="card-icon">🏰</div>
-          <div class="card-info">
-            <div class="card-name">Tower Defense</div>
-            <div class="card-ta">கோட்டை காவல்</div>
-          </div>
-        </div>
-        <div class="card-desc">Place arrow, cannon, freeze and laser towers — survive 20 waves of runners, tanks, and bosses!</div>
-        <div class="card-foot">
-          <span class="badge badge-online">Offline</span>
-          <span class="badge badge-grey">1 player</span>
-          <span class="badge badge-grey">Strategy</span>
-        </div>
-        <div class="play-btn">▶ Play Now</div>
-      </a>
+    <a class="card" href="rpg-quest.html" data-cat="solo" style="--ac:#ef4444" aria-label="Dragon's Quest">
+      <div class="card-thumb"><canvas id="th-rpg" width="320" height="180"></canvas><span class="card-cat cat-sp">Offline</span></div>
+      <div class="card-body">
+        <div class="card-name">Dragon's Quest</div>
+        <div class="card-ta">டிராகன் வேட்டை</div>
+        <div class="card-tags"><span class="tag">RPG</span><span class="tag">Dungeon</span></div>
+        <div class="card-play">▶ Play Now</div>
+      </div>
+    </a>
 
-      <a class="card" href="rpg-quest.html" style="--ac:#ef4444">
-        <div class="card-body">
-          <div class="card-icon">⚔️</div>
-          <div class="card-info">
-            <div class="card-name">Dragon's Quest</div>
-            <div class="card-ta">டிராகன் வேட்டை</div>
-          </div>
-        </div>
-        <div class="card-desc">Explore a dark dungeon, battle goblins and slimes, and slay the Dragon Boss in this atmospheric RPG!</div>
-        <div class="card-foot">
-          <span class="badge badge-online">Offline</span>
-          <span class="badge badge-grey">1 player</span>
-          <span class="badge badge-grey">RPG</span>
-        </div>
-        <div class="play-btn">▶ Play Now</div>
-      </a>
+    <a class="card" href="space-blaster.html" data-cat="solo" style="--ac:#6366f1" aria-label="Space Blaster">
+      <div class="card-thumb"><canvas id="th-space" width="320" height="180"></canvas><span class="card-cat cat-sp">Offline</span></div>
+      <div class="card-body">
+        <div class="card-name">Space Blaster</div>
+        <div class="card-ta">விண்வெளி போர்</div>
+        <div class="card-tags"><span class="tag">Arcade</span><span class="tag">Shoot 'em up</span></div>
+        <div class="card-play">▶ Play Now</div>
+      </div>
+    </a>
 
-      <a class="card" href="space-blaster.html" style="--ac:#6366f1">
-        <div class="card-body">
-          <div class="card-icon">🚀</div>
-          <div class="card-info">
-            <div class="card-name">Space Blaster</div>
-            <div class="card-ta">விண்வெளி போர்</div>
-          </div>
-        </div>
-        <div class="card-desc">Shoot alien invaders, dodge enemy fire, and survive endless waves in this neon arcade shooter!</div>
-        <div class="card-foot">
-          <span class="badge badge-online">Offline</span>
-          <span class="badge badge-grey">1 player</span>
-          <span class="badge badge-grey">Arcade</span>
-        </div>
-        <div class="play-btn">▶ Play Now</div>
-      </a>
-
-    </div>
   </div>
-
-</div><!-- /wrap -->
-
-<!-- ── Firebase FAB ── -->
-<button class="fab" onclick="openCtrl()" title="Firebase Room Manager">⚙️</button>
+</div>
 
 <!-- ── Firebase Modal ── -->
 <div class="mo" id="ctrl-overlay" onclick="if(event.target===this)closeCtrl()">
   <div class="mo-panel">
     <div class="mo-head">
-      <h2>🗄️ Firebase Room Manager</h2>
-      <button class="mo-close" onclick="closeCtrl()">✕</button>
+      <h2>FIREBASE ROOM MANAGER</h2>
+      <button class="mo-close" onclick="closeCtrl()" aria-label="Close">✕</button>
     </div>
     <div class="mo-body">
-      <div class="mo-status" id="ctrl-status">Connecting to Firebase…</div>
+      <div class="mo-status" id="ctrl-status">Connecting…</div>
       <div class="mo-actions">
-        <button class="b-refresh" onclick="loadRooms()">🔄 Refresh</button>
-        <button class="b-all" onclick="toggleSelectAll()">☑ Select All</button>
-        <button class="b-del" onclick="deleteSelected()">🗑 Delete Selected</button>
-        <button class="b-old" onclick="deleteOld()">🕒 Delete &gt;24h</button>
+        <button class="b-refresh" onclick="loadRooms()">↻ Refresh</button>
+        <button class="b-all" onclick="toggleAll()">☑ Select All</button>
+        <button class="b-del" onclick="deleteSelected()">✕ Delete Selected</button>
+        <button class="b-old" onclick="deleteOld()">⌛ Delete &gt;24h</button>
       </div>
-      <div class="room-list" id="ctrl-room-list">
-        <div class="room-empty">Loading…</div>
-      </div>
+      <div class="room-list" id="ctrl-room-list"><div class="room-empty">Loading…</div></div>
       <div class="mo-log" id="ctrl-log"></div>
     </div>
   </div>
 </div>
 
-<!-- ── Starfield ── -->
 <script>
+// ── Filter ───────────────────────────────────────────────────────────────────
+const tabs  = document.querySelectorAll('.ftab');
+const cards = document.querySelectorAll('.card');
+const grids = {multi: document.getElementById('grid-multi'), solo: document.getElementById('grid-solo')};
+
+tabs.forEach(tab => tab.addEventListener('click', () => {
+  tabs.forEach(t => t.classList.remove('active'));
+  tab.classList.add('active');
+  const f = tab.dataset.f;
+  cards.forEach(c => c.classList.toggle('hidden', f !== 'all' && c.dataset.cat !== f));
+  // show/hide section heads
+  if (f === 'multi') { grids.multi.previousElementSibling.style.display=''; grids.multi.style.display=''; grids.solo.previousElementSibling.style.display='none'; grids.solo.style.display='none'; }
+  else if (f === 'solo') { grids.multi.previousElementSibling.style.display='none'; grids.multi.style.display='none'; grids.solo.previousElementSibling.style.display=''; grids.solo.style.display=''; }
+  else { grids.multi.previousElementSibling.style.display=''; grids.multi.style.display=''; grids.solo.previousElementSibling.style.display=''; grids.solo.style.display=''; }
+}));
+
+// ── Thumbnail drawing ────────────────────────────────────────────────────────
+function th(id){
+  const el=document.getElementById(id);
+  if(!el)return null;
+  const ctx=el.getContext('2d');
+  ctx.w=el.width; ctx.h=el.height;
+  return ctx;
+}
+function grad(ctx,x0,y0,x1,y1,...stops){
+  const g=ctx.createLinearGradient(x0,y0,x1,y1);
+  stops.forEach((s,i)=>g.addColorStop(i/(stops.length-1),s));
+  return g;
+}
+function rgrad(ctx,x,y,r1,r2,...stops){
+  const g=ctx.createRadialGradient(x,y,r1,x,y,r2);
+  stops.forEach((s,i)=>g.addColorStop(i/(stops.length-1),s));
+  return g;
+}
+function glow(ctx,col,blur){ctx.shadowColor=col;ctx.shadowBlur=blur;}
+function noglow(ctx){ctx.shadowBlur=0;}
+function text(ctx,str,x,y,size,col,font){
+  ctx.font=`${font||'bold'} ${size}px ${font==='Russo'?'"Russo One"':'sans-serif'}`;
+  ctx.fillStyle=col; ctx.textAlign='center'; ctx.fillText(str,x,y);
+}
+
+// Raja Rani — gold crown + cards
 (function(){
-  const cv=document.getElementById('bg');
-  const c=cv.getContext('2d');
-  let W,H,stars=[];
-  function resize(){
-    W=cv.width=window.innerWidth;
-    H=cv.height=window.innerHeight;
-    stars=Array.from({length:130},()=>({
-      x:Math.random()*W,y:Math.random()*H,
-      r:.3+Math.random()*1.2,
-      a:Math.random(),
-      sp:.003+Math.random()*.008,
-      twinkle:Math.random()*Math.PI*2
-    }));
+  const c=th('th-raja'); if(!c)return;
+  c.fillStyle=grad(c,0,0,c.w,c.h,'#1a0800','#2d1200','#1a0800'); c.fillRect(0,0,c.w,c.h);
+  // fanned cards behind
+  const cardC=['#d32f2f','#1565c0','#2e7d32','#f9a825'];
+  for(let i=0;i<4;i++){
+    c.save(); c.translate(c.w/2,c.h*.65); c.rotate((i-1.5)*0.32);
+    c.fillStyle='#fff'; c.beginPath(); c.roundRect(-22,-32,44,62,4); c.fill();
+    c.fillStyle=cardC[i]; c.font='bold 18px sans-serif'; c.textAlign='center';
+    c.fillText(['♠','♥','♦','♣'][i],0,8);
+    c.strokeStyle='rgba(0,0,0,.15)'; c.lineWidth=1; c.stroke();
+    c.restore();
   }
-  window.addEventListener('resize',resize); resize();
-  function draw(){
-    c.clearRect(0,0,W,H);
-    const now=performance.now()/1000;
-    for(const s of stars){
-      s.twinkle+=s.sp;
-      const alpha=s.a*(.4+.6*Math.abs(Math.sin(s.twinkle)));
-      c.fillStyle=`rgba(200,200,255,${alpha})`;
-      c.beginPath(); c.arc(s.x,s.y,s.r,0,Math.PI*2); c.fill();
+  // crown
+  c.save(); c.translate(c.w/2,c.h*.35);
+  glow(c,'#f59e0b',22); c.fillStyle='#f59e0b';
+  c.beginPath();
+  c.moveTo(-30,16); c.lineTo(-30,-10); c.lineTo(-16,-24); c.lineTo(0,-10);
+  c.lineTo(16,-24); c.lineTo(30,-10); c.lineTo(30,16); c.closePath(); c.fill();
+  c.fillStyle='#fcd34d'; c.beginPath(); c.arc(-18,-26,5,0,Math.PI*2); c.fill();
+  c.beginPath(); c.arc(0,-12,5,0,Math.PI*2); c.fill();
+  c.beginPath(); c.arc(18,-26,5,0,Math.PI*2); c.fill();
+  noglow(c); c.restore();
+  // overlay gradient bottom
+  c.fillStyle=grad(c,0,c.h*.5,0,c.h,'transparent','rgba(26,8,0,.85)'); c.fillRect(0,c.h*.5,c.w,c.h*.5);
+  text(c,'RAJA RANI',c.w/2,c.h-.14*c.h,13,'#f59e0b');
+})();
+
+// Bluff — green felt + face-down cards
+(function(){
+  const c=th('th-bluff'); if(!c)return;
+  c.fillStyle=grad(c,0,0,c.w,c.h,'#1a3a1a','#0d2a0d'); c.fillRect(0,0,c.w,c.h);
+  // felt texture dots
+  c.fillStyle='rgba(255,255,255,.025)';
+  for(let y=8;y<c.h;y+=12) for(let x=8;x<c.w;x+=12){ c.beginPath(); c.arc(x,y,1,0,Math.PI*2); c.fill(); }
+  // stacked cards face-down
+  const cx=c.w/2, cy=c.h/2+5;
+  for(let i=4;i>=0;i--){
+    c.save(); c.translate(cx+i*2,cy+i*2);
+    c.fillStyle='#1e40af'; c.beginPath(); c.roundRect(-28,-36,56,70,5); c.fill();
+    // back pattern
+    c.strokeStyle='rgba(255,255,255,.15)'; c.lineWidth=1;
+    c.beginPath(); c.roundRect(-22,-30,44,58,3); c.stroke();
+    c.beginPath(); c.roundRect(-18,-26,36,50,2); c.stroke();
+    c.restore();
+  }
+  glow(c,'#ef4444',18);
+  text(c,'BLUFF!',c.w/2,c.h*.22,22,'#ef4444');
+  noglow(c);
+  c.fillStyle=grad(c,0,c.h*.55,0,c.h,'transparent','rgba(13,42,13,.9)'); c.fillRect(0,c.h*.55,c.w,c.h*.45);
+  text(c,'CARD GAME',c.w/2,c.h-.12*c.h,11,'rgba(255,255,255,.5)');
+})();
+
+// Sus — dark space + impostor silhouettes
+(function(){
+  const c=th('th-sus'); if(!c)return;
+  c.fillStyle=grad(c,0,0,0,c.h,'#050518','#0a0a2a','#050518'); c.fillRect(0,0,c.w,c.h);
+  // stars
+  for(let i=0;i<50;i++){
+    const x=Math.random()*c.w, y=Math.random()*c.h*.7;
+    c.fillStyle=`rgba(255,255,255,${.3+Math.random()*.5})`; c.beginPath(); c.arc(x,y,.8+Math.random(),0,Math.PI*2); c.fill();
+  }
+  // crewmate silhouettes
+  function crewmate(x,y,col,eye){
+    c.fillStyle=col;
+    c.beginPath(); c.ellipse(x,y+10,16,22,0,0,Math.PI*2); c.fill(); // body
+    c.beginPath(); c.ellipse(x,y-12,13,14,0,0,Math.PI*2); c.fill(); // head
+    c.fillStyle='rgba(0,0,0,.4)'; c.beginPath(); c.ellipse(x,y-12,9,7,0,0,Math.PI*2); c.fill(); // visor
+    if(eye){ glow(c,'#ef4444',12); c.fillStyle='#ef4444'; c.beginPath(); c.arc(x,y-13,3.5,0,Math.PI*2); c.fill(); noglow(c); }
+    c.fillStyle='rgba(0,0,0,.3)'; c.beginPath(); c.ellipse(x,y+28,10,5,0,0,Math.PI*2); c.fill(); // shadow
+  }
+  crewmate(c.w*.25,c.h*.54,'#3b82f6',false);
+  crewmate(c.w*.5,c.h*.5,'#ef4444',true);
+  crewmate(c.w*.75,c.h*.54,'#22c55e',false);
+  c.fillStyle=grad(c,0,c.h*.55,0,c.h,'transparent','rgba(5,5,24,.9)'); c.fillRect(0,c.h*.55,c.w,c.h*.45);
+  glow(c,'#8b5cf6',10); text(c,'WHO IS THE IMPOSTOR?',c.w/2,c.h-.12*c.h,10,'#c4b5fd'); noglow(c);
+})();
+
+// UNO — colorful cards
+(function(){
+  const c=th('th-uno'); if(!c)return;
+  c.fillStyle=grad(c,0,0,c.w,c.h,'#1c0a00','#2d1500'); c.fillRect(0,0,c.w,c.h);
+  const cols=['#ef4444','#3b82f6','#22c55e','#eab308','#8b5cf6'];
+  const labels=['7','Draw 2','Skip','Reverse','Wild'];
+  for(let i=cols.length-1;i>=0;i--){
+    c.save(); c.translate(c.w/2+(i-2)*18,c.h/2+4); c.rotate((i-2)*0.12);
+    const rg=rgrad(c,0,-10,2,38,cols[i]+'cc',cols[i]+'88');
+    c.fillStyle=cols[i]; c.beginPath(); c.roundRect(-24,-38,48,72,6); c.fill();
+    c.strokeStyle='rgba(255,255,255,.25)'; c.lineWidth=1.5; c.stroke();
+    c.fillStyle='#fff'; c.font='bold 11px sans-serif'; c.textAlign='center'; c.fillText(labels[i],0,4);
+    c.restore();
+  }
+  // UNO logo
+  c.save(); c.translate(c.w/2,c.h*.28);
+  c.fillStyle='#fff'; c.shadowColor='#f97316'; c.shadowBlur=14;
+  c.font='bold 26px sans-serif'; c.textAlign='center'; c.fillText('UNO',0,0);
+  c.shadowBlur=0; c.restore();
+  c.fillStyle=grad(c,0,c.h*.55,0,c.h,'transparent','rgba(28,10,0,.88)'); c.fillRect(0,c.h*.55,c.w,c.h*.45);
+  text(c,'CARD GAME · 2–6 PLAYERS',c.w/2,c.h-.12*c.h,9,'rgba(255,200,100,.7)');
+})();
+
+// Ludo — 4-color board
+(function(){
+  const c=th('th-ludo'); if(!c)return;
+  c.fillStyle='#f5f5dc'; c.fillRect(0,0,c.w,c.h);
+  const colors=['#ef4444','#3b82f6','#22c55e','#eab308'];
+  const corners=[[0,0],[c.w/2,0],[c.w/2,c.h/2],[0,c.h/2]];
+  colors.forEach((col,i)=>{
+    c.fillStyle=col+'cc';
+    c.fillRect(corners[i][0],corners[i][1],c.w/2,c.h/2);
+  });
+  // white center cross
+  c.fillStyle='#fff'; c.fillRect(c.w*.33,0,c.w*.34,c.h); c.fillRect(0,c.h*.33,c.w,c.h*.34);
+  // center star
+  c.save(); c.translate(c.w/2,c.h/2);
+  c.fillStyle='rgba(0,0,0,.08)'; c.beginPath();
+  for(let i=0;i<8;i++){
+    const a=i*Math.PI/4, r=i%2===0?22:10;
+    i===0?c.moveTo(Math.cos(a)*r,Math.sin(a)*r):c.lineTo(Math.cos(a)*r,Math.sin(a)*r);
+  }
+  c.closePath(); c.fill(); c.restore();
+  // tokens
+  [[c.w*.2,c.h*.2,'#ef4444'],[c.w*.78,c.h*.2,'#3b82f6'],[c.w*.78,c.h*.78,'#22c55e'],[c.w*.2,c.h*.78,'#eab308']].forEach(([x,y,col])=>{
+    c.fillStyle=col; c.beginPath(); c.arc(x,y,10,0,Math.PI*2); c.fill();
+    c.fillStyle='rgba(255,255,255,.5)'; c.beginPath(); c.arc(x-3,y-3,3.5,0,Math.PI*2); c.fill();
+  });
+  c.fillStyle=grad(c,0,c.h*.5,0,c.h,'transparent','rgba(0,0,0,.72)'); c.fillRect(0,c.h*.5,c.w,c.h*.5);
+  text(c,'LUDO',c.w/2,c.h-.14*c.h,14,'#22c55e');
+})();
+
+// Tambola — numbered ticket
+(function(){
+  const c=th('th-tambola'); if(!c)return;
+  c.fillStyle=grad(c,0,0,c.w,c.h,'#1a0010','#2d001a'); c.fillRect(0,0,c.w,c.h);
+  // ticket background
+  c.fillStyle='rgba(255,255,255,.06)'; c.beginPath(); c.roundRect(c.w*.08,c.h*.1,c.w*.84,c.h*.72,6); c.fill();
+  c.strokeStyle='rgba(236,72,153,.3)'; c.lineWidth=1; c.stroke();
+  // grid cells
+  const nums=[4,17,32,45,61,72,83,91,0, 0,22,0,48,0,75,0,0,0, 12,0,38,0,0,70,0,88,0];
+  const marked=[0,3,5,10,15,20];
+  const cw=c.w*.84/9, ch=c.h*.72/3;
+  const ox=c.w*.08, oy=c.h*.1;
+  for(let row=0;row<3;row++) for(let col=0;col<9;col++){
+    const idx=row*9+col; const num=nums[idx];
+    const x=ox+col*cw, y=oy+row*ch;
+    c.strokeStyle='rgba(236,72,153,.2)'; c.lineWidth=.5;
+    c.strokeRect(x,y,cw,ch);
+    if(num){
+      const isMarked=marked.includes(idx);
+      if(isMarked){ c.fillStyle='rgba(236,72,153,.35)'; c.fillRect(x+1,y+1,cw-2,ch-2); }
+      c.fillStyle=isMarked?'#f9a8d4':'rgba(255,255,255,.7)';
+      c.font=`bold ${cw*.45}px sans-serif`; c.textAlign='center';
+      c.fillText(num, x+cw/2, y+ch*.65);
     }
-    requestAnimationFrame(draw);
   }
-  draw();
+  c.fillStyle=grad(c,0,c.h*.55,0,c.h,'transparent','rgba(26,0,16,.9)'); c.fillRect(0,c.h*.55,c.w,c.h*.45);
+  glow(c,'#ec4899',8); text(c,'TAMBOLA / HOUSIE',c.w/2,c.h-.12*c.h,10,'#f9a8d4'); noglow(c);
+})();
+
+// Snakes & Ladders — colored board + snake
+(function(){
+  const c=th('th-snakes'); if(!c)return;
+  const palette=['#dcfce7','#bbf7d0','#f0fdf4','#d1fae5'];
+  const dark=['#1e3a2a','#14532d','#166534','#15803d'];
+  for(let r=0;r<6;r++) for(let col=0;col<8;col++){
+    c.fillStyle=(r+col)%2===0?palette[r%4]:dark[r%4];
+    c.fillRect(col*c.w/8,r*c.h/6,c.w/8,c.h/6);
+  }
+  // ladder
+  c.strokeStyle='#f59e0b'; c.lineWidth=3;
+  c.beginPath(); c.moveTo(c.w*.7,c.h*.85); c.lineTo(c.w*.55,c.h*.15); c.stroke();
+  c.beginPath(); c.moveTo(c.w*.8,c.h*.85); c.lineTo(c.w*.65,c.h*.15); c.stroke();
+  for(let i=0;i<6;i++){
+    const t=i/5, x1=c.w*.7+t*(c.w*.55-c.w*.7), y1=c.h*.85+t*(c.h*.15-c.h*.85);
+    const x2=c.w*.8+t*(c.w*.65-c.w*.8);
+    c.beginPath(); c.moveTo(x1,y1); c.lineTo(x2,y1); c.stroke();
+  }
+  // snake
+  c.strokeStyle='#ef4444'; c.lineWidth=6; c.lineCap='round';
+  c.beginPath(); c.moveTo(c.w*.15,c.h*.15); c.bezierCurveTo(c.w*.4,c.h*.1,c.w*.35,c.h*.5,c.w*.2,c.h*.5);
+  c.bezierCurveTo(c.w*.05,c.h*.5,c.w*.1,c.h*.85,c.w*.35,c.h*.88); c.stroke();
+  // snake head
+  c.fillStyle='#ef4444'; c.beginPath(); c.arc(c.w*.15,c.h*.15,8,0,Math.PI*2); c.fill();
+  c.fillStyle='#fff'; c.beginPath(); c.arc(c.w*.13,c.h*.13,3,0,Math.PI*2); c.fill();
+  c.fillStyle=grad(c,0,c.h*.5,0,c.h,'transparent','rgba(0,0,0,.72)'); c.fillRect(0,c.h*.5,c.w,c.h*.5);
+  text(c,'SNAKES & LADDERS',c.w/2,c.h-.12*c.h,10,'#86efac');
+})();
+
+// Business — property board
+(function(){
+  const c=th('th-biz'); if(!c)return;
+  c.fillStyle=grad(c,0,0,c.w,c.h,'#060e24','#0a1836'); c.fillRect(0,0,c.w,c.h);
+  // property cards
+  const props=[['MUMBAI','#ef4444'],['DELHI','#3b82f6'],['BENGALURU','#22c55e'],['CHENNAI','#f59e0b'],['PUNE','#8b5cf6']];
+  props.forEach(([name,col],i){
+    const x=c.w*.08+(i%3)*(c.w*.3), y=c.h*.1+Math.floor(i/3)*(c.h*.38);
+    c.fillStyle=col+'33'; c.beginPath(); c.roundRect(x,y,c.w*.26,c.h*.34,4); c.fill();
+    c.strokeStyle=col+'66'; c.lineWidth=1; c.stroke();
+    c.fillStyle=col; c.beginPath(); c.roundRect(x,y,c.w*.26,c.h*.09,4); c.fill();
+    c.fillStyle='#fff'; c.font='bold 7px sans-serif'; c.textAlign='center';
+    c.fillText(name,x+c.w*.13,y+c.h*.06);
+    // building icons
+    for(let b=0;b<3;b++){
+      c.fillStyle=col+'cc';
+      const bh=(3-b)*6+4;
+      c.fillRect(x+c.w*.03+b*c.w*.07,y+c.h*.28-bh/c.h*c.h*0.01*10,c.w*.05,bh*1.2);
+    }
+  });
+  // money symbol
+  glow(c,'#22c55e',14); text(c,'₹',c.w*.82,c.h*.28,30,'#22c55e'); noglow(c);
+  c.fillStyle=grad(c,0,c.h*.52,0,c.h,'transparent','rgba(6,14,36,.9)'); c.fillRect(0,c.h*.52,c.w,c.h*.48);
+  text(c,'BUSINESS — INDIA EDITION',c.w/2,c.h-.12*c.h,9,'#93c5fd');
+})();
+
+// Surf — ocean wave + surfer
+(function(){
+  const c=th('th-surf'); if(!c)return;
+  // sky
+  c.fillStyle=grad(c,0,0,0,c.h*.58,'#87CEEB','#B8E0FF'); c.fillRect(0,0,c.w,c.h*.58);
+  // clouds
+  [[c.w*.15,c.h*.12,30],[c.w*.6,c.h*.08,22],[c.w*.82,c.h*.16,18]].forEach(([x,y,r])=>{
+    c.fillStyle='rgba(255,255,255,.9)';
+    c.beginPath(); c.ellipse(x,y,r,r*.55,0,0,Math.PI*2); c.fill();
+    c.beginPath(); c.ellipse(x+r*.5,y-r*.18,r*.65,r*.5,0,0,Math.PI*2); c.fill();
+    c.beginPath(); c.ellipse(x-r*.45,y-r*.1,r*.5,r*.42,0,0,Math.PI*2); c.fill();
+  });
+  // ocean
+  c.beginPath(); c.moveTo(0,c.h*.55);
+  for(let x=0;x<=c.w;x+=4){ const y=c.h*.55+Math.sin(x*.018)*14+Math.sin(x*.04)*7; c.lineTo(x,y); }
+  c.lineTo(c.w,c.h); c.lineTo(0,c.h); c.closePath();
+  const og=grad(c,0,c.h*.52,0,c.h,'#00B4D8','#0078D4','#005A9E');
+  c.fillStyle=og; c.fill();
+  // foam crest
+  c.strokeStyle='rgba(255,255,255,.9)'; c.lineWidth=2.5;
+  c.beginPath();
+  for(let x=0;x<=c.w;x+=4){ const y=c.h*.55+Math.sin(x*.018)*14+Math.sin(x*.04)*7; x===0?c.moveTo(x,y):c.lineTo(x,y); }
+  c.stroke();
+  // surfer silhouette
+  const sy=c.h*.52; const sx=c.w*.25;
+  c.fillStyle='rgba(0,30,60,.85)';
+  c.beginPath(); c.ellipse(sx,sy+3,22,4,0,0,Math.PI*2); c.fill(); // board
+  c.fillRect(sx-7,sy-18,6,18); c.fillRect(sx+1,sy-18,6,18); // legs
+  c.fillRect(sx-6,sy-28,12,12); // body
+  c.beginPath(); c.arc(sx,sy-32,6,0,Math.PI*2); c.fill(); // head
+  c.fillStyle=grad(c,0,c.h*.6,0,c.h,'transparent','rgba(0,90,158,.6)'); c.fillRect(0,c.h*.6,c.w,c.h*.4);
+  glow(c,'#06b6d4',8); text(c,'EDGE SURF',c.w/2,c.h-.12*c.h,12,'#67e8f9'); noglow(c);
+})();
+
+// Contra 3D — dark + neon soldier
+(function(){
+  const c=th('th-c3d'); if(!c)return;
+  c.fillStyle=grad(c,0,0,0,c.h,'#020a02','#041508'); c.fillRect(0,0,c.w,c.h);
+  // scan lines
+  for(let y=0;y<c.h;y+=6){ c.fillStyle='rgba(0,255,80,.02)'; c.fillRect(0,y,c.w,2); }
+  // soldier silhouette
+  const sx=c.w*.5, sy=c.h*.62;
+  glow(c,'#10b981',20);
+  c.fillStyle='#064e3b';
+  c.fillRect(sx-10,sy-55,20,30); // torso
+  c.beginPath(); c.arc(sx,sy-62,12,0,Math.PI*2); c.fill(); // head
+  c.fillRect(sx-16,sy-42,10,22); c.fillRect(sx+6,sy-42,10,22); // arms
+  c.fillRect(sx-8,sy-26,8,26); c.fillRect(sx,sy-26,8,26); // legs
+  // gun barrel neon
+  c.strokeStyle='#34d399'; c.lineWidth=4; c.lineCap='round';
+  c.beginPath(); c.moveTo(sx+16,sy-38); c.lineTo(sx+46,sy-44); c.stroke();
+  glow(c,'#10b981',30); c.strokeStyle='#6ee7b7'; c.lineWidth=2;
+  c.beginPath(); c.moveTo(sx+46,sy-44); c.lineTo(sx+c.w*.3,sy-48); c.stroke();
+  noglow(c);
+  // particles
+  for(let i=0;i<20;i++){
+    glow(c,'#10b981',8); c.fillStyle='#6ee7b7';
+    c.beginPath(); c.arc(c.w*.65+Math.random()*c.w*.28,c.h*.1+Math.random()*c.h*.8,1+Math.random()*2,0,Math.PI*2); c.fill();
+    noglow(c);
+  }
+  c.fillStyle=grad(c,0,c.h*.5,0,c.h,'transparent','rgba(2,10,2,.92)'); c.fillRect(0,c.h*.5,c.w,c.h*.5);
+  glow(c,'#10b981',8); text(c,'CONTRA 3D — WebGL',c.w/2,c.h-.12*c.h,10,'#6ee7b7'); noglow(c);
+})();
+
+// Contra Strike — jungle + soldier
+(function(){
+  const c=th('th-cs'); if(!c)return;
+  // jungle bg
+  c.fillStyle=grad(c,0,0,0,c.h,'#0a1f0a','#0d2b0d','#142814'); c.fillRect(0,0,c.w,c.h);
+  // trees / foliage
+  for(let i=0;i<8;i++){
+    const x=(i/7)*c.w, h=40+Math.random()*40;
+    c.fillStyle=`rgba(${20+Math.random()*20},${60+Math.random()*40},${20+Math.random()*20},.7)`;
+    c.beginPath(); c.moveTo(x,c.h*.7); c.lineTo(x-20,c.h*.7+h*.5); c.lineTo(x-10,c.h*.7+h*.4);
+    c.lineTo(x-14,c.h*.7+h); c.lineTo(x+14,c.h*.7+h); c.lineTo(x+10,c.h*.7+h*.4);
+    c.lineTo(x+20,c.h*.7+h*.5); c.closePath(); c.fill();
+  }
+  // running soldier
+  const sx=c.w*.38, sy=c.h*.58;
+  c.fillStyle='#4d7c0f';
+  c.fillRect(sx-8,sy-45,16,24); // torso
+  c.beginPath(); c.arc(sx,sy-52,10,0,Math.PI*2); c.fill(); // head + helmet
+  c.fillStyle='#365314'; c.beginPath(); c.ellipse(sx,sy-57,12,5,0,0,Math.PI); c.fill(); // helmet
+  c.fillStyle='#4d7c0f';
+  c.fillRect(sx-14,sy-38,10,18); c.fillRect(sx+4,sy-38,10,18); // arms
+  c.fillRect(sx-6,sy-22,7,24); c.fillRect(sx,sy-22,7,24); // legs
+  // muzzle flash
+  glow(c,'#f97316',24); c.fillStyle='#fed7aa';
+  c.beginPath(); c.arc(sx+32,sy-34,8,0,Math.PI*2); c.fill();
+  noglow(c);
+  // gun
+  c.strokeStyle='#1c1917'; c.lineWidth=4; c.lineCap='round';
+  c.beginPath(); c.moveTo(sx+14,sy-34); c.lineTo(sx+34,sy-34); c.stroke();
+  c.fillStyle=grad(c,0,c.h*.5,0,c.h,'transparent','rgba(10,31,10,.92)'); c.fillRect(0,c.h*.5,c.w,c.h*.5);
+  glow(c,'#f97316',6); text(c,'CONTRA STRIKE',c.w/2,c.h-.12*c.h,12,'#fed7aa'); noglow(c);
+})();
+
+// Tower Defense — isometric grid + tower
+(function(){
+  const c=th('th-td'); if(!c)return;
+  c.fillStyle=grad(c,0,0,0,c.h,'#0d0520','#130830'); c.fillRect(0,0,c.w,c.h);
+  // iso grid
+  c.strokeStyle='rgba(168,85,247,.15)'; c.lineWidth=1;
+  const tw=36, th2=18;
+  for(let r=-2;r<10;r++) for(let col=0;col<12;col++){
+    const x=(col-r)*tw/2+c.w/2, y=(col+r)*th2/2+c.h*.25;
+    c.beginPath(); c.moveTo(x,y-th2/2); c.lineTo(x+tw/2,y); c.lineTo(x,y+th2/2); c.lineTo(x-tw/2,y); c.closePath(); c.stroke();
+  }
+  // path tiles (highlight)
+  [[5,2],[6,2],[7,2],[7,3],[7,4],[6,4],[5,4]].forEach(([col,r])=>{
+    const x=(col-r)*tw/2+c.w/2, y=(col+r)*th2/2+c.h*.25;
+    c.fillStyle='rgba(234,179,8,.06)'; c.beginPath();
+    c.moveTo(x,y-th2/2); c.lineTo(x+tw/2,y); c.lineTo(x,y+th2/2); c.lineTo(x-tw/2,y); c.closePath(); c.fill();
+  });
+  // tower
+  const tx=c.w*.52, ty=c.h*.42;
+  glow(c,'#a855f7',18);
+  c.fillStyle='#4c1d95'; c.beginPath(); c.roundRect(tx-12,ty-36,24,44,3); c.fill();
+  c.fillStyle='#7c3aed'; c.beginPath(); c.roundRect(tx-14,ty-40,28,12,3); c.fill(); // top
+  c.fillStyle='#c4b5fd'; c.beginPath(); c.arc(tx,ty-50,5,0,Math.PI*2); c.fill(); // crystal
+  glow(c,'#a855f7',30); c.fillStyle='rgba(167,139,250,.4)';
+  c.beginPath(); c.moveTo(tx,ty-50); c.lineTo(c.w*.15,c.h*.55); // beam
+  c.lineWidth=2; c.strokeStyle='rgba(196,181,253,.6)'; c.stroke();
+  noglow(c);
+  // enemies
+  [[c.w*.2,c.h*.62,'#ef4444'],[c.w*.3,c.h*.66,'#f97316'],[c.w*.42,c.h*.6,'#ef4444']].forEach(([x,y,col])=>{
+    c.fillStyle=col; c.beginPath(); c.arc(x,y,5,0,Math.PI*2); c.fill();
+    c.fillStyle='rgba(0,0,0,.4)'; c.beginPath(); c.ellipse(x,y+6,5,2,0,0,Math.PI*2); c.fill();
+  });
+  c.fillStyle=grad(c,0,c.h*.52,0,c.h,'transparent','rgba(13,5,32,.92)'); c.fillRect(0,c.h*.52,c.w,c.h*.48);
+  glow(c,'#a855f7',6); text(c,'TOWER DEFENSE',c.w/2,c.h-.12*c.h,12,'#c4b5fd'); noglow(c);
+})();
+
+// Dragon's Quest — dungeon + dragon eye
+(function(){
+  const c=th('th-rpg'); if(!c)return;
+  c.fillStyle=grad(c,0,0,0,c.h,'#1a0000','#2d0000','#0d0000'); c.fillRect(0,0,c.w,c.h);
+  // stone floor
+  c.fillStyle='rgba(255,255,255,.03)';
+  for(let r=0;r<6;r++) for(let col=0;col<8;col++){ c.fillRect(col*c.w/8,r*c.h/6,c.w/8,c.h/6); c.strokeStyle='rgba(0,0,0,.4)'; c.lineWidth=.5; c.strokeRect(col*c.w/8,r*c.h/6,c.w/8,c.h/6); }
+  // pillars
+  [[c.w*.12,0],[c.w*.85,0]].forEach(([x,y])=>{
+    c.fillStyle='#2d1c00'; c.fillRect(x-14,y,28,c.h*.8);
+    c.fillStyle='rgba(255,255,255,.05)'; c.fillRect(x-12,y,6,c.h*.8);
+  });
+  // dragon eye glow
+  glow(c,'#ef4444',40); c.fillStyle='#b91c1c';
+  c.beginPath(); c.ellipse(c.w/2,c.h*.42,40,22,0,0,Math.PI*2); c.fill();
+  glow(c,'#ef4444',20); c.fillStyle='#fca5a5';
+  c.beginPath(); c.ellipse(c.w/2,c.h*.42,16,20,0,0,Math.PI*2); c.fill(); // iris
+  c.fillStyle='#1c0000'; c.beginPath(); c.ellipse(c.w/2,c.h*.42,6,16,0,0,Math.PI*2); c.fill(); // pupil
+  noglow(c);
+  // crystals
+  [[c.w*.3,c.h*.72,'#7c3aed'],[c.w*.7,c.h*.68,'#4c1d95'],[c.w*.18,c.h*.68,'#6d28d9']].forEach(([x,y,col])=>{
+    glow(c,col,8); c.fillStyle=col;
+    c.beginPath(); c.moveTo(x,y-18); c.lineTo(x+7,y); c.lineTo(x,y+8); c.lineTo(x-7,y); c.closePath(); c.fill();
+    noglow(c);
+  });
+  c.fillStyle=grad(c,0,c.h*.52,0,c.h,'transparent','rgba(26,0,0,.92)'); c.fillRect(0,c.h*.52,c.w,c.h*.48);
+  glow(c,'#ef4444',8); text(c,"DRAGON'S QUEST",c.w/2,c.h-.12*c.h,11,'#fca5a5'); noglow(c);
+})();
+
+// Space Blaster — deep space
+(function(){
+  const c=th('th-space'); if(!c)return;
+  c.fillStyle='#000010'; c.fillRect(0,0,c.w,c.h);
+  // stars
+  for(let i=0;i<120;i++){
+    const sz=Math.random()*1.8;
+    c.fillStyle=`rgba(${180+Math.random()*75},${180+Math.random()*75},255,${.4+Math.random()*.6})`;
+    c.beginPath(); c.arc(Math.random()*c.w,Math.random()*c.h,sz,0,Math.PI*2); c.fill();
+  }
+  // nebula
+  const ng=rgrad(c,c.w*.7,c.h*.3,0,100,'rgba(99,102,241,.25)','transparent');
+  c.fillStyle=ng; c.fillRect(0,0,c.w,c.h);
+  // alien ships
+  [[c.w*.3,c.h*.18,'#ef4444'],[c.w*.58,c.h*.12,'#f97316'],[c.w*.75,c.h*.22,'#ef4444']].forEach(([x,y,col])=>{
+    glow(c,col,10); c.fillStyle=col;
+    c.beginPath(); c.ellipse(x,y,18,8,0,0,Math.PI*2); c.fill();
+    c.fillStyle='rgba(0,0,0,.5)'; c.beginPath(); c.ellipse(x,y,10,5,0,0,Math.PI*2); c.fill();
+    noglow(c);
+  });
+  // player ship
+  const sx=c.w*.5, sy=c.h*.72;
+  glow(c,'#6366f1',18); c.fillStyle='#4f46e5';
+  c.beginPath(); c.moveTo(sx,sy-30); c.lineTo(sx-22,sy+12); c.lineTo(sx-10,sy+6); c.lineTo(sx,sy+14); c.lineTo(sx+10,sy+6); c.lineTo(sx+22,sy+12); c.closePath(); c.fill();
+  c.fillStyle='#818cf8'; c.beginPath(); c.moveTo(sx,sy-26); c.lineTo(sx-8,sy+4); c.lineTo(sx+8,sy+4); c.closePath(); c.fill();
+  // laser
+  glow(c,'#a5b4fc',16); c.strokeStyle='#e0e7ff'; c.lineWidth=2;
+  c.beginPath(); c.moveTo(sx,sy-30); c.lineTo(sx,sy-c.h*.55); c.stroke();
+  noglow(c);
+  // engine glow
+  glow(c,'#f97316',16); c.fillStyle='#fed7aa';
+  c.beginPath(); c.ellipse(sx,sy+14,7,12,0,0,Math.PI*2); c.fill(); noglow(c);
+  c.fillStyle=grad(c,0,c.h*.55,0,c.h,'transparent','rgba(0,0,16,.9)'); c.fillRect(0,c.h*.55,c.w,c.h*.45);
+  glow(c,'#6366f1',6); text(c,'SPACE BLASTER',c.w/2,c.h-.12*c.h,12,'#c7d2fe'); noglow(c);
 })();
 </script>
 
@@ -561,57 +940,50 @@ function _init(){
 function openCtrl(){document.getElementById('ctrl-overlay').classList.add('open');_init();loadRooms();}
 function closeCtrl(){document.getElementById('ctrl-overlay').classList.remove('open');}
 function _ago(ts){
-  if(!ts)return '?';
-  const s=Math.floor((Date.now()-ts)/1000);
-  if(s<60)return s+'s ago';
-  if(s<3600)return Math.floor(s/60)+'m ago';
-  if(s<86400)return Math.floor(s/3600)+'h ago';
-  return Math.floor(s/86400)+'d ago';
+  if(!ts)return '?'; const s=Math.floor((Date.now()-ts)/1000);
+  if(s<60)return s+'s ago'; if(s<3600)return Math.floor(s/60)+'m ago';
+  if(s<86400)return Math.floor(s/3600)+'h ago'; return Math.floor(s/86400)+'d ago';
 }
-function _phClass(ph){return ph==='lobby'?'ph-lobby':ph==='over'?'ph-over':'ph-active';}
+function _ph(p){return p==='lobby'?'ph-lobby':p==='over'?'ph-over':'ph-active';}
 async function loadRooms(){
   const st=document.getElementById('ctrl-status'),li=document.getElementById('ctrl-room-list');
-  if(!_db){st.textContent='Firebase not connected.';return;}
-  st.textContent='Loading rooms…';li.innerHTML='<div class="room-empty">Loading…</div>';
+  if(!_db){st.textContent='Not connected.';return;}
+  st.textContent='Loading…';li.innerHTML='<div class="room-empty">Loading…</div>';
   try{
     const snap=await _db.ref('rooms').once('value');
     _rooms=snap.val()||{};
     const codes=Object.keys(_rooms);
-    st.textContent=codes.length+' room'+(codes.length===1?'':'s')+' in Firebase';
-    if(!codes.length){li.innerHTML='<div class="room-empty">No rooms found ✨</div>';return;}
+    st.textContent=codes.length+' room'+(codes.length===1?'':'s')+' active';
+    if(!codes.length){li.innerHTML='<div class="room-empty">No active rooms ✓</div>';return;}
     codes.sort((a,b)=>((_rooms[b]?.state?.ts)||0)-((_rooms[a]?.state?.ts)||0));
     li.innerHTML='';
     codes.forEach(code=>{
-      const r=_rooms[code],s=r?.state||{};
+      const s=_rooms[code]?.state||{};
       const pLen=Array.isArray(s.players)?s.players.length:Object.keys(s.players||{}).length;
       const row=document.createElement('div'); row.className='room';
       row.innerHTML=`<input type="checkbox" id="cb-${code}" value="${code}">
         <div class="room-code">${code}</div>
-        <div class="room-info">${pLen}/${s.numPlayers||'?'} players · ${_ago(s.ts)}
-          <span class="ph ${_phClass(s.phase||'')}">${s.phase||'?'}</span><br>
-          Round ${s.round||'?'}/${s.totalRounds||'?'}</div>`;
-      row.onclick=e=>{if(e.target.tagName!=='INPUT'){const cb=document.getElementById('cb-'+code);cb.checked=!cb.checked;}};
+        <div class="room-info">${pLen}/${s.numPlayers||'?'} · ${_ago(s.ts)}
+          <span class="ph ${_ph(s.phase||'')}">${s.phase||'?'}</span><br>Round ${s.round||'?'}/${s.totalRounds||'?'}</div>`;
+      row.onclick=e=>{if(e.target.tagName!=='INPUT')document.getElementById('cb-'+code).click();};
       li.appendChild(row);
     });
   }catch(e){st.textContent='Error: '+e.message;}
 }
-function toggleSelectAll(){
-  const cbs=[...document.querySelectorAll('.room-list input[type=checkbox]')];
-  const all=cbs.every(c=>c.checked); cbs.forEach(c=>c.checked=!all);
-}
+function toggleAll(){const cbs=[...document.querySelectorAll('.room-list input')];const all=cbs.every(c=>c.checked);cbs.forEach(c=>c.checked=!all);}
 async function deleteSelected(){
   const sel=[...document.querySelectorAll('.room-list input:checked')].map(c=>c.value);
   if(!sel.length){_log('Select rooms first.');return;}
   if(!confirm('Delete '+sel.length+' room(s)?'))return;
-  for(const code of sel)await _db.ref('rooms/'+code).remove();
+  for(const c of sel)await _db.ref('rooms/'+c).remove();
   _log('Deleted: '+sel.join(', ')); await loadRooms();
 }
 async function deleteOld(){
   const cut=Date.now()-86400000;
-  const old=Object.entries(_rooms).filter(([,r])=>{const t=(r?.state?.ts)||0;return t>0&&t<cut;}).map(([c])=>c);
+  const old=Object.entries(_rooms).filter(([,r])=>{const t=r?.state?.ts||0;return t&&t<cut;}).map(([c])=>c);
   if(!old.length){_log('No rooms older than 24h.');return;}
-  if(!confirm('Delete '+old.length+' room(s) older than 24h?\n'+old.join(', ')))return;
-  for(const code of old)await _db.ref('rooms/'+code).remove();
+  if(!confirm('Delete '+old.length+' rooms older than 24h?'))return;
+  for(const c of old)await _db.ref('rooms/'+c).remove();
   _log('Deleted: '+old.join(', ')); await loadRooms();
 }
 function _log(msg){const el=document.getElementById('ctrl-log');el.textContent=msg;setTimeout(()=>{if(el.textContent===msg)el.textContent='';},4000);}
