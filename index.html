@@ -538,6 +538,18 @@ body.has-subbar{padding-top:calc(var(--nav-h) + var(--sub-h))}
 </div>
 
 <script>
+// roundRect polyfill for older browsers
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+  CanvasRenderingContext2D.prototype.roundRect = function(x,y,w,h,r){
+    r = Math.min(typeof r==='object'?r[0]||0:r||0, Math.abs(w)/2, Math.abs(h)/2);
+    this.moveTo(x+r,y);
+    this.lineTo(x+w-r,y); this.arcTo(x+w,y,x+w,y+r,r);
+    this.lineTo(x+w,y+h-r); this.arcTo(x+w,y+h,x+w-r,y+h,r);
+    this.lineTo(x+r,y+h); this.arcTo(x,y+h,x,y+h-r,r);
+    this.lineTo(x,y+r); this.arcTo(x,y,x+r,y,r);
+    this.closePath();
+  };
+}
 // ── Filter ───────────────────────────────────────────────────────────────────
 const mainTabs = document.querySelectorAll('.ftab');
 const allCards = document.querySelectorAll('.card');
