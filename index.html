@@ -3,74 +3,190 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>🎮 Games</title>
-<link href="https://fonts.googleapis.com/css2?family=Baloo+Thambi+2:wght@500;700;800&family=Catamaran:wght@400;600;800&display=swap" rel="stylesheet">
+<title>🎮 Game Zone</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root{--kraft:#d9b98a;--paper:#fdf6e3;--ink:#3a2a18;--red:#b3322b;--green:#2e6e4e;--gold:#d49a2a;--shadow:rgba(58,42,24,.25);}
+:root{
+  --bg:#08081a;
+  --s1:rgba(255,255,255,.07);
+  --s2:rgba(255,255,255,.10);
+  --s3:rgba(255,255,255,.16);
+  --b:rgba(255,255,255,.11);
+  --b2:rgba(255,255,255,.22);
+  --text:rgba(255,255,255,.93);
+  --dim:rgba(255,255,255,.55);
+  --muted:rgba(255,255,255,.32);
+  --red:#ff6b6b;
+  --red-glow:rgba(255,107,107,.25);
+  --green:#4ade80;
+  --green-glow:rgba(74,222,128,.2);
+  --gold:#fbbf24;
+  --blue:#60a5fa;
+  --blur:20px;
+  --r:16px;--r-sm:12px;
+  --shadow:0 8px 32px rgba(0,0,0,.5),0 2px 8px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.09);
+  --shadow-sm:0 4px 16px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.06);
+  --spring:.2s cubic-bezier(.34,1.56,.64,1);
+}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-/* ── Control panel button ── */
-.ctrl-btn{position:fixed;top:14px;right:14px;z-index:200;background:rgba(58,42,24,.15);border:none;border-radius:50%;width:40px;height:40px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s;}
-.ctrl-btn:hover{background:rgba(58,42,24,.3);}
-/* ── Modal overlay ── */
-.ctrl-overlay{display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.5);align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto;}
-.ctrl-overlay.open{display:flex;}
-.ctrl-panel{background:var(--paper);border-radius:14px;width:100%;max-width:480px;box-shadow:0 8px 32px rgba(0,0,0,.3);overflow:hidden;margin:auto;}
-.ctrl-header{background:var(--ink);color:var(--kraft);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;}
-.ctrl-header h2{font-size:17px;font-weight:800;}
-.ctrl-close{background:none;border:none;color:var(--kraft);font-size:22px;cursor:pointer;line-height:1;padding:0 4px;}
-.ctrl-body{padding:14px;}
-.ctrl-status{font-family:Catamaran,sans-serif;font-size:12px;font-weight:700;margin-bottom:12px;opacity:.7;}
-.ctrl-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
-.ctrl-actions button{font-family:'Baloo Thambi 2',sans-serif;font-size:13px;font-weight:700;border:none;border-radius:8px;padding:8px 12px;cursor:pointer;}
-.cb-all-btn{background:rgba(58,42,24,.12);color:var(--ink);}
-.del-sel-btn{background:var(--red);color:#fff;}
-.del-old-btn{background:#8a4a00;color:#fff;}
-.refresh-btn{background:var(--green);color:#fff;}
-.ctrl-room-list{display:flex;flex-direction:column;gap:8px;max-height:55vh;overflow-y:auto;}
-.ctrl-room{background:#fff;border-radius:8px;border:1.5px solid rgba(58,42,24,.1);padding:10px 12px;display:flex;align-items:center;gap:10px;cursor:pointer;}
-.ctrl-room:active{background:#f0e8d8;}
-.ctrl-room input[type=checkbox]{width:18px;height:18px;cursor:pointer;flex-shrink:0;accent-color:var(--red);}
-.ctrl-room-code{font-size:18px;font-weight:800;letter-spacing:2px;flex-shrink:0;}
-.ctrl-room-info{flex:1;font-family:Catamaran,sans-serif;font-size:12px;font-weight:700;opacity:.75;line-height:1.5;}
-.ctrl-phase{display:inline-block;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;padding:2px 7px;border-radius:20px;color:#fff;margin-left:6px;}
-.phase-lobby{background:var(--green);}
-.phase-active{background:#1a6fbf;}
-.phase-over{background:#888;}
-.ctrl-empty{text-align:center;padding:32px;font-family:Catamaran,sans-serif;opacity:.5;}
-.ctrl-log{margin-top:10px;font-family:Catamaran,sans-serif;font-size:12px;font-weight:700;color:var(--green);min-height:18px;}
 html,body{min-height:100%;}
-body{font-family:'Baloo Thambi 2','Catamaran',sans-serif;background:var(--kraft);background-image:radial-gradient(circle at 20% 10%,rgba(255,255,255,.25),transparent 40%),radial-gradient(circle at 80% 90%,rgba(0,0,0,.08),transparent 45%);color:var(--ink);display:flex;flex-direction:column;align-items:center;padding:28px 16px 48px;}
-.crown{font-size:52px;text-align:center;line-height:1;margin-top:8px;}
-h1{text-align:center;font-weight:800;font-size:30px;color:var(--red);text-shadow:1px 2px 0 rgba(255,255,255,.5);margin-top:6px;}
-.sub{text-align:center;font-family:'Catamaran';font-size:12px;font-weight:800;opacity:.6;letter-spacing:2.5px;text-transform:uppercase;margin-top:3px;}
-.grid{width:100%;max-width:430px;margin-top:28px;display:flex;flex-direction:column;gap:16px;}
-.game-card{background:var(--paper);border-radius:10px;box-shadow:0 6px 0 var(--shadow),0 10px 24px rgba(0,0,0,.12);padding:20px 18px;position:relative;cursor:pointer;transition:transform .1s;text-decoration:none;color:inherit;display:block;}
-.game-card::before{content:"";position:absolute;inset:6px;border:1.5px dashed rgba(58,42,24,.22);border-radius:6px;pointer-events:none;}
-.game-card:active{transform:translateY(3px);box-shadow:0 3px 0 var(--shadow),0 4px 12px rgba(0,0,0,.1);}
+body{
+  font-family:'Inter',system-ui,sans-serif;
+  background:var(--bg);
+  background-image:
+    radial-gradient(ellipse at 15% 0%,rgba(99,50,220,.4) 0%,transparent 55%),
+    radial-gradient(ellipse at 85% 100%,rgba(30,80,200,.3) 0%,transparent 55%),
+    radial-gradient(ellipse at 50% 50%,rgba(20,20,60,.6) 0%,transparent 80%);
+  color:var(--text);
+  display:flex;flex-direction:column;align-items:center;
+  padding:36px 16px 56px;
+}
+
+/* ── Header ── */
+.hero{text-align:center;margin-bottom:32px;}
+.hero-icon{font-size:56px;line-height:1;filter:drop-shadow(0 0 20px rgba(99,50,220,.6));}
+.hero h1{
+  font-weight:800;font-size:34px;margin-top:10px;
+  background:linear-gradient(135deg,#fff 0%,rgba(200,180,255,.85) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  line-height:1.1;
+}
+.hero .sub{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px;letter-spacing:3px;text-transform:uppercase;}
+
+/* ── Grid ── */
+.grid{width:100%;max-width:480px;display:flex;flex-direction:column;gap:12px;}
+
+/* ── Game card ── */
+.game-card{
+  display:block;text-decoration:none;color:inherit;
+  background:var(--s1);
+  backdrop-filter:blur(var(--blur));-webkit-backdrop-filter:blur(var(--blur));
+  border:1px solid var(--b);
+  border-radius:var(--r);
+  box-shadow:var(--shadow);
+  padding:18px 16px;
+  cursor:pointer;
+  transition:transform var(--spring),box-shadow .15s,background .15s,border-color .15s;
+  position:relative;overflow:hidden;
+}
+.game-card::after{
+  content:"";position:absolute;inset:0;border-radius:var(--r);
+  background:linear-gradient(135deg,rgba(255,255,255,.04) 0%,transparent 60%);
+  pointer-events:none;
+}
+.game-card:hover{background:var(--s2);border-color:var(--b2);}
+.game-card:active{transform:scale(.97);box-shadow:var(--shadow-sm);}
+
 .card-top{display:flex;align-items:center;gap:14px;}
-.card-icon{font-size:48px;line-height:1;flex-shrink:0;}
-.card-info{flex:1;}
-.card-title{font-size:22px;font-weight:800;line-height:1.1;}
-.card-title-ta{font-size:14px;font-weight:700;opacity:.6;margin-top:2px;}
-.card-desc{font-family:'Catamaran';font-size:13px;font-weight:600;opacity:.7;margin-top:8px;line-height:1.5;}
+.card-icon{font-size:44px;line-height:1;flex-shrink:0;filter:drop-shadow(0 2px 8px rgba(0,0,0,.4));}
+.card-info{flex:1;min-width:0;}
+.card-title{font-size:20px;font-weight:700;line-height:1.1;color:var(--text);}
+.card-title-ta{font-size:13px;font-weight:500;color:var(--dim);margin-top:2px;}
+.card-desc{font-size:13px;font-weight:400;color:var(--dim);margin-top:8px;line-height:1.55;}
 .card-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
-.tag{font-family:'Catamaran';font-size:11px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;padding:3px 9px;border-radius:20px;background:var(--ink);color:var(--kraft);}
-.tag.green{background:var(--green);}
-.tag.gold{background:var(--gold);}
-.play-btn{display:flex;align-items:center;justify-content:center;margin-top:14px;padding:12px 0;background:var(--red);color:#fff;border-radius:8px;font-size:17px;font-weight:800;box-shadow:0 4px 0 #7e1f1a;letter-spacing:.5px;}
-.coming-soon{background:rgba(58,42,24,.06);border:2px dashed rgba(58,42,24,.2);}
-.coming-soon .play-btn{background:rgba(58,42,24,.15);color:rgba(58,42,24,.5);box-shadow:none;cursor:default;}
-.coming-soon:active{transform:none;box-shadow:0 6px 0 var(--shadow),0 10px 24px rgba(0,0,0,.12);}
+.tag{
+  font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;
+  padding:3px 9px;border-radius:20px;
+  background:var(--s2);color:var(--muted);border:1px solid var(--b);
+}
+.tag.green{background:rgba(74,222,128,.15);color:var(--green);border-color:rgba(74,222,128,.25);}
+.tag.gold{background:rgba(251,191,36,.15);color:var(--gold);border-color:rgba(251,191,36,.25);}
+.tag.blue{background:rgba(96,165,250,.15);color:var(--blue);border-color:rgba(96,165,250,.25);}
+
+.play-btn{
+  display:flex;align-items:center;justify-content:center;
+  margin-top:14px;padding:11px 0;
+  background:linear-gradient(180deg,rgba(255,107,107,.82) 0%,rgba(210,55,55,.88) 100%);
+  color:#fff;border-radius:var(--r-sm);
+  font-size:15px;font-weight:700;letter-spacing:.3px;
+  border:1px solid rgba(255,140,140,.2);
+  box-shadow:0 4px 16px var(--red-glow),inset 0 1px 0 rgba(255,255,255,.15);
+  transition:filter .15s,box-shadow .15s;
+}
+.game-card:hover .play-btn{filter:brightness(1.1);}
+
+/* ── Section divider ── */
+.section-label{
+  width:100%;max-width:480px;
+  font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;
+  color:var(--muted);margin-top:24px;margin-bottom:4px;padding:0 4px;
+}
+
+/* ── Control panel button ── */
+.ctrl-btn{
+  position:fixed;top:14px;right:14px;z-index:200;
+  background:var(--s2);backdrop-filter:blur(var(--blur));
+  border:1px solid var(--b);border-radius:50%;
+  width:40px;height:40px;font-size:18px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:var(--shadow-sm);
+  transition:background .15s,border-color .15s;
+}
+.ctrl-btn:hover{background:var(--s3);border-color:var(--b2);}
+
+/* ── Modal overlay ── */
+.ctrl-overlay{display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.65);backdrop-filter:blur(8px);align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto;}
+.ctrl-overlay.open{display:flex;}
+.ctrl-panel{
+  background:rgba(12,12,28,.92);
+  backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);
+  border:1px solid var(--b2);
+  border-radius:var(--r);
+  width:100%;max-width:480px;
+  box-shadow:0 24px 64px rgba(0,0,0,.6);
+  overflow:hidden;margin:auto;
+}
+.ctrl-header{
+  background:var(--s2);border-bottom:1px solid var(--b);
+  padding:14px 16px;display:flex;align-items:center;justify-content:space-between;
+}
+.ctrl-header h2{font-size:16px;font-weight:700;color:var(--text);}
+.ctrl-close{background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;line-height:1;padding:0 4px;transition:color .15s;}
+.ctrl-close:hover{color:var(--text);}
+.ctrl-body{padding:14px;}
+.ctrl-status{font-size:12px;font-weight:600;margin-bottom:12px;color:var(--muted);}
+.ctrl-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
+.ctrl-actions button{
+  font-family:'Inter',sans-serif;font-size:12px;font-weight:700;
+  border:1px solid var(--b);border-radius:8px;padding:7px 12px;cursor:pointer;
+  backdrop-filter:blur(8px);transition:filter .15s;
+}
+.cb-all-btn{background:var(--s2);color:var(--dim);}
+.del-sel-btn{background:rgba(255,107,107,.18);color:var(--red);border-color:rgba(255,107,107,.25);}
+.del-old-btn{background:rgba(251,191,36,.15);color:var(--gold);border-color:rgba(251,191,36,.25);}
+.refresh-btn{background:rgba(74,222,128,.15);color:var(--green);border-color:rgba(74,222,128,.25);}
+.ctrl-room-list{display:flex;flex-direction:column;gap:6px;max-height:52vh;overflow-y:auto;}
+.ctrl-room{
+  background:var(--s1);border:1px solid var(--b);
+  border-radius:var(--r-sm);padding:10px 12px;
+  display:flex;align-items:center;gap:10px;cursor:pointer;
+  transition:background .15s;
+}
+.ctrl-room:hover{background:var(--s2);}
+.ctrl-room input[type=checkbox]{width:16px;height:16px;cursor:pointer;flex-shrink:0;accent-color:var(--red);}
+.ctrl-room-code{font-size:16px;font-weight:800;letter-spacing:2px;flex-shrink:0;color:var(--text);}
+.ctrl-room-info{flex:1;font-size:12px;font-weight:500;color:var(--dim);line-height:1.5;}
+.ctrl-phase{display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;padding:2px 7px;border-radius:20px;margin-left:6px;}
+.phase-lobby{background:rgba(74,222,128,.2);color:var(--green);}
+.phase-active{background:rgba(96,165,250,.2);color:var(--blue);}
+.phase-over{background:rgba(255,255,255,.1);color:var(--muted);}
+.ctrl-empty{text-align:center;padding:32px;color:var(--muted);font-size:14px;}
+.ctrl-log{margin-top:10px;font-size:12px;font-weight:600;color:var(--green);min-height:18px;}
+
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms !important;transition-duration:.01ms !important;}}
 </style>
 </head>
 <body>
-<div class="crown">🎮</div>
-<h1>Game Zone</h1>
-<div class="sub">Select a game to play</div>
 
+<div class="hero">
+  <div class="hero-icon">🎮</div>
+  <h1>Game Zone</h1>
+  <div class="sub">Pick a game and play</div>
+</div>
+
+<div class="section-label">🌐 Online Multiplayer</div>
 <div class="grid">
 
-  <!-- Raja Rani -->
   <a class="game-card" href="raja-rani.html">
     <div class="card-top">
       <div class="card-icon">👑</div>
@@ -88,7 +204,6 @@ h1{text-align:center;font-weight:800;font-size:30px;color:var(--red);text-shadow
     <div class="play-btn">▶ Play now</div>
   </a>
 
-  <!-- Bluff -->
   <a class="game-card" href="bluff.html">
     <div class="card-top">
       <div class="card-icon">🃏</div>
@@ -106,7 +221,6 @@ h1{text-align:center;font-weight:800;font-size:30px;color:var(--red);text-shadow
     <div class="play-btn">▶ Play now</div>
   </a>
 
-  <!-- Sus! -->
   <a class="game-card" href="sus.html">
     <div class="card-top">
       <div class="card-icon">🕵️</div>
@@ -124,10 +238,9 @@ h1{text-align:center;font-weight:800;font-size:30px;color:var(--red);text-shadow
     <div class="play-btn">▶ Play now</div>
   </a>
 
-  <!-- UNO -->
   <a class="game-card" href="uno.html">
     <div class="card-top">
-      <div class="card-icon">🃏</div>
+      <div class="card-icon">🎴</div>
       <div class="card-info">
         <div class="card-title">UNO</div>
         <div class="card-title-ta">கார்டு கட்ட வா!</div>
@@ -142,7 +255,6 @@ h1{text-align:center;font-weight:800;font-size:30px;color:var(--red);text-shadow
     <div class="play-btn">▶ Play now</div>
   </a>
 
-  <!-- Ludo -->
   <a class="game-card" href="ludo.html">
     <div class="card-top">
       <div class="card-icon">🎲</div>
@@ -160,7 +272,6 @@ h1{text-align:center;font-weight:800;font-size:30px;color:var(--red);text-shadow
     <div class="play-btn">▶ Play now</div>
   </a>
 
-  <!-- Tambola -->
   <a class="game-card" href="tambola.html">
     <div class="card-top">
       <div class="card-icon">🎟️</div>
@@ -178,54 +289,19 @@ h1{text-align:center;font-weight:800;font-size:30px;color:var(--red);text-shadow
     <div class="play-btn">▶ Play now</div>
   </a>
 
-  <a class="game-card" href="rpg-quest.html">
+  <a class="game-card" href="snakes.html">
     <div class="card-top">
-      <div class="card-icon">⚔️</div>
+      <div class="card-icon">🐍</div>
       <div class="card-info">
-        <div class="card-title">Dragon's Quest</div>
-        <div class="card-title-ta">டிராகன் வேட்டை</div>
+        <div class="card-title">Snakes &amp; Ladders</div>
+        <div class="card-title-ta">பாம்பு மற்றும் ஏணி</div>
       </div>
     </div>
-    <div class="card-desc">Explore a dark dungeon, battle goblins and slimes, and slay the Dragon Boss in this atmospheric RPG!</div>
+    <div class="card-desc">Race to square 100 — climb ladders to leap ahead, but watch out for snakes that send you sliding back!</div>
     <div class="card-tags">
-      <span class="tag green">Offline</span>
-      <span class="tag">1 player</span>
-      <span class="tag">RPG</span>
-    </div>
-    <div class="play-btn">▶ Play now</div>
-  </a>
-
-  <!-- Business -->
-  <a class="game-card" href="rpg-quest.html">
-    <div class="card-top">
-      <div class="card-icon">⚔️</div>
-      <div class="card-info">
-        <div class="card-title">Dragon's Quest</div>
-        <div class="card-title-ta">டிராகன் வேட்டை</div>
-      </div>
-    </div>
-    <div class="card-desc">Explore a dark dungeon, battle goblins and slimes, and slay the Dragon Boss in this atmospheric RPG!</div>
-    <div class="card-tags">
-      <span class="tag green">Offline</span>
-      <span class="tag">1 player</span>
-      <span class="tag">RPG</span>
-    </div>
-    <div class="play-btn">▶ Play now</div>
-  </a>
-
-  <a class="game-card" href="space-blaster.html">
-    <div class="card-top">
-      <div class="card-icon">🚀</div>
-      <div class="card-info">
-        <div class="card-title">Space Blaster</div>
-        <div class="card-title-ta">விண்வெளி போர்</div>
-      </div>
-    </div>
-    <div class="card-desc">Shoot alien invaders, dodge enemy fire, and survive endless waves in this neon arcade shooter!</div>
-    <div class="card-tags">
-      <span class="tag green">Offline</span>
-      <span class="tag">1 player</span>
-      <span class="tag">Arcade</span>
+      <span class="tag green">Online</span>
+      <span class="tag gold">2–4 players</span>
+      <span class="tag">Board</span>
     </div>
     <div class="play-btn">▶ Play now</div>
   </a>
@@ -247,20 +323,58 @@ h1{text-align:center;font-weight:800;font-size:30px;color:var(--red);text-shadow
     <div class="play-btn">▶ Play now</div>
   </a>
 
-  <!-- Snakes & Ladders -->
-  <a class="game-card" href="snakes.html">
+</div>
+
+<div class="section-label" style="margin-top:28px;">🕹️ Single Player</div>
+<div class="grid">
+
+  <a class="game-card" href="tower-defense.html">
     <div class="card-top">
-      <div class="card-icon">🐍</div>
+      <div class="card-icon">🏰</div>
       <div class="card-info">
-        <div class="card-title">Snakes &amp; Ladders</div>
-        <div class="card-title-ta">பாம்பு மற்றும் ஏணி</div>
+        <div class="card-title">Tower Defense</div>
+        <div class="card-title-ta">கோட்டை காவல்</div>
       </div>
     </div>
-    <div class="card-desc">Race to square 100 — climb ladders to leap ahead, but watch out for snakes that send you sliding back!</div>
+    <div class="card-desc">Place arrow, cannon, freeze and laser towers — survive 20 waves of runners, tanks, speeders, healers and bosses!</div>
     <div class="card-tags">
-      <span class="tag green">Online</span>
-      <span class="tag gold">2–4 players</span>
-      <span class="tag">Board</span>
+      <span class="tag blue">Offline</span>
+      <span class="tag">1 player</span>
+      <span class="tag">Strategy</span>
+    </div>
+    <div class="play-btn">▶ Play now</div>
+  </a>
+
+  <a class="game-card" href="rpg-quest.html">
+    <div class="card-top">
+      <div class="card-icon">⚔️</div>
+      <div class="card-info">
+        <div class="card-title">Dragon's Quest</div>
+        <div class="card-title-ta">டிராகன் வேட்டை</div>
+      </div>
+    </div>
+    <div class="card-desc">Explore a dark dungeon, battle goblins and slimes, and slay the Dragon Boss in this atmospheric RPG!</div>
+    <div class="card-tags">
+      <span class="tag blue">Offline</span>
+      <span class="tag">1 player</span>
+      <span class="tag">RPG</span>
+    </div>
+    <div class="play-btn">▶ Play now</div>
+  </a>
+
+  <a class="game-card" href="space-blaster.html">
+    <div class="card-top">
+      <div class="card-icon">🚀</div>
+      <div class="card-info">
+        <div class="card-title">Space Blaster</div>
+        <div class="card-title-ta">விண்வெளி போர்</div>
+      </div>
+    </div>
+    <div class="card-desc">Shoot alien invaders, dodge enemy fire, and survive endless waves in this neon arcade shooter!</div>
+    <div class="card-tags">
+      <span class="tag blue">Offline</span>
+      <span class="tag">1 player</span>
+      <span class="tag">Arcade</span>
     </div>
     <div class="play-btn">▶ Play now</div>
   </a>
@@ -293,7 +407,6 @@ h1{text-align:center;font-weight:800;font-size:30px;color:var(--red);text-shadow
   </div>
 </div>
 
-<!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script>
@@ -347,7 +460,6 @@ async function loadRooms(){
     const codes=Object.keys(_rooms);
     status.textContent=codes.length+' room'+(codes.length===1?'':'s')+' in Firebase';
     if(!codes.length){list.innerHTML='<div class="ctrl-empty">No rooms found ✨</div>';return;}
-    // Sort newest first
     codes.sort((a,b)=>{
       const ta=(_rooms[a]&&_rooms[a].state&&_rooms[a].state.ts)||0;
       const tb=(_rooms[b]&&_rooms[b].state&&_rooms[b].state.ts)||0;
@@ -387,11 +499,7 @@ async function deleteSelected(){
   const sel=[...document.querySelectorAll('#ctrl-room-list input[type=checkbox]:checked')].map(c=>c.value);
   if(!sel.length){_log('Select rooms first.');return;}
   if(!confirm('Delete '+sel.length+' room(s)?'))return;
-  const log=document.getElementById('ctrl-log');
-  log.textContent='Deleting…';
-  for(const code of sel){
-    await _db.ref('rooms/'+code).remove();
-  }
+  for(const code of sel){await _db.ref('rooms/'+code).remove();}
   _log('Deleted: '+sel.join(', '));
   await loadRooms();
 }
@@ -404,9 +512,7 @@ async function deleteOld(){
   }).map(([code])=>code);
   if(!old.length){_log('No rooms older than 24h found.');return;}
   if(!confirm('Delete '+old.length+' room(s) older than 24h?\n'+old.join(', ')))return;
-  for(const code of old){
-    await _db.ref('rooms/'+code).remove();
-  }
+  for(const code of old){await _db.ref('rooms/'+code).remove();}
   _log('Deleted: '+old.join(', '));
   await loadRooms();
 }
