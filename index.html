@@ -16,6 +16,7 @@
   --dim:rgba(232,232,255,.6);
   --muted:rgba(232,232,255,.35);
   --nav-h:58px;
+  --sub-h:42px;
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{scroll-behavior:smooth}
@@ -80,6 +81,37 @@ nav{
   transition:background .15s,transform .15s;
 }
 .fab:hover{background:rgba(255,255,255,.12);transform:rotate(20deg)}
+
+/* ── Subbar ── */
+.subbar{
+  position:fixed;top:var(--nav-h);left:0;right:0;z-index:999;
+  height:var(--sub-h);
+  background:rgba(9,9,26,.97);
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  border-bottom:1px solid rgba(255,255,255,.05);
+  display:none;align-items:center;
+  padding:0 16px;gap:6px;
+  overflow-x:auto;scrollbar-width:none;
+}
+.subbar::-webkit-scrollbar{display:none}
+.subbar.visible{display:flex}
+.sub-group{display:none;align-items:center;gap:6px}
+.sub-group.visible{display:flex}
+.stab{
+  font-family:'Chakra Petch',sans-serif;font-size:11px;font-weight:600;
+  letter-spacing:.5px;text-transform:uppercase;
+  padding:5px 12px;border-radius:16px;border:1px solid var(--border);
+  background:transparent;color:var(--muted);cursor:pointer;
+  transition:background .15s,color .15s,border-color .15s;
+  white-space:nowrap;flex-shrink:0;
+}
+.stab:hover{background:rgba(255,255,255,.06);color:var(--dim)}
+.stab.active{
+  background:rgba(167,139,250,.18);
+  border-color:rgba(167,139,250,.5);
+  color:#c4b5fd;
+}
+body.has-subbar{padding-top:calc(var(--nav-h) + var(--sub-h))}
 
 /* ── Hero ── */
 .hero{
@@ -187,6 +219,14 @@ nav{
 }
 .cat-mp{background:rgba(239,68,68,.75);color:#fff}
 .cat-sp{background:rgba(139,92,246,.75);color:#fff}
+.cat-board{background:rgba(34,197,94,.8);color:#fff}
+.cat-card{background:rgba(249,115,22,.8);color:#fff}
+.cat-party{background:rgba(139,92,246,.8);color:#fff}
+.cat-action{background:rgba(239,68,68,.8);color:#fff}
+.cat-arcade{background:rgba(6,182,212,.8);color:#fff}
+.cat-racing{background:rgba(245,158,11,.8);color:#fff}
+.cat-strategy{background:rgba(168,85,247,.8);color:#fff}
+.cat-rpg{background:rgba(236,72,153,.8);color:#fff}
 
 .card-body{padding:10px 12px 12px;flex:1;display:flex;flex-direction:column;gap:6px}
 .card-name{
@@ -272,19 +312,37 @@ nav{
   <div class="nav-logo">GAME<span>ZONE</span></div>
   <div class="filter-tabs">
     <button class="ftab active" data-f="all">All Games</button>
-    <button class="ftab" data-f="multi">🌐 Multiplayer</button>
-    <button class="ftab" data-f="solo">🕹️ Single Player</button>
+    <button class="ftab" data-f="online">🌐 Online</button>
+    <button class="ftab" data-f="offline">🕹️ Offline</button>
   </div>
   <button class="fab" onclick="openCtrl()" title="Room Manager" aria-label="Firebase room manager">⚙️</button>
 </nav>
+
+<!-- ── Sub-filter bar ── -->
+<div class="subbar" id="subbar">
+  <div class="sub-group" id="sub-online">
+    <button class="stab active" data-s="">All</button>
+    <button class="stab" data-s="board">🎲 Board</button>
+    <button class="stab" data-s="card">🃏 Card</button>
+    <button class="stab" data-s="party">🎭 Party</button>
+  </div>
+  <div class="sub-group" id="sub-offline">
+    <button class="stab active" data-s="">All</button>
+    <button class="stab" data-s="action">⚔️ Action</button>
+    <button class="stab" data-s="arcade">🕹️ Arcade</button>
+    <button class="stab" data-s="racing">🏎️ Racing</button>
+    <button class="stab" data-s="strategy">🧠 Strategy</button>
+    <button class="stab" data-s="rpg">🐉 RPG</button>
+  </div>
+</div>
 
 <!-- ── Hero ── -->
 <div class="hero">
   <h1><span class="hero-glow" data-text="GAME ZONE">GAME ZONE</span></h1>
   <p class="hero-sub">No install · No login · Play instantly</p>
   <div class="hero-chips">
-    <span class="chip mp">8 Multiplayer</span>
-    <span class="chip sp">6 Single Player</span>
+    <span class="chip mp">8 Online</span>
+    <span class="chip sp">7 Offline</span>
     <span class="chip free">100% Free</span>
   </div>
 </div>
@@ -292,13 +350,13 @@ nav{
 <!-- ── All Games Grid ── -->
 <div class="section">
   <div class="section-head">
-    <h2>🌐 Multiplayer</h2>
+    <h2 id="head-online">🌐 Online Multiplayer</h2>
     <div class="section-line"></div>
   </div>
   <div class="game-grid" id="grid-multi">
 
-    <a class="card" href="raja-rani.html" data-cat="multi" style="--ac:#f59e0b" aria-label="Raja Rani">
-      <div class="card-thumb"><canvas id="th-raja" width="320" height="180"></canvas><span class="card-cat cat-mp">Online</span></div>
+    <a class="card" href="raja-rani.html" data-mode="online" data-subcat="card" style="--ac:#f59e0b" aria-label="Raja Rani">
+      <div class="card-thumb"><canvas id="th-raja" width="320" height="180"></canvas><span class="card-cat cat-card">Card</span></div>
       <div class="card-body">
         <div class="card-name">Raja Rani</div>
         <div class="card-ta">ராஜா ராணி</div>
@@ -307,8 +365,8 @@ nav{
       </div>
     </a>
 
-    <a class="card" href="bluff.html" data-cat="multi" style="--ac:#ef4444" aria-label="Bluff">
-      <div class="card-thumb"><canvas id="th-bluff" width="320" height="180"></canvas><span class="card-cat cat-mp">Online</span></div>
+    <a class="card" href="bluff.html" data-mode="online" data-subcat="card" style="--ac:#ef4444" aria-label="Bluff">
+      <div class="card-thumb"><canvas id="th-bluff" width="320" height="180"></canvas><span class="card-cat cat-card">Card</span></div>
       <div class="card-body">
         <div class="card-name">Bluff</div>
         <div class="card-ta">பொய் சொல்லு!</div>
@@ -317,8 +375,8 @@ nav{
       </div>
     </a>
 
-    <a class="card" href="sus.html" data-cat="multi" style="--ac:#8b5cf6" aria-label="Sus">
-      <div class="card-thumb"><canvas id="th-sus" width="320" height="180"></canvas><span class="card-cat cat-mp">Online</span></div>
+    <a class="card" href="sus.html" data-mode="online" data-subcat="party" style="--ac:#8b5cf6" aria-label="Sus">
+      <div class="card-thumb"><canvas id="th-sus" width="320" height="180"></canvas><span class="card-cat cat-party">Party</span></div>
       <div class="card-body">
         <div class="card-name">Sus!</div>
         <div class="card-ta">யார் ஒற்றன்?</div>
@@ -327,8 +385,8 @@ nav{
       </div>
     </a>
 
-    <a class="card" href="uno.html" data-cat="multi" style="--ac:#f97316" aria-label="UNO">
-      <div class="card-thumb"><canvas id="th-uno" width="320" height="180"></canvas><span class="card-cat cat-mp">Online</span></div>
+    <a class="card" href="uno.html" data-mode="online" data-subcat="card" style="--ac:#f97316" aria-label="UNO">
+      <div class="card-thumb"><canvas id="th-uno" width="320" height="180"></canvas><span class="card-cat cat-card">Card</span></div>
       <div class="card-body">
         <div class="card-name">UNO</div>
         <div class="card-ta">கார்டு கட்ட வா!</div>
@@ -337,8 +395,8 @@ nav{
       </div>
     </a>
 
-    <a class="card" href="ludo.html" data-cat="multi" style="--ac:#22c55e" aria-label="Ludo">
-      <div class="card-thumb"><canvas id="th-ludo" width="320" height="180"></canvas><span class="card-cat cat-mp">Online</span></div>
+    <a class="card" href="ludo.html" data-mode="online" data-subcat="board" style="--ac:#22c55e" aria-label="Ludo">
+      <div class="card-thumb"><canvas id="th-ludo" width="320" height="180"></canvas><span class="card-cat cat-board">Board</span></div>
       <div class="card-body">
         <div class="card-name">Ludo</div>
         <div class="card-ta">பார்சி விளையாட்டு</div>
@@ -347,8 +405,8 @@ nav{
       </div>
     </a>
 
-    <a class="card" href="tambola.html" data-cat="multi" style="--ac:#ec4899" aria-label="Tambola">
-      <div class="card-thumb"><canvas id="th-tambola" width="320" height="180"></canvas><span class="card-cat cat-mp">Online</span></div>
+    <a class="card" href="tambola.html" data-mode="online" data-subcat="board" style="--ac:#ec4899" aria-label="Tambola">
+      <div class="card-thumb"><canvas id="th-tambola" width="320" height="180"></canvas><span class="card-cat cat-board">Board</span></div>
       <div class="card-body">
         <div class="card-name">Tambola</div>
         <div class="card-ta">தம்போலா / ஹவுஸி</div>
@@ -357,8 +415,8 @@ nav{
       </div>
     </a>
 
-    <a class="card" href="snakes.html" data-cat="multi" style="--ac:#84cc16" aria-label="Snakes and Ladders">
-      <div class="card-thumb"><canvas id="th-snakes" width="320" height="180"></canvas><span class="card-cat cat-mp">Online</span></div>
+    <a class="card" href="snakes.html" data-mode="online" data-subcat="board" style="--ac:#84cc16" aria-label="Snakes and Ladders">
+      <div class="card-thumb"><canvas id="th-snakes" width="320" height="180"></canvas><span class="card-cat cat-board">Board</span></div>
       <div class="card-body">
         <div class="card-name">Snakes &amp; Ladders</div>
         <div class="card-ta">பாம்பு மற்றும் ஏணி</div>
@@ -367,8 +425,8 @@ nav{
       </div>
     </a>
 
-    <a class="card" href="business.html" data-cat="multi" style="--ac:#3b82f6" aria-label="Business">
-      <div class="card-thumb"><canvas id="th-biz" width="320" height="180"></canvas><span class="card-cat cat-mp">Online</span></div>
+    <a class="card" href="business.html" data-mode="online" data-subcat="board" style="--ac:#3b82f6" aria-label="Business">
+      <div class="card-thumb"><canvas id="th-biz" width="320" height="180"></canvas><span class="card-cat cat-board">Board</span></div>
       <div class="card-body">
         <div class="card-name">Business</div>
         <div class="card-ta">வியாபாரம்</div>
@@ -380,13 +438,13 @@ nav{
   </div>
 
   <div class="section-head" style="margin-top:40px">
-    <h2>🕹️ Single Player</h2>
+    <h2 id="head-offline">🕹️ Offline Games</h2>
     <div class="section-line"></div>
   </div>
   <div class="game-grid" id="grid-solo">
 
-    <a class="card" href="surf.html" data-cat="solo" style="--ac:#06b6d4" aria-label="Edge Surf">
-      <div class="card-thumb"><canvas id="th-surf" width="320" height="180"></canvas><span class="card-cat cat-sp">Offline</span></div>
+    <a class="card" href="surf.html" data-mode="offline" data-subcat="arcade" style="--ac:#06b6d4" aria-label="Edge Surf">
+      <div class="card-thumb"><canvas id="th-surf" width="320" height="180"></canvas><span class="card-cat cat-arcade">Arcade</span></div>
       <div class="card-body">
         <div class="card-name">Edge Surf</div>
         <div class="card-ta">அலை சர்ஃபிங்</div>
@@ -395,8 +453,8 @@ nav{
       </div>
     </a>
 
-    <a class="card" href="contra-3d.html" data-cat="solo" style="--ac:#10b981" aria-label="Contra 3D">
-      <div class="card-thumb"><canvas id="th-c3d" width="320" height="180"></canvas><span class="card-cat cat-sp">Offline</span></div>
+    <a class="card" href="contra-3d.html" data-mode="offline" data-subcat="action" style="--ac:#10b981" aria-label="Contra 3D">
+      <div class="card-thumb"><canvas id="th-c3d" width="320" height="180"></canvas><span class="card-cat cat-action">Action</span></div>
       <div class="card-body">
         <div class="card-name">Contra 3D</div>
         <div class="card-ta">கான்ட்ரா 3D யுத்தம்</div>
@@ -405,8 +463,8 @@ nav{
       </div>
     </a>
 
-    <a class="card" href="contra-strike.html" data-cat="solo" style="--ac:#f97316" aria-label="Contra Strike">
-      <div class="card-thumb"><canvas id="th-cs" width="320" height="180"></canvas><span class="card-cat cat-sp">Offline</span></div>
+    <a class="card" href="contra-strike.html" data-mode="offline" data-subcat="action" style="--ac:#f97316" aria-label="Contra Strike">
+      <div class="card-thumb"><canvas id="th-cs" width="320" height="180"></canvas><span class="card-cat cat-action">Action</span></div>
       <div class="card-body">
         <div class="card-name">Contra Strike</div>
         <div class="card-ta">கான்ட்ரா யுத்தம்</div>
@@ -415,8 +473,8 @@ nav{
       </div>
     </a>
 
-    <a class="card" href="tower-defense.html" data-cat="solo" style="--ac:#a855f7" aria-label="Tower Defense">
-      <div class="card-thumb"><canvas id="th-td" width="320" height="180"></canvas><span class="card-cat cat-sp">Offline</span></div>
+    <a class="card" href="tower-defense.html" data-mode="offline" data-subcat="strategy" style="--ac:#a855f7" aria-label="Tower Defense">
+      <div class="card-thumb"><canvas id="th-td" width="320" height="180"></canvas><span class="card-cat cat-strategy">Strategy</span></div>
       <div class="card-body">
         <div class="card-name">Tower Defense</div>
         <div class="card-ta">கோட்டை காவல்</div>
@@ -425,8 +483,8 @@ nav{
       </div>
     </a>
 
-    <a class="card" href="rpg-quest.html" data-cat="solo" style="--ac:#ef4444" aria-label="Dragon's Quest">
-      <div class="card-thumb"><canvas id="th-rpg" width="320" height="180"></canvas><span class="card-cat cat-sp">Offline</span></div>
+    <a class="card" href="rpg-quest.html" data-mode="offline" data-subcat="rpg" style="--ac:#ef4444" aria-label="Dragon's Quest">
+      <div class="card-thumb"><canvas id="th-rpg" width="320" height="180"></canvas><span class="card-cat cat-rpg">RPG</span></div>
       <div class="card-body">
         <div class="card-name">Dragon's Quest</div>
         <div class="card-ta">டிராகன் வேட்டை</div>
@@ -435,8 +493,8 @@ nav{
       </div>
     </a>
 
-    <a class="card" href="space-blaster.html" data-cat="solo" style="--ac:#6366f1" aria-label="Space Blaster">
-      <div class="card-thumb"><canvas id="th-space" width="320" height="180"></canvas><span class="card-cat cat-sp">Offline</span></div>
+    <a class="card" href="space-blaster.html" data-mode="offline" data-subcat="arcade" style="--ac:#6366f1" aria-label="Space Blaster">
+      <div class="card-thumb"><canvas id="th-space" width="320" height="180"></canvas><span class="card-cat cat-arcade">Arcade</span></div>
       <div class="card-body">
         <div class="card-name">Space Blaster</div>
         <div class="card-ta">விண்வெளி போர்</div>
@@ -445,8 +503,8 @@ nav{
       </div>
     </a>
 
-    <a class="card" href="highway-racer-3d.html" data-cat="solo" style="--ac:#f97316" aria-label="Highway Racer 3D">
-      <div class="card-thumb"><canvas id="th-hr3d" width="320" height="180"></canvas><span class="card-cat cat-sp">Online</span></div>
+    <a class="card" href="highway-racer-3d.html" data-mode="offline" data-subcat="racing" style="--ac:#f97316" aria-label="Highway Racer 3D">
+      <div class="card-thumb"><canvas id="th-hr3d" width="320" height="180"></canvas><span class="card-cat cat-racing">Racing</span></div>
       <div class="card-body">
         <div class="card-name">Highway Racer 3D</div>
         <div class="card-ta">நெடுஞ்சாலை பந்தயம்</div>
@@ -481,19 +539,66 @@ nav{
 
 <script>
 // ── Filter ───────────────────────────────────────────────────────────────────
-const tabs  = document.querySelectorAll('.ftab');
-const cards = document.querySelectorAll('.card');
-const grids = {multi: document.getElementById('grid-multi'), solo: document.getElementById('grid-solo')};
+const mainTabs = document.querySelectorAll('.ftab');
+const allCards = document.querySelectorAll('.card');
+const subbar   = document.getElementById('subbar');
+const subOnline  = document.getElementById('sub-online');
+const subOffline = document.getElementById('sub-offline');
+const gridOnline = document.getElementById('grid-multi');
+const gridOffline= document.getElementById('grid-solo');
+const headOnline = document.getElementById('head-online');
+const headOffline= document.getElementById('head-offline');
+let curMode = 'all', curSub = '';
 
-tabs.forEach(tab => tab.addEventListener('click', () => {
-  tabs.forEach(t => t.classList.remove('active'));
+function applyFilter(){
+  allCards.forEach(c => {
+    const mOk = curMode === 'all' || c.dataset.mode === curMode;
+    const sOk = !curSub || c.dataset.subcat === curSub;
+    c.classList.toggle('hidden', !mOk || !sOk);
+  });
+  const showOnline  = curMode !== 'offline';
+  const showOffline = curMode !== 'online';
+  headOnline.parentElement.style.display  = showOnline  ? '' : 'none';
+  gridOnline.style.display  = showOnline  ? '' : 'none';
+  headOffline.parentElement.style.display = showOffline ? '' : 'none';
+  gridOffline.style.display = showOffline ? '' : 'none';
+}
+
+mainTabs.forEach(tab => tab.addEventListener('click', () => {
+  mainTabs.forEach(t => t.classList.remove('active'));
   tab.classList.add('active');
-  const f = tab.dataset.f;
-  cards.forEach(c => c.classList.toggle('hidden', f !== 'all' && c.dataset.cat !== f));
-  // show/hide section heads
-  if (f === 'multi') { grids.multi.previousElementSibling.style.display=''; grids.multi.style.display=''; grids.solo.previousElementSibling.style.display='none'; grids.solo.style.display='none'; }
-  else if (f === 'solo') { grids.multi.previousElementSibling.style.display='none'; grids.multi.style.display='none'; grids.solo.previousElementSibling.style.display=''; grids.solo.style.display=''; }
-  else { grids.multi.previousElementSibling.style.display=''; grids.multi.style.display=''; grids.solo.previousElementSibling.style.display=''; grids.solo.style.display=''; }
+  curMode = tab.dataset.f;
+  curSub  = '';
+
+  // Reset sub-tabs
+  document.querySelectorAll('.stab').forEach(s => s.classList.remove('active'));
+
+  if (curMode === 'online') {
+    subbar.classList.add('visible');
+    subOnline.classList.add('visible');
+    subOffline.classList.remove('visible');
+    subOnline.querySelector('.stab').classList.add('active');
+    document.body.classList.add('has-subbar');
+  } else if (curMode === 'offline') {
+    subbar.classList.add('visible');
+    subOnline.classList.remove('visible');
+    subOffline.classList.add('visible');
+    subOffline.querySelector('.stab').classList.add('active');
+    document.body.classList.add('has-subbar');
+  } else {
+    subbar.classList.remove('visible');
+    subOnline.classList.remove('visible');
+    subOffline.classList.remove('visible');
+    document.body.classList.remove('has-subbar');
+  }
+  applyFilter();
+}));
+
+document.querySelectorAll('.stab').forEach(stab => stab.addEventListener('click', () => {
+  stab.parentElement.querySelectorAll('.stab').forEach(s => s.classList.remove('active'));
+  stab.classList.add('active');
+  curSub = stab.dataset.s;
+  applyFilter();
 }));
 
 // ── Thumbnail drawing ────────────────────────────────────────────────────────
