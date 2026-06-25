@@ -445,6 +445,16 @@ nav{
       </div>
     </a>
 
+    <a class="card" href="highway-racer-3d.html" data-cat="solo" style="--ac:#f97316" aria-label="Highway Racer 3D">
+      <div class="card-thumb"><canvas id="th-hr3d" width="320" height="180"></canvas><span class="card-cat cat-sp">Online</span></div>
+      <div class="card-body">
+        <div class="card-name">Highway Racer 3D</div>
+        <div class="card-ta">நெடுஞ்சாலை பந்தயம்</div>
+        <div class="card-tags"><span class="tag">Racing</span><span class="tag">3D</span></div>
+        <div class="card-play">▶ Play Now</div>
+      </div>
+    </a>
+
   </div>
 </div>
 
@@ -922,6 +932,53 @@ function text(ctx,str,x,y,size,col,font){
   c.beginPath(); c.ellipse(sx,sy+14,7,12,0,0,Math.PI*2); c.fill(); noglow(c);
   c.fillStyle=grad(c,0,c.h*.55,0,c.h,'transparent','rgba(0,0,16,.9)'); c.fillRect(0,c.h*.55,c.w,c.h*.45);
   glow(c,'#6366f1',6); text(c,'SPACE BLASTER',c.w/2,c.h-.12*c.h,12,'#c7d2fe'); noglow(c);
+})();
+
+// Highway Racer 3D — night highway + speed lines
+(function(){
+  const c=th('th-hr3d'); if(!c)return;
+  c.fillStyle=grad(c,0,0,0,c.h,'#0a0a0a','#1a0a00'); c.fillRect(0,0,c.w,c.h);
+  const sg=rgrad(c,c.w/2,0,0,c.h*.6,'rgba(255,100,0,.12)','transparent');
+  c.fillStyle=sg; c.fillRect(0,0,c.w,c.h);
+  // road
+  c.fillStyle=grad(c,0,c.h*.45,0,c.h,'#1c1c1c','#111');
+  c.beginPath(); c.moveTo(c.w*.2,c.h*.45); c.lineTo(c.w*.8,c.h*.45); c.lineTo(c.w,c.h); c.lineTo(0,c.h); c.closePath(); c.fill();
+  // center dashes
+  c.strokeStyle='rgba(255,200,0,.7)'; c.lineWidth=2;
+  [[c.w*.5,c.h*.47,c.w*.5,c.h*.57],[c.w*.5,c.h*.63,c.w*.5,c.h*.72],[c.w*.5,c.h*.78,c.w*.5,c.h*.87]].forEach(([x1,y1,x2,y2])=>{
+    c.beginPath(); c.moveTo(x1,y1); c.lineTo(x2,y2); c.stroke();
+  });
+  // lane markings
+  c.strokeStyle='rgba(255,255,255,.22)'; c.lineWidth=1.5; c.setLineDash([14,10]);
+  [c.w*.35,c.w*.65].forEach(lx=>{
+    c.beginPath(); c.moveTo(c.w*.5+(lx-c.w*.5)*.3,c.h*.48); c.lineTo(lx,c.h); c.stroke();
+  });
+  c.setLineDash([]);
+  // speed blur lines
+  glow(c,'#f97316',8);
+  for(let i=0;i<8;i++){
+    const y=c.h*.08+i*(c.h*.09), a=.12+i*.04;
+    c.strokeStyle=`rgba(255,140,0,${a})`; c.lineWidth=1;
+    c.beginPath(); c.moveTo(0,y); c.lineTo(c.w*.22,y); c.stroke();
+    c.beginPath(); c.moveTo(c.w*.78,y); c.lineTo(c.w,y); c.stroke();
+  }
+  noglow(c);
+  // player car
+  const cx=c.w/2, cy=c.h*.72;
+  glow(c,'#f97316',20); c.fillStyle='#ea580c';
+  c.beginPath(); c.roundRect(cx-18,cy-28,36,52,5); c.fill();
+  c.fillStyle='#fb923c'; c.beginPath(); c.roundRect(cx-13,cy-22,26,22,3); c.fill();
+  glow(c,'#fef3c7',12); c.fillStyle='#fff8e7';
+  c.beginPath(); c.ellipse(cx-10,cy+20,5,3,0,0,Math.PI*2); c.fill();
+  c.beginPath(); c.ellipse(cx+10,cy+20,5,3,0,0,Math.PI*2); c.fill();
+  noglow(c);
+  // rival car
+  glow(c,'#3b82f6',12); c.fillStyle='#1d4ed8';
+  c.beginPath(); c.roundRect(cx+45,cy-52,30,44,4); c.fill();
+  c.fillStyle='#60a5fa'; c.beginPath(); c.roundRect(cx+49,cy-46,22,18,3); c.fill();
+  noglow(c);
+  c.fillStyle=grad(c,0,c.h*.8,0,c.h,'transparent','rgba(0,0,0,.6)'); c.fillRect(0,c.h*.8,c.w,c.h*.2);
+  glow(c,'#f97316',8); text(c,'HIGHWAY RACER 3D',c.w/2,c.h-.12*c.h,11,'#fed7aa'); noglow(c);
 })();
 </script>
 
