@@ -3,488 +3,563 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>🎮 Game Zone</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<title>Game Zone</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#08081a;
-  --s1:rgba(255,255,255,.07);
-  --s2:rgba(255,255,255,.10);
-  --s3:rgba(255,255,255,.16);
-  --b:rgba(255,255,255,.11);
-  --b2:rgba(255,255,255,.22);
-  --text:rgba(255,255,255,.93);
-  --dim:rgba(255,255,255,.55);
-  --muted:rgba(255,255,255,.32);
-  --red:#ff6b6b;
-  --red-glow:rgba(255,107,107,.25);
-  --green:#4ade80;
-  --green-glow:rgba(74,222,128,.2);
-  --gold:#fbbf24;
-  --blue:#60a5fa;
-  --blur:20px;
-  --r:16px;--r-sm:12px;
-  --shadow:0 8px 32px rgba(0,0,0,.5),0 2px 8px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.09);
-  --shadow-sm:0 4px 16px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.06);
-  --spring:.2s cubic-bezier(.34,1.56,.64,1);
+  --bg:#07071a;
+  --card:#0e0e28;
+  --card-h:#141432;
+  --border:rgba(255,255,255,.08);
+  --border-h:rgba(255,255,255,.18);
+  --text:#f0f0ff;
+  --dim:rgba(240,240,255,.6);
+  --muted:rgba(240,240,255,.35);
+  --r:14px;
 }
-*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-html,body{min-height:100%;}
-body{
-  font-family:'Inter',system-ui,sans-serif;
-  background:var(--bg);
-  background-image:
-    radial-gradient(ellipse at 15% 0%,rgba(99,50,220,.4) 0%,transparent 55%),
-    radial-gradient(ellipse at 85% 100%,rgba(30,80,200,.3) 0%,transparent 55%),
-    radial-gradient(ellipse at 50% 50%,rgba(20,20,60,.6) 0%,transparent 80%);
-  color:var(--text);
-  display:flex;flex-direction:column;align-items:center;
-  padding:36px 16px 56px;
-}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{min-height:100%;background:var(--bg)}
+body{font-family:'Inter',system-ui,sans-serif;color:var(--text)}
 
-/* ── Header ── */
-.hero{text-align:center;margin-bottom:32px;}
-.hero-icon{font-size:56px;line-height:1;filter:drop-shadow(0 0 20px rgba(99,50,220,.6));}
+/* ── Starfield canvas ── */
+#bg{position:fixed;inset:0;z-index:0;pointer-events:none}
+
+/* ── Layout ── */
+.wrap{position:relative;z-index:1;max-width:960px;margin:0 auto;padding:0 16px 64px}
+
+/* ── Hero ── */
+.hero{
+  text-align:center;
+  padding:56px 16px 40px;
+}
+.hero-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(99,50,220,.22);border:1px solid rgba(140,100,255,.3);
+  border-radius:20px;padding:5px 14px;
+  font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;
+  color:rgba(180,160,255,.85);margin-bottom:18px;
+}
 .hero h1{
-  font-weight:800;font-size:34px;margin-top:10px;
-  background:linear-gradient(135deg,#fff 0%,rgba(200,180,255,.85) 100%);
+  font-size:clamp(40px,9vw,80px);font-weight:900;line-height:1;
+  background:linear-gradient(135deg,#fff 20%,rgba(180,150,255,.9) 60%,rgba(100,120,255,.8) 100%);
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
-  line-height:1.1;
+  margin-bottom:10px;
 }
-.hero .sub{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px;letter-spacing:3px;text-transform:uppercase;}
+.hero-sub{font-size:15px;font-weight:500;color:var(--dim);margin-bottom:24px}
+.hero-stats{
+  display:inline-flex;gap:24px;
+  background:rgba(255,255,255,.04);border:1px solid var(--border);
+  border-radius:40px;padding:10px 24px;
+}
+.hero-stat{text-align:center}
+.hero-stat .n{font-size:20px;font-weight:800;color:var(--text)}
+.hero-stat .l{font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
 
-/* ── Grid ── */
-.grid{width:100%;max-width:480px;display:flex;flex-direction:column;gap:12px;}
+/* ── Section heading ── */
+.section{margin-top:40px}
+.section-head{
+  display:flex;align-items:center;gap:12px;
+  margin-bottom:16px;
+}
+.section-head h2{font-size:13px;font-weight:800;letter-spacing:2.5px;text-transform:uppercase;color:var(--muted)}
+.section-line{flex:1;height:1px;background:var(--border)}
+.section-count{
+  font-size:11px;font-weight:700;letter-spacing:1px;
+  background:rgba(255,255,255,.06);border:1px solid var(--border);
+  border-radius:20px;padding:3px 10px;color:var(--muted);
+}
+
+/* ── Game grid ── */
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr));
+  gap:12px;
+}
 
 /* ── Game card ── */
-.game-card{
-  display:block;text-decoration:none;color:inherit;
-  background:var(--s1);
-  backdrop-filter:blur(var(--blur));-webkit-backdrop-filter:blur(var(--blur));
-  border:1px solid var(--b);
+.card{
+  display:flex;flex-direction:column;
+  text-decoration:none;color:inherit;
+  background:var(--card);
+  border:1px solid var(--border);
   border-radius:var(--r);
-  box-shadow:var(--shadow);
-  padding:18px 16px;
-  cursor:pointer;
-  transition:transform var(--spring),box-shadow .15s,background .15s,border-color .15s;
-  position:relative;overflow:hidden;
+  overflow:hidden;
+  transition:transform .18s cubic-bezier(.34,1.56,.64,1),
+             box-shadow .18s,border-color .18s,background .18s;
+  position:relative;
 }
-.game-card::after{
-  content:"";position:absolute;inset:0;border-radius:var(--r);
-  background:linear-gradient(135deg,rgba(255,255,255,.04) 0%,transparent 60%);
-  pointer-events:none;
+.card::before{
+  content:"";
+  position:absolute;top:0;left:0;right:0;height:3px;
+  background:var(--ac,#8b5cf6);
+  opacity:.85;
 }
-.game-card:hover{background:var(--s2);border-color:var(--b2);}
-.game-card:active{transform:scale(.97);box-shadow:var(--shadow-sm);}
+.card:hover{
+  background:var(--card-h);
+  border-color:var(--border-h);
+  transform:translateY(-3px);
+  box-shadow:0 16px 40px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.06),
+             0 8px 16px color-mix(in srgb, var(--ac,#8b5cf6) 20%, transparent);
+}
+.card:active{transform:scale(.97)}
 
-.card-top{display:flex;align-items:center;gap:14px;}
-.card-icon{font-size:44px;line-height:1;flex-shrink:0;filter:drop-shadow(0 2px 8px rgba(0,0,0,.4));}
-.card-info{flex:1;min-width:0;}
-.card-title{font-size:20px;font-weight:700;line-height:1.1;color:var(--text);}
-.card-title-ta{font-size:13px;font-weight:500;color:var(--dim);margin-top:2px;}
-.card-desc{font-size:13px;font-weight:400;color:var(--dim);margin-top:8px;line-height:1.55;}
-.card-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
-.tag{
-  font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;
-  padding:3px 9px;border-radius:20px;
-  background:var(--s2);color:var(--muted);border:1px solid var(--b);
+.card-body{display:flex;gap:14px;padding:16px 16px 12px}
+.card-icon{
+  width:48px;height:48px;flex-shrink:0;
+  background:color-mix(in srgb,var(--ac,#8b5cf6) 18%,rgba(255,255,255,.04));
+  border:1px solid color-mix(in srgb,var(--ac,#8b5cf6) 35%,transparent);
+  border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:26px;line-height:1;
 }
-.tag.green{background:rgba(74,222,128,.15);color:var(--green);border-color:rgba(74,222,128,.25);}
-.tag.gold{background:rgba(251,191,36,.15);color:var(--gold);border-color:rgba(251,191,36,.25);}
-.tag.blue{background:rgba(96,165,250,.15);color:var(--blue);border-color:rgba(96,165,250,.25);}
+.card-info{flex:1;min-width:0}
+.card-name{font-size:16px;font-weight:800;line-height:1.15;color:var(--text)}
+.card-ta{font-size:11px;font-weight:500;color:var(--muted);margin-top:2px}
+.card-desc{
+  font-size:12px;line-height:1.5;color:var(--dim);
+  padding:0 16px 12px;
+}
+.card-foot{
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  padding:0 16px 14px;
+}
+.badge{
+  font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;
+  padding:3px 8px;border-radius:20px;
+}
+.badge-online{
+  background:color-mix(in srgb,var(--ac,#8b5cf6) 22%,transparent);
+  color:color-mix(in srgb,var(--ac,#8b5cf6) 100%,#fff 20%);
+  border:1px solid color-mix(in srgb,var(--ac,#8b5cf6) 40%,transparent);
+}
+.badge-grey{background:rgba(255,255,255,.07);color:var(--muted);border:1px solid var(--border)}
 
 .play-btn{
-  display:flex;align-items:center;justify-content:center;
-  margin-top:14px;padding:11px 0;
-  background:linear-gradient(180deg,rgba(255,107,107,.82) 0%,rgba(210,55,55,.88) 100%);
-  color:#fff;border-radius:var(--r-sm);
-  font-size:15px;font-weight:700;letter-spacing:.3px;
-  border:1px solid rgba(255,140,140,.2);
-  box-shadow:0 4px 16px var(--red-glow),inset 0 1px 0 rgba(255,255,255,.15);
+  margin:0 12px 12px;padding:10px;
+  background:color-mix(in srgb,var(--ac,#8b5cf6) 85%,#000 15%);
+  border-radius:8px;
+  text-align:center;font-size:13px;font-weight:800;letter-spacing:.4px;color:#fff;
   transition:filter .15s,box-shadow .15s;
+  box-shadow:0 4px 14px color-mix(in srgb,var(--ac,#8b5cf6) 30%,transparent);
 }
-.game-card:hover .play-btn{filter:brightness(1.1);}
+.card:hover .play-btn{filter:brightness(1.12)}
 
-/* ── Section divider ── */
-.section-label{
-  width:100%;max-width:480px;
-  font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;
-  color:var(--muted);margin-top:24px;margin-bottom:4px;padding:0 4px;
-}
-
-/* ── Control panel button ── */
-.ctrl-btn{
-  position:fixed;top:14px;right:14px;z-index:200;
-  background:var(--s2);backdrop-filter:blur(var(--blur));
-  border:1px solid var(--b);border-radius:50%;
-  width:40px;height:40px;font-size:18px;cursor:pointer;
+/* ── Firebase button ── */
+.fab{
+  position:fixed;bottom:20px;right:16px;z-index:200;
+  background:rgba(14,14,40,.9);backdrop-filter:blur(16px);
+  border:1px solid var(--border-h);border-radius:50%;
+  width:44px;height:44px;font-size:18px;cursor:pointer;
   display:flex;align-items:center;justify-content:center;
-  box-shadow:var(--shadow-sm);
-  transition:background .15s,border-color .15s;
+  box-shadow:0 4px 20px rgba(0,0,0,.5);
+  transition:background .15s,transform .15s;
 }
-.ctrl-btn:hover{background:var(--s3);border-color:var(--b2);}
+.fab:hover{background:rgba(25,25,60,.95);transform:scale(1.08)}
 
-/* ── Modal overlay ── */
-.ctrl-overlay{display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.65);backdrop-filter:blur(8px);align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto;}
-.ctrl-overlay.open{display:flex;}
-.ctrl-panel{
-  background:rgba(12,12,28,.92);
-  backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);
-  border:1px solid var(--b2);
-  border-radius:var(--r);
-  width:100%;max-width:480px;
-  box-shadow:0 24px 64px rgba(0,0,0,.6);
+/* ── Modal ── */
+.mo{display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.7);
+  backdrop-filter:blur(10px);align-items:flex-start;justify-content:center;
+  padding:16px;overflow-y:auto}
+.mo.open{display:flex}
+.mo-panel{
+  background:rgba(10,10,28,.95);
+  backdrop-filter:blur(32px);
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:16px;width:100%;max-width:480px;
+  box-shadow:0 24px 64px rgba(0,0,0,.7);
   overflow:hidden;margin:auto;
 }
-.ctrl-header{
-  background:var(--s2);border-bottom:1px solid var(--b);
+.mo-head{
+  background:rgba(255,255,255,.05);border-bottom:1px solid var(--border);
   padding:14px 16px;display:flex;align-items:center;justify-content:space-between;
 }
-.ctrl-header h2{font-size:16px;font-weight:700;color:var(--text);}
-.ctrl-close{background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;line-height:1;padding:0 4px;transition:color .15s;}
-.ctrl-close:hover{color:var(--text);}
-.ctrl-body{padding:14px;}
-.ctrl-status{font-size:12px;font-weight:600;margin-bottom:12px;color:var(--muted);}
-.ctrl-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
-.ctrl-actions button{
+.mo-head h2{font-size:15px;font-weight:700}
+.mo-close{background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;padding:0 4px}
+.mo-close:hover{color:var(--text)}
+.mo-body{padding:14px}
+.mo-status{font-size:12px;font-weight:600;margin-bottom:12px;color:var(--muted)}
+.mo-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.mo-actions button{
   font-family:'Inter',sans-serif;font-size:12px;font-weight:700;
-  border:1px solid var(--b);border-radius:8px;padding:7px 12px;cursor:pointer;
-  backdrop-filter:blur(8px);transition:filter .15s;
+  border:1px solid var(--border);border-radius:8px;padding:7px 12px;cursor:pointer;
 }
-.cb-all-btn{background:var(--s2);color:var(--dim);}
-.del-sel-btn{background:rgba(255,107,107,.18);color:var(--red);border-color:rgba(255,107,107,.25);}
-.del-old-btn{background:rgba(251,191,36,.15);color:var(--gold);border-color:rgba(251,191,36,.25);}
-.refresh-btn{background:rgba(74,222,128,.15);color:var(--green);border-color:rgba(74,222,128,.25);}
-.ctrl-room-list{display:flex;flex-direction:column;gap:6px;max-height:52vh;overflow-y:auto;}
-.ctrl-room{
-  background:var(--s1);border:1px solid var(--b);
-  border-radius:var(--r-sm);padding:10px 12px;
+.b-refresh{background:rgba(74,222,128,.15);color:#4ade80;border-color:rgba(74,222,128,.25)}
+.b-all{background:rgba(255,255,255,.07);color:var(--dim)}
+.b-del{background:rgba(255,107,107,.15);color:#ff6b6b;border-color:rgba(255,107,107,.25)}
+.b-old{background:rgba(251,191,36,.12);color:#fbbf24;border-color:rgba(251,191,36,.25)}
+.room-list{display:flex;flex-direction:column;gap:6px;max-height:52vh;overflow-y:auto}
+.room{
+  background:rgba(255,255,255,.04);border:1px solid var(--border);
+  border-radius:10px;padding:10px 12px;
   display:flex;align-items:center;gap:10px;cursor:pointer;
-  transition:background .15s;
 }
-.ctrl-room:hover{background:var(--s2);}
-.ctrl-room input[type=checkbox]{width:16px;height:16px;cursor:pointer;flex-shrink:0;accent-color:var(--red);}
-.ctrl-room-code{font-size:16px;font-weight:800;letter-spacing:2px;flex-shrink:0;color:var(--text);}
-.ctrl-room-info{flex:1;font-size:12px;font-weight:500;color:var(--dim);line-height:1.5;}
-.ctrl-phase{display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;padding:2px 7px;border-radius:20px;margin-left:6px;}
-.phase-lobby{background:rgba(74,222,128,.2);color:var(--green);}
-.phase-active{background:rgba(96,165,250,.2);color:var(--blue);}
-.phase-over{background:rgba(255,255,255,.1);color:var(--muted);}
-.ctrl-empty{text-align:center;padding:32px;color:var(--muted);font-size:14px;}
-.ctrl-log{margin-top:10px;font-size:12px;font-weight:600;color:var(--green);min-height:18px;}
-
-@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms !important;transition-duration:.01ms !important;}}
+.room:hover{background:rgba(255,255,255,.07)}
+.room input[type=checkbox]{width:16px;height:16px;cursor:pointer;flex-shrink:0;accent-color:#a78bfa}
+.room-code{font-size:15px;font-weight:800;letter-spacing:2px;flex-shrink:0}
+.room-info{flex:1;font-size:12px;font-weight:500;color:var(--dim);line-height:1.5}
+.ph{display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;padding:2px 7px;border-radius:20px;margin-left:6px}
+.ph-lobby{background:rgba(74,222,128,.2);color:#4ade80}
+.ph-active{background:rgba(96,165,250,.2);color:#60a5fa}
+.ph-over{background:rgba(255,255,255,.1);color:var(--muted)}
+.room-empty{text-align:center;padding:32px;color:var(--muted);font-size:14px}
+.mo-log{margin-top:10px;font-size:12px;font-weight:600;color:#4ade80;min-height:18px}
 </style>
 </head>
 <body>
 
-<div class="hero">
-  <div class="hero-icon">🎮</div>
-  <h1>Game Zone</h1>
-  <div class="sub">Pick a game and play</div>
-</div>
+<canvas id="bg"></canvas>
 
-<div class="section-label">🌐 Online Multiplayer</div>
-<div class="grid">
+<div class="wrap">
 
-  <a class="game-card" href="raja-rani.html">
-    <div class="card-top">
-      <div class="card-icon">👑</div>
-      <div class="card-info">
-        <div class="card-title">Raja Rani</div>
-        <div class="card-title-ta">ராஜா ராணி</div>
-      </div>
+  <!-- ── Hero ── -->
+  <div class="hero">
+    <div class="hero-badge">🎮 Game Zone</div>
+    <h1>Play Together</h1>
+    <p class="hero-sub">14 games · No install · No login needed</p>
+    <div class="hero-stats">
+      <div class="hero-stat"><div class="n">8</div><div class="l">Multiplayer</div></div>
+      <div class="hero-stat"><div class="n">6</div><div class="l">Single&nbsp;Player</div></div>
+      <div class="hero-stat"><div class="n">0</div><div class="l">Downloads</div></div>
     </div>
-    <div class="card-desc">Classic Tamil card game — find the chain of roles before the thief escapes! Bluff, guess, and outsmart your friends.</div>
-    <div class="card-tags">
-      <span class="tag green">Online</span>
-      <span class="tag gold">2–6 players</span>
-      <span class="tag">Tamil</span>
-    </div>
-    <div class="play-btn">▶ Play now</div>
-  </a>
+  </div>
 
-  <a class="game-card" href="bluff.html">
-    <div class="card-top">
-      <div class="card-icon">🃏</div>
-      <div class="card-info">
-        <div class="card-title">Bluff</div>
-        <div class="card-title-ta">பொய் சொல்லு!</div>
-      </div>
+  <!-- ── Online Multiplayer ── -->
+  <div class="section">
+    <div class="section-head">
+      <h2>🌐 Online Multiplayer</h2>
+      <div class="section-line"></div>
+      <div class="section-count">8 games</div>
     </div>
-    <div class="card-desc">Play cards face-down, declare the rank — but you can lie! Call out bluffers before they empty their hand.</div>
-    <div class="card-tags">
-      <span class="tag green">Online</span>
-      <span class="tag gold">2–6 players</span>
-      <span class="tag">Cards</span>
-    </div>
-    <div class="play-btn">▶ Play now</div>
-  </a>
+    <div class="grid">
 
-  <a class="game-card" href="sus.html">
-    <div class="card-top">
-      <div class="card-icon">🕵️</div>
-      <div class="card-info">
-        <div class="card-title">Sus!</div>
-        <div class="card-title-ta">யார் ஒற்றன்?</div>
-      </div>
-    </div>
-    <div class="card-desc">Hidden impostors among the crew — discuss, vote, and eliminate before they outnumber you. Who do you trust?</div>
-    <div class="card-tags">
-      <span class="tag green">Online</span>
-      <span class="tag gold">4–8 players</span>
-      <span class="tag">Deduction</span>
-    </div>
-    <div class="play-btn">▶ Play now</div>
-  </a>
+      <a class="card" href="raja-rani.html" style="--ac:#f59e0b">
+        <div class="card-body">
+          <div class="card-icon">👑</div>
+          <div class="card-info">
+            <div class="card-name">Raja Rani</div>
+            <div class="card-ta">ராஜா ராணி</div>
+          </div>
+        </div>
+        <div class="card-desc">Find the chain of roles before the thief escapes. Bluff, guess, and outsmart your friends.</div>
+        <div class="card-foot">
+          <span class="badge badge-online">Online</span>
+          <span class="badge badge-grey">2–6 players</span>
+          <span class="badge badge-grey">Tamil</span>
+        </div>
+        <div class="play-btn">▶ Play Now</div>
+      </a>
 
-  <a class="game-card" href="uno.html">
-    <div class="card-top">
-      <div class="card-icon">🎴</div>
-      <div class="card-info">
-        <div class="card-title">UNO</div>
-        <div class="card-title-ta">கார்டு கட்ட வா!</div>
-      </div>
-    </div>
-    <div class="card-desc">Match colors and numbers, stack Draw 2s, play Wilds — shout UNO when you're down to one card!</div>
-    <div class="card-tags">
-      <span class="tag green">Online</span>
-      <span class="tag gold">2–6 players</span>
-      <span class="tag">Cards</span>
-    </div>
-    <div class="play-btn">▶ Play now</div>
-  </a>
+      <a class="card" href="bluff.html" style="--ac:#ef4444">
+        <div class="card-body">
+          <div class="card-icon">🃏</div>
+          <div class="card-info">
+            <div class="card-name">Bluff</div>
+            <div class="card-ta">பொய் சொல்லு!</div>
+          </div>
+        </div>
+        <div class="card-desc">Play cards face-down and declare the rank — but you can lie! Call out bluffers before they empty their hand.</div>
+        <div class="card-foot">
+          <span class="badge badge-online">Online</span>
+          <span class="badge badge-grey">2–6 players</span>
+          <span class="badge badge-grey">Cards</span>
+        </div>
+        <div class="play-btn">▶ Play Now</div>
+      </a>
 
-  <a class="game-card" href="ludo.html">
-    <div class="card-top">
-      <div class="card-icon">🎲</div>
-      <div class="card-info">
-        <div class="card-title">Ludo</div>
-        <div class="card-title-ta">பார்சி விளையாட்டு</div>
-      </div>
-    </div>
-    <div class="card-desc">Roll the dice, race your 4 tokens home — land on opponents to send them back! Classic board game.</div>
-    <div class="card-tags">
-      <span class="tag green">Online</span>
-      <span class="tag gold">2–4 players</span>
-      <span class="tag">Board</span>
-    </div>
-    <div class="play-btn">▶ Play now</div>
-  </a>
+      <a class="card" href="sus.html" style="--ac:#8b5cf6">
+        <div class="card-body">
+          <div class="card-icon">🕵️</div>
+          <div class="card-info">
+            <div class="card-name">Sus!</div>
+            <div class="card-ta">யார் ஒற்றன்?</div>
+          </div>
+        </div>
+        <div class="card-desc">Hidden impostors among the crew — discuss, vote, and eliminate before they outnumber you.</div>
+        <div class="card-foot">
+          <span class="badge badge-online">Online</span>
+          <span class="badge badge-grey">4–8 players</span>
+          <span class="badge badge-grey">Deduction</span>
+        </div>
+        <div class="play-btn">▶ Play Now</div>
+      </a>
 
-  <a class="game-card" href="tambola.html">
-    <div class="card-top">
-      <div class="card-icon">🎟️</div>
-      <div class="card-info">
-        <div class="card-title">Tambola</div>
-        <div class="card-title-ta">தம்போலா / ஹவுஸி</div>
-      </div>
-    </div>
-    <div class="card-desc">Host calls numbers 1–90, players mark their tickets — claim Early Five, rows, or Full House to win!</div>
-    <div class="card-tags">
-      <span class="tag green">Online</span>
-      <span class="tag gold">2–8 players</span>
-      <span class="tag">Bingo</span>
-    </div>
-    <div class="play-btn">▶ Play now</div>
-  </a>
+      <a class="card" href="uno.html" style="--ac:#f97316">
+        <div class="card-body">
+          <div class="card-icon">🎴</div>
+          <div class="card-info">
+            <div class="card-name">UNO</div>
+            <div class="card-ta">கார்டு கட்ட வா!</div>
+          </div>
+        </div>
+        <div class="card-desc">Match colors and numbers, stack Draw 2s, play Wilds — shout UNO when you're down to one card!</div>
+        <div class="card-foot">
+          <span class="badge badge-online">Online</span>
+          <span class="badge badge-grey">2–6 players</span>
+          <span class="badge badge-grey">Cards</span>
+        </div>
+        <div class="play-btn">▶ Play Now</div>
+      </a>
 
-  <a class="game-card" href="snakes.html">
-    <div class="card-top">
-      <div class="card-icon">🐍</div>
-      <div class="card-info">
-        <div class="card-title">Snakes &amp; Ladders</div>
-        <div class="card-title-ta">பாம்பு மற்றும் ஏணி</div>
-      </div>
-    </div>
-    <div class="card-desc">Race to square 100 — climb ladders to leap ahead, but watch out for snakes that send you sliding back!</div>
-    <div class="card-tags">
-      <span class="tag green">Online</span>
-      <span class="tag gold">2–4 players</span>
-      <span class="tag">Board</span>
-    </div>
-    <div class="play-btn">▶ Play now</div>
-  </a>
+      <a class="card" href="ludo.html" style="--ac:#22c55e">
+        <div class="card-body">
+          <div class="card-icon">🎲</div>
+          <div class="card-info">
+            <div class="card-name">Ludo</div>
+            <div class="card-ta">பார்சி விளையாட்டு</div>
+          </div>
+        </div>
+        <div class="card-desc">Roll the dice, race your 4 tokens home — land on opponents to send them back to start!</div>
+        <div class="card-foot">
+          <span class="badge badge-online">Online</span>
+          <span class="badge badge-grey">2–4 players</span>
+          <span class="badge badge-grey">Board</span>
+        </div>
+        <div class="play-btn">▶ Play Now</div>
+      </a>
 
-  <a class="game-card" href="business.html">
-    <div class="card-top">
-      <div class="card-icon">🏦</div>
-      <div class="card-info">
-        <div class="card-title">Business</div>
-        <div class="card-title-ta">வியாபாரம்</div>
-      </div>
-    </div>
-    <div class="card-desc">Buy properties across India, collect rent, build houses and drive your rivals to bankruptcy!</div>
-    <div class="card-tags">
-      <span class="tag green">Online</span>
-      <span class="tag gold">2–5 players</span>
-      <span class="tag">Board</span>
-    </div>
-    <div class="play-btn">▶ Play now</div>
-  </a>
+      <a class="card" href="tambola.html" style="--ac:#ec4899">
+        <div class="card-body">
+          <div class="card-icon">🎟️</div>
+          <div class="card-info">
+            <div class="card-name">Tambola</div>
+            <div class="card-ta">தம்போலா / ஹவுஸி</div>
+          </div>
+        </div>
+        <div class="card-desc">Host calls numbers 1–90, players mark their tickets — claim Early Five, rows, or Full House!</div>
+        <div class="card-foot">
+          <span class="badge badge-online">Online</span>
+          <span class="badge badge-grey">2–8 players</span>
+          <span class="badge badge-grey">Bingo</span>
+        </div>
+        <div class="play-btn">▶ Play Now</div>
+      </a>
 
-</div>
+      <a class="card" href="snakes.html" style="--ac:#84cc16">
+        <div class="card-body">
+          <div class="card-icon">🐍</div>
+          <div class="card-info">
+            <div class="card-name">Snakes &amp; Ladders</div>
+            <div class="card-ta">பாம்பு மற்றும் ஏணி</div>
+          </div>
+        </div>
+        <div class="card-desc">Race to square 100 — climb ladders to leap ahead, dodge snakes that send you sliding back!</div>
+        <div class="card-foot">
+          <span class="badge badge-online">Online</span>
+          <span class="badge badge-grey">2–4 players</span>
+          <span class="badge badge-grey">Board</span>
+        </div>
+        <div class="play-btn">▶ Play Now</div>
+      </a>
 
-<div class="section-label" style="margin-top:28px;">🕹️ Single Player</div>
-<div class="grid">
+      <a class="card" href="business.html" style="--ac:#3b82f6">
+        <div class="card-body">
+          <div class="card-icon">🏦</div>
+          <div class="card-info">
+            <div class="card-name">Business</div>
+            <div class="card-ta">வியாபாரம்</div>
+          </div>
+        </div>
+        <div class="card-desc">Buy properties across India, collect rent, build houses and drive your rivals to bankruptcy!</div>
+        <div class="card-foot">
+          <span class="badge badge-online">Online</span>
+          <span class="badge badge-grey">2–5 players</span>
+          <span class="badge badge-grey">Board</span>
+        </div>
+        <div class="play-btn">▶ Play Now</div>
+      </a>
 
-  <a class="game-card" href="surf.html">
-    <div class="card-top">
-      <div class="card-icon">🏄</div>
-      <div class="card-info">
-        <div class="card-title">Edge Surf — WebGL</div>
-        <div class="card-title-ta">அலை சர்ஃபிங்</div>
-      </div>
     </div>
-    <div class="card-desc">Three.js WebGL endless surfer — animated ocean wave shader, UnrealBloom glow, dodge rocks &amp; buoys, collect starfish combos!</div>
-    <div class="card-tags">
-      <span class="tag blue">Offline</span>
-      <span class="tag">WebGL</span>
-      <span class="tag">Endless</span>
-    </div>
-    <div class="play-btn">▶ Play now</div>
-  </a>
+  </div>
 
-  <a class="game-card" href="contra-3d.html">
-    <div class="card-top">
-      <div class="card-icon">🔫</div>
-      <div class="card-info">
-        <div class="card-title">Contra 3D — WebGL</div>
-        <div class="card-title-ta">கான்ட்ரா 3D யுத்தம்</div>
-      </div>
+  <!-- ── Single Player ── -->
+  <div class="section">
+    <div class="section-head">
+      <h2>🕹️ Single Player</h2>
+      <div class="section-line"></div>
+      <div class="section-count">6 games</div>
     </div>
-    <div class="card-desc">Three.js WebGL port — 3D voxel characters, UnrealBloom glow bullets, dynamic lights, and a 3-phase boss fight. Spread, Laser, Fireball pickups!</div>
-    <div class="card-tags">
-      <span class="tag blue">Offline</span>
-      <span class="tag">WebGL</span>
-      <span class="tag">Action</span>
-    </div>
-    <div class="play-btn">▶ Play now</div>
-  </a>
+    <div class="grid">
 
-  <a class="game-card" href="contra-strike.html">
-    <div class="card-top">
-      <div class="card-icon">🪖</div>
-      <div class="card-info">
-        <div class="card-title">Contra Strike</div>
-        <div class="card-title-ta">கான்ட்ரா யுத்தம்</div>
-      </div>
-    </div>
-    <div class="card-desc">Side-scrolling run & gun — sprint through jungle bases, grab spread shots & rockets, and destroy the boss mech!</div>
-    <div class="card-tags">
-      <span class="tag blue">Offline</span>
-      <span class="tag">1 player</span>
-      <span class="tag">Action</span>
-    </div>
-    <div class="play-btn">▶ Play now</div>
-  </a>
+      <a class="card" href="surf.html" style="--ac:#06b6d4">
+        <div class="card-body">
+          <div class="card-icon">🏄</div>
+          <div class="card-info">
+            <div class="card-name">Edge Surf</div>
+            <div class="card-ta">அலை சர்ஃபிங்</div>
+          </div>
+        </div>
+        <div class="card-desc">The real Microsoft Edge surf game — ride waves, jump rocks, duck under birds, grab shields and boosts!</div>
+        <div class="card-foot">
+          <span class="badge badge-online">Offline</span>
+          <span class="badge badge-grey">1 player</span>
+          <span class="badge badge-grey">Endless</span>
+        </div>
+        <div class="play-btn">▶ Play Now</div>
+      </a>
 
-  <a class="game-card" href="tower-defense.html">
-    <div class="card-top">
-      <div class="card-icon">🏰</div>
-      <div class="card-info">
-        <div class="card-title">Tower Defense</div>
-        <div class="card-title-ta">கோட்டை காவல்</div>
-      </div>
-    </div>
-    <div class="card-desc">Place arrow, cannon, freeze and laser towers — survive 20 waves of runners, tanks, speeders, healers and bosses!</div>
-    <div class="card-tags">
-      <span class="tag blue">Offline</span>
-      <span class="tag">1 player</span>
-      <span class="tag">Strategy</span>
-    </div>
-    <div class="play-btn">▶ Play now</div>
-  </a>
+      <a class="card" href="contra-3d.html" style="--ac:#10b981">
+        <div class="card-body">
+          <div class="card-icon">🔫</div>
+          <div class="card-info">
+            <div class="card-name">Contra 3D</div>
+            <div class="card-ta">கான்ட்ரா 3D யுத்தம்</div>
+          </div>
+        </div>
+        <div class="card-desc">Three.js WebGL port — 3D voxel characters, bloom glow bullets, and a 3-phase boss fight!</div>
+        <div class="card-foot">
+          <span class="badge badge-online">Offline</span>
+          <span class="badge badge-grey">1 player</span>
+          <span class="badge badge-grey">WebGL</span>
+        </div>
+        <div class="play-btn">▶ Play Now</div>
+      </a>
 
-  <a class="game-card" href="rpg-quest.html">
-    <div class="card-top">
-      <div class="card-icon">⚔️</div>
-      <div class="card-info">
-        <div class="card-title">Dragon's Quest</div>
-        <div class="card-title-ta">டிராகன் வேட்டை</div>
-      </div>
-    </div>
-    <div class="card-desc">Explore a dark dungeon, battle goblins and slimes, and slay the Dragon Boss in this atmospheric RPG!</div>
-    <div class="card-tags">
-      <span class="tag blue">Offline</span>
-      <span class="tag">1 player</span>
-      <span class="tag">RPG</span>
-    </div>
-    <div class="play-btn">▶ Play now</div>
-  </a>
+      <a class="card" href="contra-strike.html" style="--ac:#f97316">
+        <div class="card-body">
+          <div class="card-icon">🪖</div>
+          <div class="card-info">
+            <div class="card-name">Contra Strike</div>
+            <div class="card-ta">கான்ட்ரா யுத்தம்</div>
+          </div>
+        </div>
+        <div class="card-desc">Side-scrolling run & gun — sprint through jungle bases, grab spread shots and destroy the boss mech!</div>
+        <div class="card-foot">
+          <span class="badge badge-online">Offline</span>
+          <span class="badge badge-grey">1 player</span>
+          <span class="badge badge-grey">Action</span>
+        </div>
+        <div class="play-btn">▶ Play Now</div>
+      </a>
 
-  <a class="game-card" href="space-blaster.html">
-    <div class="card-top">
-      <div class="card-icon">🚀</div>
-      <div class="card-info">
-        <div class="card-title">Space Blaster</div>
-        <div class="card-title-ta">விண்வெளி போர்</div>
-      </div>
+      <a class="card" href="tower-defense.html" style="--ac:#a855f7">
+        <div class="card-body">
+          <div class="card-icon">🏰</div>
+          <div class="card-info">
+            <div class="card-name">Tower Defense</div>
+            <div class="card-ta">கோட்டை காவல்</div>
+          </div>
+        </div>
+        <div class="card-desc">Place arrow, cannon, freeze and laser towers — survive 20 waves of runners, tanks, and bosses!</div>
+        <div class="card-foot">
+          <span class="badge badge-online">Offline</span>
+          <span class="badge badge-grey">1 player</span>
+          <span class="badge badge-grey">Strategy</span>
+        </div>
+        <div class="play-btn">▶ Play Now</div>
+      </a>
+
+      <a class="card" href="rpg-quest.html" style="--ac:#ef4444">
+        <div class="card-body">
+          <div class="card-icon">⚔️</div>
+          <div class="card-info">
+            <div class="card-name">Dragon's Quest</div>
+            <div class="card-ta">டிராகன் வேட்டை</div>
+          </div>
+        </div>
+        <div class="card-desc">Explore a dark dungeon, battle goblins and slimes, and slay the Dragon Boss in this atmospheric RPG!</div>
+        <div class="card-foot">
+          <span class="badge badge-online">Offline</span>
+          <span class="badge badge-grey">1 player</span>
+          <span class="badge badge-grey">RPG</span>
+        </div>
+        <div class="play-btn">▶ Play Now</div>
+      </a>
+
+      <a class="card" href="space-blaster.html" style="--ac:#6366f1">
+        <div class="card-body">
+          <div class="card-icon">🚀</div>
+          <div class="card-info">
+            <div class="card-name">Space Blaster</div>
+            <div class="card-ta">விண்வெளி போர்</div>
+          </div>
+        </div>
+        <div class="card-desc">Shoot alien invaders, dodge enemy fire, and survive endless waves in this neon arcade shooter!</div>
+        <div class="card-foot">
+          <span class="badge badge-online">Offline</span>
+          <span class="badge badge-grey">1 player</span>
+          <span class="badge badge-grey">Arcade</span>
+        </div>
+        <div class="play-btn">▶ Play Now</div>
+      </a>
+
     </div>
-    <div class="card-desc">Shoot alien invaders, dodge enemy fire, and survive endless waves in this neon arcade shooter!</div>
-    <div class="card-tags">
-      <span class="tag blue">Offline</span>
-      <span class="tag">1 player</span>
-      <span class="tag">Arcade</span>
-    </div>
-    <div class="play-btn">▶ Play now</div>
-  </a>
+  </div>
 
-</div>
+</div><!-- /wrap -->
 
-<!-- ── Control Panel Button ── -->
-<button class="ctrl-btn" onclick="openCtrl()" title="Firebase Room Manager">⚙️</button>
+<!-- ── Firebase FAB ── -->
+<button class="fab" onclick="openCtrl()" title="Firebase Room Manager">⚙️</button>
 
-<!-- ── Control Panel Modal ── -->
-<div class="ctrl-overlay" id="ctrl-overlay" onclick="if(event.target===this)closeCtrl()">
-  <div class="ctrl-panel">
-    <div class="ctrl-header">
+<!-- ── Firebase Modal ── -->
+<div class="mo" id="ctrl-overlay" onclick="if(event.target===this)closeCtrl()">
+  <div class="mo-panel">
+    <div class="mo-head">
       <h2>🗄️ Firebase Room Manager</h2>
-      <button class="ctrl-close" onclick="closeCtrl()">✕</button>
+      <button class="mo-close" onclick="closeCtrl()">✕</button>
     </div>
-    <div class="ctrl-body">
-      <div class="ctrl-status" id="ctrl-status">Connecting to Firebase…</div>
-      <div class="ctrl-actions">
-        <button class="refresh-btn" onclick="loadRooms()">🔄 Refresh</button>
-        <button class="cb-all-btn" onclick="toggleSelectAll()">☑ Select All</button>
-        <button class="del-sel-btn" onclick="deleteSelected()">🗑 Delete Selected</button>
-        <button class="del-old-btn" onclick="deleteOld()">🕒 Delete &gt;24h old</button>
+    <div class="mo-body">
+      <div class="mo-status" id="ctrl-status">Connecting to Firebase…</div>
+      <div class="mo-actions">
+        <button class="b-refresh" onclick="loadRooms()">🔄 Refresh</button>
+        <button class="b-all" onclick="toggleSelectAll()">☑ Select All</button>
+        <button class="b-del" onclick="deleteSelected()">🗑 Delete Selected</button>
+        <button class="b-old" onclick="deleteOld()">🕒 Delete &gt;24h</button>
       </div>
-      <div class="ctrl-room-list" id="ctrl-room-list">
-        <div class="ctrl-empty">Loading…</div>
+      <div class="room-list" id="ctrl-room-list">
+        <div class="room-empty">Loading…</div>
       </div>
-      <div class="ctrl-log" id="ctrl-log"></div>
+      <div class="mo-log" id="ctrl-log"></div>
     </div>
   </div>
 </div>
 
+<!-- ── Starfield ── -->
+<script>
+(function(){
+  const cv=document.getElementById('bg');
+  const c=cv.getContext('2d');
+  let W,H,stars=[];
+  function resize(){
+    W=cv.width=window.innerWidth;
+    H=cv.height=window.innerHeight;
+    stars=Array.from({length:130},()=>({
+      x:Math.random()*W,y:Math.random()*H,
+      r:.3+Math.random()*1.2,
+      a:Math.random(),
+      sp:.003+Math.random()*.008,
+      twinkle:Math.random()*Math.PI*2
+    }));
+  }
+  window.addEventListener('resize',resize); resize();
+  function draw(){
+    c.clearRect(0,0,W,H);
+    const now=performance.now()/1000;
+    for(const s of stars){
+      s.twinkle+=s.sp;
+      const alpha=s.a*(.4+.6*Math.abs(Math.sin(s.twinkle)));
+      c.fillStyle=`rgba(200,200,255,${alpha})`;
+      c.beginPath(); c.arc(s.x,s.y,s.r,0,Math.PI*2); c.fill();
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+</script>
+
+<!-- ── Firebase ── -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script>
-const _FBCFG={
-  apiKey:"AIzaSyAQ0l788yLKmfWIJ6Ok88k2TcwdD6XA1n4",
-  databaseURL:"https://raja-rani-game-ffecd-default-rtdb.asia-southeast1.firebasedatabase.app"
-};
-let _db=null;
-function _initFB(){
+const _FB={apiKey:"AIzaSyAQ0l788yLKmfWIJ6Ok88k2TcwdD6XA1n4",
+  databaseURL:"https://raja-rani-game-ffecd-default-rtdb.asia-southeast1.firebasedatabase.app"};
+let _db=null,_rooms={};
+function _init(){
   if(_db)return;
-  try{
-    if(!firebase.apps.length)firebase.initializeApp(_FBCFG);
-    _db=firebase.database();
-  }catch(e){document.getElementById('ctrl-status').textContent='Firebase error: '+e.message;}
+  try{if(!firebase.apps.length)firebase.initializeApp(_FB);_db=firebase.database();}
+  catch(e){document.getElementById('ctrl-status').textContent='Firebase error: '+e.message;}
 }
-
-let _rooms={};
-
-function openCtrl(){
-  document.getElementById('ctrl-overlay').classList.add('open');
-  _initFB();
-  loadRooms();
-}
-function closeCtrl(){
-  document.getElementById('ctrl-overlay').classList.remove('open');
-}
-
+function openCtrl(){document.getElementById('ctrl-overlay').classList.add('open');_init();loadRooms();}
+function closeCtrl(){document.getElementById('ctrl-overlay').classList.remove('open');}
 function _ago(ts){
   if(!ts)return '?';
   const s=Math.floor((Date.now()-ts)/1000);
@@ -493,86 +568,53 @@ function _ago(ts){
   if(s<86400)return Math.floor(s/3600)+'h ago';
   return Math.floor(s/86400)+'d ago';
 }
-function _phaseClass(ph){
-  if(ph==='lobby')return 'phase-lobby';
-  if(ph==='over')return 'phase-over';
-  return 'phase-active';
-}
-
+function _phClass(ph){return ph==='lobby'?'ph-lobby':ph==='over'?'ph-over':'ph-active';}
 async function loadRooms(){
-  const status=document.getElementById('ctrl-status');
-  const list=document.getElementById('ctrl-room-list');
-  if(!_db){status.textContent='Firebase not connected.';return;}
-  status.textContent='Loading rooms…';
-  list.innerHTML='<div class="ctrl-empty">Loading…</div>';
+  const st=document.getElementById('ctrl-status'),li=document.getElementById('ctrl-room-list');
+  if(!_db){st.textContent='Firebase not connected.';return;}
+  st.textContent='Loading rooms…';li.innerHTML='<div class="room-empty">Loading…</div>';
   try{
     const snap=await _db.ref('rooms').once('value');
     _rooms=snap.val()||{};
     const codes=Object.keys(_rooms);
-    status.textContent=codes.length+' room'+(codes.length===1?'':'s')+' in Firebase';
-    if(!codes.length){list.innerHTML='<div class="ctrl-empty">No rooms found ✨</div>';return;}
-    codes.sort((a,b)=>{
-      const ta=(_rooms[a]&&_rooms[a].state&&_rooms[a].state.ts)||0;
-      const tb=(_rooms[b]&&_rooms[b].state&&_rooms[b].state.ts)||0;
-      return tb-ta;
-    });
-    list.innerHTML='';
+    st.textContent=codes.length+' room'+(codes.length===1?'':'s')+' in Firebase';
+    if(!codes.length){li.innerHTML='<div class="room-empty">No rooms found ✨</div>';return;}
+    codes.sort((a,b)=>((_rooms[b]?.state?.ts)||0)-((_rooms[a]?.state?.ts)||0));
+    li.innerHTML='';
     codes.forEach(code=>{
-      const r=_rooms[code];
-      const s=r&&r.state||{};
-      const players=(s.players||[]);
-      const pLen=Array.isArray(players)?players.length:Object.keys(players).length;
-      const numP=s.numPlayers||'?';
-      const ph=s.phase||'?';
-      const row=document.createElement('div');
-      row.className='ctrl-room';
-      row.innerHTML=`
-        <input type="checkbox" id="cb-${code}" value="${code}">
-        <div class="ctrl-room-code">${code}</div>
-        <div class="ctrl-room-info">
-          ${pLen}/${numP} players &nbsp;•&nbsp; ${_ago(s.ts)}
-          <span class="ctrl-phase ${_phaseClass(ph)}">${ph}</span>
-          <br>Round ${s.round||'?'}/${s.totalRounds||'?'}
-        </div>`;
+      const r=_rooms[code],s=r?.state||{};
+      const pLen=Array.isArray(s.players)?s.players.length:Object.keys(s.players||{}).length;
+      const row=document.createElement('div'); row.className='room';
+      row.innerHTML=`<input type="checkbox" id="cb-${code}" value="${code}">
+        <div class="room-code">${code}</div>
+        <div class="room-info">${pLen}/${s.numPlayers||'?'} players · ${_ago(s.ts)}
+          <span class="ph ${_phClass(s.phase||'')}">${s.phase||'?'}</span><br>
+          Round ${s.round||'?'}/${s.totalRounds||'?'}</div>`;
       row.onclick=e=>{if(e.target.tagName!=='INPUT'){const cb=document.getElementById('cb-'+code);cb.checked=!cb.checked;}};
-      list.appendChild(row);
+      li.appendChild(row);
     });
-  }catch(e){status.textContent='Error: '+e.message;}
+  }catch(e){st.textContent='Error: '+e.message;}
 }
-
 function toggleSelectAll(){
-  const cbs=[...document.querySelectorAll('#ctrl-room-list input[type=checkbox]')];
-  const allChecked=cbs.every(c=>c.checked);
-  cbs.forEach(c=>c.checked=!allChecked);
+  const cbs=[...document.querySelectorAll('.room-list input[type=checkbox]')];
+  const all=cbs.every(c=>c.checked); cbs.forEach(c=>c.checked=!all);
 }
-
 async function deleteSelected(){
-  const sel=[...document.querySelectorAll('#ctrl-room-list input[type=checkbox]:checked')].map(c=>c.value);
+  const sel=[...document.querySelectorAll('.room-list input:checked')].map(c=>c.value);
   if(!sel.length){_log('Select rooms first.');return;}
   if(!confirm('Delete '+sel.length+' room(s)?'))return;
-  for(const code of sel){await _db.ref('rooms/'+code).remove();}
-  _log('Deleted: '+sel.join(', '));
-  await loadRooms();
+  for(const code of sel)await _db.ref('rooms/'+code).remove();
+  _log('Deleted: '+sel.join(', ')); await loadRooms();
 }
-
 async function deleteOld(){
-  const cutoff=Date.now()-(24*60*60*1000);
-  const old=Object.entries(_rooms).filter(([,r])=>{
-    const ts=(r&&r.state&&r.state.ts)||0;
-    return ts>0&&ts<cutoff;
-  }).map(([code])=>code);
-  if(!old.length){_log('No rooms older than 24h found.');return;}
+  const cut=Date.now()-86400000;
+  const old=Object.entries(_rooms).filter(([,r])=>{const t=(r?.state?.ts)||0;return t>0&&t<cut;}).map(([c])=>c);
+  if(!old.length){_log('No rooms older than 24h.');return;}
   if(!confirm('Delete '+old.length+' room(s) older than 24h?\n'+old.join(', ')))return;
-  for(const code of old){await _db.ref('rooms/'+code).remove();}
-  _log('Deleted: '+old.join(', '));
-  await loadRooms();
+  for(const code of old)await _db.ref('rooms/'+code).remove();
+  _log('Deleted: '+old.join(', ')); await loadRooms();
 }
-
-function _log(msg){
-  const el=document.getElementById('ctrl-log');
-  el.textContent=msg;
-  setTimeout(()=>{if(el.textContent===msg)el.textContent='';},4000);
-}
+function _log(msg){const el=document.getElementById('ctrl-log');el.textContent=msg;setTimeout(()=>{if(el.textContent===msg)el.textContent='';},4000);}
 </script>
 </body>
 </html>
