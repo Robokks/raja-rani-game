@@ -27,10 +27,16 @@ body{
     linear-gradient(rgba(255,255,255,.022) 1px,transparent 1px),
     linear-gradient(90deg,rgba(255,255,255,.022) 1px,transparent 1px);
   background-size:48px 48px;
+  animation:grid-drift 25s linear infinite;
   color:var(--text);
   min-height:100vh;
   padding-top:var(--nav-h);
 }
+@keyframes grid-drift{
+  0%{background-position:0 0,0 0}
+  100%{background-position:48px 48px,48px 48px}
+}
+#bgc{position:fixed;inset:0;z-index:-1;pointer-events:none}
 /* subtle CRT scanline overlay */
 body::after{
   content:'';position:fixed;inset:0;pointer-events:none;z-index:9000;
@@ -306,6 +312,7 @@ body.has-subbar{padding-top:calc(var(--nav-h) + var(--sub-h))}
 </style>
 </head>
 <body>
+<canvas id="bgc"></canvas>
 
 <!-- ── Nav ── -->
 <nav>
@@ -528,6 +535,60 @@ body.has-subbar{padding-top:calc(var(--nav-h) + var(--sub-h))}
 </div>
 
 <script>
+// ── Animated background ──────────────────────────────────────────────────────
+(function(){
+  const cv=document.getElementById('bgc');
+  const cx=cv.getContext('2d');
+  function resize(){cv.width=innerWidth;cv.height=innerHeight;}
+  resize();
+  window.addEventListener('resize',resize);
+  const COLS=['#a78bfa','#818cf8','#6366f1','#ef4444','#f97316','#22c55e','#06b6d4','#ec4899','#3b82f6','#f59e0b'];
+  const pts=Array.from({length:55},()=>({
+    x:Math.random()*innerWidth,
+    y:Math.random()*innerHeight,
+    r:.7+Math.random()*1.6,
+    col:COLS[~~(Math.random()*COLS.length)],
+    vy:-(0.12+Math.random()*.35),
+    vx:(Math.random()-.5)*.22,
+    a:.15+Math.random()*.45,
+    t:Math.random()*Math.PI*2,
+  }));
+  let shooters=[];
+  setInterval(()=>{
+    if(Math.random()<.65) shooters.push({
+      x:Math.random()*cv.width,y:-10,
+      dx:3+Math.random()*4,dy:4+Math.random()*5,
+      len:55+Math.random()*90,a:.9
+    });
+  },2200);
+  function frame(){
+    cx.clearRect(0,0,cv.width,cv.height);
+    pts.forEach(p=>{
+      p.x+=p.vx;p.y+=p.vy;p.t+=.016;
+      if(p.y<-4){p.y=cv.height+4;p.x=Math.random()*cv.width;}
+      if(p.x<-4)p.x=cv.width+4;
+      if(p.x>cv.width+4)p.x=-4;
+      const a=p.a*(.65+.35*Math.sin(p.t));
+      cx.save();cx.globalAlpha=a;
+      cx.shadowColor=p.col;cx.shadowBlur=12;
+      cx.fillStyle=p.col;
+      cx.beginPath();cx.arc(p.x,p.y,p.r,0,Math.PI*2);cx.fill();
+      cx.restore();
+    });
+    shooters=shooters.filter(s=>s.a>.015);
+    shooters.forEach(s=>{
+      s.x+=s.dx;s.y+=s.dy;s.a-=.011;
+      const g=cx.createLinearGradient(s.x,s.y,s.x-s.len*.65,s.y-s.len);
+      g.addColorStop(0,`rgba(255,255,255,${s.a})`);
+      g.addColorStop(1,'rgba(255,255,255,0)');
+      cx.strokeStyle=g;cx.lineWidth=1.3;
+      cx.beginPath();cx.moveTo(s.x,s.y);cx.lineTo(s.x-s.len*.65,s.y-s.len);cx.stroke();
+    });
+    requestAnimationFrame(frame);
+  }
+  frame();
+})();
+
 // roundRect polyfill for older browsers
 if (!CanvasRenderingContext2D.prototype.roundRect) {
   CanvasRenderingContext2D.prototype.roundRect = function(x,y,w,h,r){
