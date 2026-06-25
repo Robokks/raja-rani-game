@@ -3,657 +3,742 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-<title>Edge Surf — Three.js WebGL</title>
+<title>Surf — Edge Style</title>
 <style>
-*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-html,body{width:100%;height:100%;background:#000;overflow:hidden;font-family:'Segoe UI',system-ui,sans-serif}
-canvas{display:block;width:100%;height:100%}
-#hud{position:fixed;top:0;left:0;right:0;pointer-events:none;z-index:10;
-  display:flex;align-items:center;gap:16px;padding:12px 20px;
-  background:linear-gradient(180deg,rgba(0,0,0,0.55) 0%,transparent 100%)}
-#sc{font-size:22px;font-weight:900;color:#fff;letter-spacing:1px;
-  text-shadow:0 2px 8px rgba(0,0,0,.5),0 0 20px rgba(0,220,255,.4)}
-#hi{font-size:12px;color:rgba(255,255,255,.55);font-weight:600}
-#spd{margin-left:auto;font-size:11px;color:#7dd3fc;font-weight:700;letter-spacing:2px;
-  text-shadow:0 0 10px #38bdf8}
-#lives{display:flex;gap:5px;align-items:center}
-.lv{width:14px;height:14px;background:#ef4444;
-  clip-path:polygon(50% 0%,100% 35%,80% 100%,20% 100%,0% 35%);
-  filter:drop-shadow(0 0 5px rgba(239,68,68,.7));transition:all .2s}
-.lv.gone{background:#1e293b;filter:none}
-#combo{position:fixed;top:60px;left:50%;transform:translateX(-50%);
-  font-size:16px;font-weight:800;color:#fbbf24;letter-spacing:2px;
-  text-shadow:0 0 14px #fbbf24;pointer-events:none;opacity:0;transition:opacity .4s;z-index:10}
-/* mobile */
-#mc{position:fixed;bottom:0;left:0;width:100%;height:130px;display:none;pointer-events:none;z-index:20}
-.mbt{position:absolute;width:72px;height:72px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;font-size:22px;
-  pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none}
-#ml{bottom:28px;left:20px;background:rgba(255,255,255,.12);border:2px solid rgba(255,255,255,.28)}
-#mr{bottom:28px;left:100px;background:rgba(255,255,255,.12);border:2px solid rgba(255,255,255,.28)}
-#mj{bottom:28px;right:20px;background:rgba(251,191,36,.18);border:2px solid rgba(251,191,36,.45);
-  color:#fbbf24;font-weight:900;font-size:13px}
-/* overlays */
-.ov{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;
-  justify-content:center;z-index:50;backdrop-filter:blur(6px);
-  background:rgba(0,10,30,.78);color:#fff;text-align:center}
-.ov h1{font-size:56px;font-weight:900;letter-spacing:6px;margin-bottom:6px}
-.ov p{font-size:14px;opacity:.68;margin:3px 0;letter-spacing:.5px}
-.ov .pts{font-size:34px;font-weight:800;color:#fbbf24;
-  text-shadow:0 0 20px #fbbf24;margin:14px 0}
-.pbtn{margin-top:22px;padding:14px 44px;border:none;border-radius:50px;
-  font-size:16px;font-weight:800;cursor:pointer;letter-spacing:2px;
-  background:linear-gradient(135deg,#0ea5e9,#38bdf8);color:#fff;
-  box-shadow:0 8px 30px rgba(14,165,233,.5);transition:transform .15s,box-shadow .15s}
-.pbtn:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(14,165,233,.65)}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#0c1a3d;
+  font-family:'Segoe UI',system-ui,sans-serif;display:flex;
+  align-items:center;justify-content:center}
+canvas{display:block;max-width:100%;max-height:100%}
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="hud">
-  <span id="sc">0</span>
-  <span id="hi">HI: 0</span>
-  <span id="spd">SPEED 1×</span>
-  <div id="lives"></div>
-</div>
-<div id="combo"></div>
-<div id="mc">
-  <div class="mbt" id="ml">◀</div>
-  <div class="mbt" id="mr">▶</div>
-  <div class="mbt" id="mj">JUMP</div>
-</div>
-<div class="ov" id="ovT">
-  <h1 style="color:#38bdf8;text-shadow:0 0 40px #0ea5e9,0 0 80px #0ea5e9">SURF</h1>
-  <p style="font-size:11px;letter-spacing:4px;color:#7dd3fc;margin-bottom:18px">THREE.JS WebGL EDITION</p>
-  <p>← → / A D — Dodge &nbsp;&nbsp; SPACE / ↑ — Jump</p>
-  <p style="margin-top:4px">Collect ⭐ starfish &amp; survive as long as possible!</p>
-  <button class="pbtn" id="bS">🏄 START SURFING</button>
-</div>
-<div class="ov" id="ovG" style="display:none">
-  <h1 style="color:#ef4444;text-shadow:0 0 30px #ef4444">WIPED OUT</h1>
-  <div class="pts" id="gPts">0</div>
-  <p id="gHi" style="color:#fbbf24"></p>
-  <button class="pbtn" id="bR">🏄 SURF AGAIN</button>
-</div>
+<script>
+'use strict';
 
-<script type="importmap">
-{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/"}}
-</script>
-<script type="module">
-import * as THREE from 'three';
-import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-import { RenderPass }     from 'three/addons/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-import { OutputPass }     from 'three/addons/postprocessing/OutputPass.js';
-
-// ── Renderer ───────────────────────────────────────────────────────────────
+// ── Canvas setup ─────────────────────────────────────────────────────────────
 const canvas = document.getElementById('c');
-const renderer = new THREE.WebGLRenderer({canvas, antialias:true, powerPreference:'high-performance'});
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.05;
+const ctx    = canvas.getContext('2d');
+const GW = 900, GH = 500;
+canvas.width = GW; canvas.height = GH;
 
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(62, 1, 0.5, 2000);
-
-const composer = new EffectComposer(renderer);
-composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(new THREE.Vector2(1,1), 1.1, 0.4, 0.78);
-composer.addPass(bloom);
-composer.addPass(new OutputPass());
-
+// Scale canvas to fill screen while keeping aspect ratio
 function resize(){
-  const w=window.innerWidth, h=window.innerHeight;
-  renderer.setSize(w,h); renderer.setPixelRatio(Math.min(devicePixelRatio,2));
-  camera.aspect=w/h; camera.updateProjectionMatrix();
-  composer.setSize(w,h); bloom.resolution.set(w,h);
+  const scl = Math.min(window.innerWidth/GW, window.innerHeight/GH);
+  canvas.style.width  = GW*scl+'px';
+  canvas.style.height = GH*scl+'px';
 }
-window.addEventListener('resize',resize); resize();
+window.addEventListener('resize', resize); resize();
 
-// ── Lights ─────────────────────────────────────────────────────────────────
-scene.add(new THREE.AmbientLight(0x4466aa, 3));
-const sun = new THREE.DirectionalLight(0xffd580, 5);
-sun.position.set(60, 120, 80);
-sun.castShadow = true;
-sun.shadow.mapSize.set(2048,2048);
-Object.assign(sun.shadow.camera, {left:-200,right:200,top:150,bottom:-50});
-sun.shadow.bias = -0.001;
-scene.add(sun);
-const fill = new THREE.DirectionalLight(0x2255aa, 1.5);
-fill.position.set(-80, 40, -100);
-scene.add(fill);
+// ── Constants ─────────────────────────────────────────────────────────────────
+const WAVE_BASE = GH * 0.60; // baseline of wave surface
+const PLAYER_X  = 160;       // fixed horizontal position
+const GRAVITY    = 0.55;
+const JUMP_VEL   = -14;
+const SPEED_INIT = 5.5;
+const SPEED_MAX  = 14;
 
-// ── Wave shader ────────────────────────────────────────────────────────────
-const waveVert = `
-uniform float uTime;
-uniform float uScroll;
-varying vec2 vUv;
-varying float vH;
+// ── Game state ────────────────────────────────────────────────────────────────
+let state = 'title'; // title | playing | flash | gameover
+let score, hiScore=0, dist, speed, frame;
+let scrollX;         // wave/bg scroll offset (pixels)
+let lives, invTimer;
+let flashTimer=0;
+let groundFlash=0;
 
-void main(){
-  vUv = uv;
-  vec3 p = position;
-  float h = 0.0;
-  h += sin(p.x*0.030 + uScroll*1.10 + uTime*0.85)*6.0;
-  h += sin(p.x*0.075 - uScroll*0.55 + uTime*1.60)*3.0;
-  h += sin(p.z*0.045 + uTime*1.30)*4.5;
-  h += sin(p.z*0.110 - uTime*0.95)*2.0;
-  h += sin(p.x*0.130 + p.z*0.090 + uTime*2.10)*1.2;
-  vH = h;
-  p.y += h;
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(p,1.0);
-}`;
+// ── Player ────────────────────────────────────────────────────────────────────
+const P = {
+  y:0, vy:0, onGround:false,
+  dead:false, deadTimer:0,
+  lean:0, jumpGlow:0,
+};
 
-const waveFrag = `
-uniform float uTime;
-varying vec2 vUv;
-varying float vH;
+// ── Object arrays ──────────────────────────────────────────────────────────────
+let obstacles=[], pickups=[], clouds=[], particles=[], birds=[];
 
-void main(){
-  vec3 deep  = vec3(0.01,0.10,0.35);
-  vec3 mid   = vec3(0.04,0.32,0.68);
-  vec3 light = vec3(0.12,0.60,0.92);
-  vec3 foam  = vec3(0.82,0.94,1.00);
+// ── Wave geometry ─────────────────────────────────────────────────────────────
+function waveY(x) {
+  return WAVE_BASE
+    + Math.sin((x + scrollX) * 0.019) * 13
+    + Math.sin((x + scrollX*1.25) * 0.038) * 7
+    + Math.sin((x + scrollX*0.65) * 0.058) * 4;
+}
 
-  float t = clamp((vH+12.0)/24.0, 0.0, 1.0);
-  vec3 col = mix(deep, mid, t);
-  col = mix(col, light, clamp(vH*0.07,0.0,1.0));
-
-  float foamA = smoothstep(4.0,9.0,vH);
-  float stripe = abs(sin(vUv.y*80.0 + uTime*4.0)) * 0.04 * max(0.0,vH*0.1);
-  col = mix(col, foam, foamA*0.65 + stripe);
-
-  float glint = pow(max(0.0, sin(vUv.x*55.0+uTime*6.0)*0.5+0.5),30.0)*0.25;
-  col += glint;
-
-  gl_FragColor = vec4(col, 1.0);
-}`;
-
-const waveMat = new THREE.ShaderMaterial({
-  uniforms:{ uTime:{value:0}, uScroll:{value:0} },
-  vertexShader: waveVert, fragmentShader: waveFrag,
+// ── Input ─────────────────────────────────────────────────────────────────────
+const K = {};
+window.addEventListener('keydown', e=>{
+  K[e.code]=true;
+  if((e.code==='Space'||e.code==='ArrowUp')&&state==='playing') tryJump();
+  if(e.code==='Space'||e.code==='ArrowUp') tryStart();
 });
-const waterGeo = new THREE.PlaneGeometry(600, 1200, 60, 80);
-waterGeo.rotateX(-Math.PI/2);
-const water = new THREE.Mesh(waterGeo, waveMat);
-water.position.set(0,0,-500);
-scene.add(water);
+window.addEventListener('keyup', e=>K[e.code]=false);
+canvas.addEventListener('pointerdown', e=>{e.preventDefault();tryJump();tryStart();});
+canvas.addEventListener('touchstart', e=>{e.preventDefault();tryJump();tryStart();},{passive:false});
 
-// ── Wave height JS (must match shader) ────────────────────────────────────
-function waveH(x, z, t, sc){
-  return Math.sin(x*.030 + sc*1.10 + t*.85)*6
-       + Math.sin(x*.075 - sc*.55  + t*1.60)*3
-       + Math.sin(z*.045 + t*1.30)*4.5
-       + Math.sin(z*.110 - t*.95)*2
-       + Math.sin(x*.130 + z*.090 + t*2.10)*1.2;
+function tryJump(){
+  if(state!=='playing') return;
+  if(P.onGround&&!P.dead){ P.vy=JUMP_VEL; P.onGround=false; P.jumpGlow=1; }
+}
+function tryStart(){
+  if(state==='title'||state==='gameover') startGame();
 }
 
-// ── Sky ────────────────────────────────────────────────────────────────────
-const skyM = new THREE.ShaderMaterial({
-  side: THREE.BackSide,
-  uniforms:{
-    sunDir:{value:new THREE.Vector3(0.3,0.18,-0.9).normalize()},
-    sunColor:{value:new THREE.Color(1.0,0.75,0.3)},
-  },
-  vertexShader:`varying vec3 vW;void main(){vW=(modelMatrix*vec4(position,1.0)).xyz;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
-  fragmentShader:`
-    uniform vec3 sunDir,sunColor;
-    varying vec3 vW;
-    void main(){
-      vec3 n=normalize(vW);
-      float h=clamp(n.y,0.0,1.0);
-      vec3 hor=vec3(0.9,0.55,0.22);
-      vec3 zen=vec3(0.04,0.14,0.48);
-      vec3 col=mix(hor,zen,pow(h,.55));
-      float sd=max(dot(n,sunDir),0.0);
-      col+=sunColor*pow(sd,120.0)*2.5;
-      col+=sunColor*pow(sd,8.0)*0.18;
-      gl_FragColor=vec4(col,1.0);
-    }`
-});
-scene.add(new THREE.Mesh(new THREE.SphereGeometry(1400,20,12),skyM));
-
-// Stars (few visible at horizon)
-const sv=new Float32Array(600);
-for(let i=0;i<200;i++){const θ=Math.random()*Math.PI*2,φ=Math.acos(2*Math.random()-1),r=1300;sv[i*3]=r*Math.sin(φ)*Math.cos(θ);sv[i*3+1]=Math.abs(r*Math.cos(φ));sv[i*3+2]=r*Math.sin(φ)*Math.sin(θ);}
-const sg=new THREE.BufferGeometry();sg.setAttribute('position',new THREE.Float32BufferAttribute(sv,3));
-scene.add(new THREE.Points(sg,new THREE.PointsMaterial({color:0xfff8e0,size:2,sizeAttenuation:false,transparent:true,opacity:.6})));
-
-// ── Distant islands ────────────────────────────────────────────────────────
-[[-220,-600],[-80,-750],[180,-650],[300,-800]].forEach(([x,z])=>{
-  const h=60+Math.random()*60;
-  const isle=new THREE.Mesh(new THREE.ConeGeometry(30+Math.random()*20,h,8),
-    new THREE.MeshStandardMaterial({color:0x1a5c30,roughness:1}));
-  isle.position.set(x,-8,z);scene.add(isle);
-  const base=new THREE.Mesh(new THREE.CylinderGeometry(28+Math.random()*18,32,12,8),
-    new THREE.MeshStandardMaterial({color:0xd4a96a,roughness:1}));
-  base.position.set(x,-14,z);scene.add(base);
-});
-
-// ── Surfer character ───────────────────────────────────────────────────────
-function mkSurfer(){
-  const g=new THREE.Group();
-  const cast=(m)=>{m.castShadow=true;return m;}
-
-  // Board
-  const board=cast(new THREE.Mesh(new THREE.BoxGeometry(22,1.5,8),
-    new THREE.MeshStandardMaterial({color:0x0891b2,emissive:0x0369a1,emissiveIntensity:.3,roughness:.3,metalness:.3})));
-  board.position.y=-1.5; g.add(board);
-
-  // Board stripe
-  const stripe=new THREE.Mesh(new THREE.BoxGeometry(22,1.6,2.5),
-    new THREE.MeshStandardMaterial({color:0xf97316,emissive:0xea580c,emissiveIntensity:.4,roughness:.3}));
-  stripe.position.set(0,-1.4,0); g.add(stripe);
-
-  // Legs
-  const lm=new THREE.MeshStandardMaterial({color:0x0c4a6e,roughness:.7});
-  const lL=cast(new THREE.Mesh(new THREE.BoxGeometry(3.5,7,3.5),lm));lL.position.set(-3,2.5,0);g.add(lL);
-  const rL=cast(new THREE.Mesh(new THREE.BoxGeometry(3.5,7,3.5),lm));rL.position.set(3,2.5,0);g.add(rL);
-
-  // Torso
-  const tm=new THREE.MeshStandardMaterial({color:0x0ea5e9,roughness:.6});
-  const torso=cast(new THREE.Mesh(new THREE.BoxGeometry(10,12,7),tm));torso.position.y=11;g.add(torso);
-
-  // Arms (outstretched for balance)
-  const am=new THREE.MeshStandardMaterial({color:0xf4a261,roughness:.7});
-  const lA=cast(new THREE.Mesh(new THREE.BoxGeometry(3,9,3),tm));
-  lA.position.set(-9,11,0);lA.rotation.z=.6;g.add(lA);
-  const rA=cast(new THREE.Mesh(new THREE.BoxGeometry(3,9,3),tm));
-  rA.position.set(9,11,0);rA.rotation.z=-.6;g.add(rA);
-
-  // Head
-  const head=cast(new THREE.Mesh(new THREE.BoxGeometry(7,8,7),am));head.position.y=21;g.add(head);
-
-  // Hair
-  const hair=new THREE.Mesh(new THREE.BoxGeometry(8,3,7.5),
-    new THREE.MeshStandardMaterial({color:0x92400e,roughness:.9}));
-  hair.position.y=26;g.add(hair);
-
-  // Sunglasses
-  const sg=new THREE.Mesh(new THREE.BoxGeometry(8,2,1),
-    new THREE.MeshStandardMaterial({color:0x000000,emissive:0x1e40af,emissiveIntensity:.5}));
-  sg.position.set(0,22,3.6);g.add(sg);
-
-  return{group:g,board,torso,lA,rA,lL,rL,head};
+// ── Game init / restart ────────────────────────────────────────────────────────
+function startGame(){
+  state='playing';
+  score=0; dist=0; speed=SPEED_INIT; frame=0; scrollX=0;
+  lives=3; invTimer=0;
+  P.y=waveY(PLAYER_X); P.vy=0; P.onGround=true;
+  P.dead=false; P.deadTimer=0; P.lean=0; P.jumpGlow=0;
+  obstacles=[]; pickups=[]; clouds=[]; particles=[]; birds=[];
+  // Seed clouds
+  for(let i=0;i<6;i++) spawnCloud(Math.random()*GW);
+  // First obstacles far away
+  lastObsX = GW + 400;
+  lastPuX  = GW + 200;
 }
 
-// ── Obstacle + pickup factories ────────────────────────────────────────────
-function mkRock(){
-  const geo=new THREE.SphereGeometry(10+Math.random()*4,8,6);
-  const pos=geo.attributes.position;
-  for(let i=0;i<pos.count;i++){
-    pos.setY(i,pos.getY(i)*(0.45+Math.random()*.55));
-    pos.setX(i,pos.getX(i)*(0.7+Math.random()*.6));
-    pos.setZ(i,pos.getZ(i)*(0.7+Math.random()*.6));
-  }
-  geo.computeVertexNormals();
-  const m=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:0x374151+Math.floor(Math.random()*0x111111),roughness:.9,metalness:.05}));
-  m.castShadow=true; m.receiveShadow=true; return m;
+// ── Spawning ──────────────────────────────────────────────────────────────────
+let lastObsX=0, lastPuX=0;
+
+function spawnCloud(x){
+  clouds.push({
+    x, y:40+Math.random()*GH*.22,
+    w:60+Math.random()*80, h:22+Math.random()*18,
+    alpha:0.55+Math.random()*.3,
+    spd:0.3+Math.random()*.5,
+  });
 }
 
-function mkBuoy(){
-  const g=new THREE.Group();
-  const body=new THREE.Mesh(new THREE.CylinderGeometry(5,5,18,10),
-    new THREE.MeshStandardMaterial({color:0xef4444,roughness:.5}));
-  body.castShadow=true;
-  const stripe=new THREE.Mesh(new THREE.CylinderGeometry(5.1,5.1,4,10),
-    new THREE.MeshStandardMaterial({color:0xfbbf24,emissive:0xf59e0b,emissiveIntensity:.5,roughness:.4}));
-  stripe.position.y=2;
-  const top=new THREE.Mesh(new THREE.SphereGeometry(5,10,8),
-    new THREE.MeshStandardMaterial({color:0xef4444,roughness:.5}));
-  top.position.y=9;
-  const light=new THREE.Mesh(new THREE.SphereGeometry(2.5,6,5),
-    new THREE.MeshStandardMaterial({color:0xfff,emissive:0xfde047,emissiveIntensity:4}));
-  light.position.y=14;
-  g.add(body,stripe,top,light);
-  g.castShadow=true; return g;
-}
-
-function mkStarfish(){
-  const g=new THREE.Group();
-  const mat=new THREE.MeshStandardMaterial({color:0xfbbf24,emissive:0xf59e0b,emissiveIntensity:2.5,roughness:.3,metalness:.2});
-  // 5 arms
-  for(let i=0;i<5;i++){
-    const arm=new THREE.Mesh(new THREE.CylinderGeometry(1.5,2.5,10,6),mat);
-    arm.rotation.z=Math.PI/2;arm.rotation.y=(i/5)*Math.PI*2;
-    arm.position.set(Math.cos((i/5)*Math.PI*2)*4,0,Math.sin((i/5)*Math.PI*2)*4);
-    g.add(arm);
-  }
-  const center=new THREE.Mesh(new THREE.SphereGeometry(3.5,8,6),mat);g.add(center);
-  return g;
-}
-
-function mkCoin(){
-  const m=new THREE.Mesh(new THREE.CylinderGeometry(5,5,2,12),
-    new THREE.MeshStandardMaterial({color:0xfbbf24,emissive:0xf59e0b,emissiveIntensity:3,roughness:.2,metalness:.8}));
-  m.castShadow=true; return m;
-}
-
-// ── Wake particles ─────────────────────────────────────────────────────────
-const WAKE_N=60;
-const wakePool=[];
-const wakeMat=new THREE.MeshStandardMaterial({color:0xfff,emissive:0x7dd3fc,emissiveIntensity:1.5,transparent:true,opacity:.7,roughness:1});
-for(let i=0;i<WAKE_N;i++){
-  const m=new THREE.Mesh(new THREE.SphereGeometry(2,5,3),wakeMat.clone());
-  m.visible=false;scene.add(m);wakePool.push(m);
-}
-let wakeParticles=[];
-
-function spawnWake(x,y,z){
-  const m=wakePool.find(w=>!w.visible);if(!m)return;
-  m.visible=true;m.position.set(x+(Math.random()-.5)*6,y,z+(Math.random()-.5)*4);
-  m.scale.setScalar(.5+Math.random()*.5);
-  wakeParticles.push({m,life:.8+Math.random()*.4,maxLife:0,vx:(Math.random()-.5)*8,vy:1+Math.random()*3,vz:6+Math.random()*6});
-  wakeParticles[wakeParticles.length-1].maxLife=wakeParticles[wakeParticles.length-1].life;
-}
-
-// ── Explosion particles ────────────────────────────────────────────────────
-const XP_N=80;
-const xpPool=[];
-const xpMat=new THREE.MeshStandardMaterial({color:0x38bdf8,emissive:0x0ea5e9,emissiveIntensity:4,roughness:.2});
-for(let i=0;i<XP_N;i++){
-  const m=new THREE.Mesh(new THREE.SphereGeometry(2.5,4,3),xpMat.clone());
-  m.visible=false;scene.add(m);xpPool.push(m);
-}
-let xpParticles=[];
-
-function spawnSplash(x,y,z,col=0x38bdf8){
-  for(let i=0;i<14;i++){
-    const m=xpPool.find(p=>!p.visible);if(!m)continue;
-    m.visible=true;m.position.set(x,y,z);
-    m.material.color.setHex(col);m.material.emissive.setHex(col);
-    const a=Math.random()*Math.PI*2,sp=20+Math.random()*50;
-    const lf=.5+Math.random()*.5;
-    xpParticles.push({m,vx:Math.cos(a)*sp,vy:15+Math.random()*30,vz:Math.sin(a)*sp*.4,life:lf,maxLife:lf});
-  }
-  const xl=new THREE.PointLight(col,8,80);xl.position.set(x,y,z);scene.add(xl);
-  setTimeout(()=>scene.remove(xl),350);
-}
-
-// ── Game state ────────────────────────────────────────────────────────────
-let gSt='title';
-let score=0,hiScore=0,dist=0,starCount=0,combo=0;
-let lives=3,gameSpeed=80,scroll=0,gameTime=0;
-let lastObs=0,lastPu=0,wakeTimer=0;
-
-const P={x:0,y:0,vy:0,vx:0,onGround:true,lean:0,roll:0};
-const surfer=mkSurfer();
-scene.add(surfer.group);
-
-let obstacles=[];
-let pickups=[];
-
-// Obstacle pool
-const obsPool=[];
-for(let i=0;i<20;i++){
-  const type=i%2===0?'rock':'buoy';
-  const obj=type==='rock'?mkRock():mkBuoy();
-  obj.visible=false; scene.add(obj);
-  obsPool.push({mesh:obj,type,alive:false});
-}
-
-// Pickup pool
-const puPool=[];
-for(let i=0;i<12;i++){
-  const type=i%3===0?'star':'coin';
-  const obj=type==='star'?mkStarfish():mkCoin();
-  obj.visible=false;scene.add(obj);
-  puPool.push({mesh:obj,type,alive:false});
-}
-
-// ── Input ─────────────────────────────────────────────────────────────────
-const K={};
-window.addEventListener('keydown',e=>K[e.code]=true);
-window.addEventListener('keyup',e=>K[e.code]=false);
-const TC={l:false,r:false,j:false};
-document.getElementById('ml').addEventListener('touchstart',e=>{e.preventDefault();TC.l=true;},{passive:false});
-document.getElementById('ml').addEventListener('touchend',e=>{e.preventDefault();TC.l=false;},{passive:false});
-document.getElementById('mr').addEventListener('touchstart',e=>{e.preventDefault();TC.r=true;},{passive:false});
-document.getElementById('mr').addEventListener('touchend',e=>{e.preventDefault();TC.r=false;},{passive:false});
-document.getElementById('mj').addEventListener('touchstart',e=>{e.preventDefault();TC.j=true;},{passive:false});
-document.getElementById('mj').addEventListener('touchend',e=>{e.preventDefault();TC.j=false;},{passive:false});
-if('ontouchstart' in window||navigator.maxTouchPoints>0)document.getElementById('mc').style.display='block';
-
-// Swipe detection
-let tX0=0,tY0=0;
-window.addEventListener('touchstart',e=>{tX0=e.touches[0].clientX;tY0=e.touches[0].clientY;},{passive:true});
-window.addEventListener('touchend',e=>{
-  const dx=e.changedTouches[0].clientX-tX0,dy=e.changedTouches[0].clientY-tY0;
-  if(Math.abs(dy)>40&&dy<-40&&P.onGround)doJump();
-},{passive:true});
-
-function doJump(){
-  if(P.onGround){P.vy=135;P.onGround=false;}
-}
-
-// ── HUD ───────────────────────────────────────────────────────────────────
-function hudScore(){document.getElementById('sc').textContent=String(Math.floor(score)).padStart(5,'0');document.getElementById('hi').textContent='HI: '+String(hiScore).padStart(5,'0');}
-function hudSpeed(){document.getElementById('spd').textContent='SPEED '+Math.floor(gameSpeed/80*10)/10+'×';}
-function hudLives(){
-  const el=document.getElementById('lives');el.innerHTML='';
-  for(let i=0;i<3;i++){const d=document.createElement('div');d.className='lv'+(i>=lives?' gone':'');el.appendChild(d);}
-}
-function showCombo(n){
-  const el=document.getElementById('combo');
-  el.textContent=n>=3?`COMBO ×${n} 🔥`:`⭐ +50`;
-  el.style.opacity='1';clearTimeout(el._t);el._t=setTimeout(()=>el.style.opacity='0',1200);
-}
-
-// ── Obstacle / pickup spawning ────────────────────────────────────────────
-function spawnObs(){
-  const lanes=[-50,0,50];
-  // Pick 1 or 2 obstacles
-  const n=Math.random()<.3?2:1;
-  const usedLanes=[];
-  for(let i=0;i<n;i++){
-    let lane;do{lane=lanes[Math.floor(Math.random()*3)];}while(usedLanes.includes(lane));
-    usedLanes.push(lane);
-    const ob=obsPool.find(o=>!o.alive);if(!ob)continue;
-    const h=ob.type==='rock'?10:12;
-    ob.mesh.position.set(lane,-h*.5,-380+(Math.random()-.5)*80);
-    ob.mesh.position.y=waveH(lane,ob.mesh.position.z,gameTime,scroll)+(ob.type==='rock'?6:8);
-    ob.mesh.visible=true;ob.alive=true;ob.x=lane;ob.clearH=h;
-    ob.mesh.rotation.set(Math.random()*.3,Math.random()*Math.PI*2,Math.random()*.2);
-    obstacles.push(ob);
+function spawnObstacle(){
+  const t = Math.random();
+  if(t < 0.45){
+    // Rock in water
+    const h = 22+Math.random()*20;
+    obstacles.push({
+      type:'rock', x:GW+60,
+      w:28+Math.random()*20, h,
+      col1:'#374151',col2:'#4b5563',col3:'#6b7280',
+      wob:Math.random()*Math.PI*2,
+    });
+  } else if(t < 0.75){
+    // Bird in air (low, medium, high)
+    const airH = [WAVE_BASE-65, WAVE_BASE-115, WAVE_BASE-165];
+    const y = airH[Math.floor(Math.random()*3)];
+    birds.push({x:GW+60, y, wingPhase:0, spd:speed*1.1+1});
+  } else {
+    // Boat
+    obstacles.push({
+      type:'boat', x:GW+60,
+      w:70, h:30,
+      col1:'#b45309',col2:'#d97706',col3:'#fbbf24',
+      wob:Math.random()*Math.PI*2,
+    });
   }
 }
 
 function spawnPickup(){
-  const lanes=[-50,0,50];
-  const lane=lanes[Math.floor(Math.random()*3)];
-  const pu=puPool.find(p=>!p.alive);if(!pu)return;
-  pu.mesh.position.set(lane,10,-380+(Math.random()-.5)*60);
-  pu.mesh.visible=true;pu.alive=true;pu.x=lane;
-  pickups.push(pu);
+  const y = WAVE_BASE - 55 - Math.random()*80;
+  pickups.push({
+    x:GW+40, y,
+    type:Math.random()<.7?'ring':'gem',
+    phase:Math.random()*Math.PI*2,
+    rot:0,
+  });
 }
 
-// ── Init / reset ─────────────────────────────────────────────────────────
-function initGame(){
-  score=0;dist=0;starCount=0;combo=0;lives=3;gameSpeed=80;scroll=0;gameTime=0;
-  lastObs=0;lastPu=0;wakeTimer=0;
-  P.x=0;P.y=0;P.vy=0;P.vx=0;P.onGround=true;P.lean=0;P.roll=0;
-  obstacles.forEach(o=>{o.alive=false;o.mesh.visible=false;});obstacles=[];
-  pickups.forEach(p=>{p.alive=false;p.mesh.visible=false;});pickups=[];
-  wakeParticles.forEach(w=>{w.m.visible=false;});wakeParticles=[];
-  xpParticles.forEach(p=>{p.m.visible=false;});xpParticles=[];
-  surfer.group.visible=true;surfer.group.rotation.set(0,Math.PI,0);
-  hudScore();hudSpeed();hudLives();
+function spawnParticle(x,y,col,vx,vy,life,r=4){
+  particles.push({x,y,vx,vy,life,maxLife:life,col,r});
 }
 
-// ── Update ────────────────────────────────────────────────────────────────
-const clock=new THREE.Clock();
-let camLX=0,camLY=60,shake=0;
+function spawnSplash(x,y,col='#7dd3fc'){
+  for(let i=0;i<12;i++){
+    const a=Math.random()*Math.PI, sp=2+Math.random()*6;
+    spawnParticle(x,y,col,Math.cos(a)*sp,-Math.abs(Math.sin(a)*sp)-2,.7+Math.random()*.5,3+Math.random()*3);
+  }
+}
+
+function spawnScorePopup(x,y,txt,col='#fbbf24'){
+  particles.push({type:'text',x,y,vy:-1.2,life:1.2,maxLife:1.2,txt,col});
+}
+
+// ── Drawing helpers ────────────────────────────────────────────────────────────
+function drawSky(){
+  // Sky gradient
+  const g=ctx.createLinearGradient(0,0,0,WAVE_BASE+20);
+  g.addColorStop(0,'#0c1445');
+  g.addColorStop(0.35,'#1e40af');
+  g.addColorStop(0.72,'#3b82f6');
+  g.addColorStop(1,'#93c5fd');
+  ctx.fillStyle=g; ctx.fillRect(0,0,GW,WAVE_BASE+20);
+
+  // Sun
+  const sx=GW*.82, sy=GH*.11;
+  const sg=ctx.createRadialGradient(sx,sy,8,sx,sy,70);
+  sg.addColorStop(0,'rgba(254,240,138,1)');
+  sg.addColorStop(0.28,'rgba(253,224,71,0.6)');
+  sg.addColorStop(1,'rgba(253,224,71,0)');
+  ctx.fillStyle=sg; ctx.beginPath(); ctx.arc(sx,sy,70,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#fef08a'; ctx.beginPath(); ctx.arc(sx,sy,20,0,Math.PI*2); ctx.fill();
+
+  // Sun rays
+  ctx.save(); ctx.translate(sx,sy);
+  ctx.strokeStyle='rgba(254,240,138,0.18)'; ctx.lineWidth=14;
+  for(let i=0;i<8;i++){
+    ctx.beginPath(); ctx.rotate(Math.PI/4);
+    ctx.moveTo(24,0); ctx.lineTo(68,0); ctx.stroke();
+  }
+  ctx.restore();
+
+  // Horizon glow
+  const hg=ctx.createLinearGradient(0,WAVE_BASE-40,0,WAVE_BASE+10);
+  hg.addColorStop(0,'rgba(147,197,253,0)');
+  hg.addColorStop(0.6,'rgba(186,230,253,0.25)');
+  hg.addColorStop(1,'rgba(186,230,253,0)');
+  ctx.fillStyle=hg; ctx.fillRect(0,WAVE_BASE-40,GW,50);
+}
+
+function drawClouds(){
+  for(const c of clouds){
+    ctx.save(); ctx.globalAlpha=c.alpha;
+    ctx.fillStyle='#fff';
+    ctx.beginPath(); ctx.ellipse(c.x,c.y,c.w,c.h,0,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(c.x+c.w*.4,c.y-c.h*.45,c.w*.72,c.h*.9,0,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(c.x-c.w*.38,c.y-c.h*.3,c.w*.6,c.h*.75,0,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+}
+
+function drawOcean(){
+  // Main water fill
+  ctx.beginPath();
+  ctx.moveTo(0,GH);
+  for(let x=0;x<=GW;x+=4) ctx.lineTo(x,waveY(x));
+  ctx.lineTo(GW,GH); ctx.closePath();
+  const wg=ctx.createLinearGradient(0,WAVE_BASE-10,0,GH);
+  wg.addColorStop(0,'#0ea5e9');
+  wg.addColorStop(0.18,'#0284c7');
+  wg.addColorStop(0.55,'#075985');
+  wg.addColorStop(1,'#0c2d4e');
+  ctx.fillStyle=wg; ctx.fill();
+
+  // Foam line (white edge)
+  ctx.strokeStyle='rgba(255,255,255,0.65)';
+  ctx.lineWidth=2.5; ctx.lineCap='round';
+  ctx.beginPath();
+  for(let x=0;x<=GW;x+=4){
+    const y=waveY(x);
+    x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+
+  // Inner foam strips
+  ctx.strokeStyle='rgba(255,255,255,0.18)';
+  ctx.lineWidth=1.5;
+  ctx.beginPath();
+  for(let x=0;x<=GW;x+=4){
+    const y=waveY(x)+8+Math.sin((x+scrollX*.8)*.025)*5;
+    x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+
+  // Wave highlight sheen
+  for(let i=0;i<3;i++){
+    const ox=((scrollX*0.6+i*200)%GW);
+    const pg=ctx.createLinearGradient(ox-60,0,ox+60,0);
+    pg.addColorStop(0,'rgba(255,255,255,0)');
+    pg.addColorStop(0.5,'rgba(255,255,255,0.07)');
+    pg.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.fillStyle=pg;
+    ctx.fillRect(ox-60, WAVE_BASE-5, 120, 20);
+  }
+}
+
+function drawWake(px,py){
+  // Spray trail behind player
+  for(let i=1;i<=5;i++){
+    const wx=px-i*16, wy=py+2;
+    const alpha=0.5-i*.08;
+    ctx.fillStyle=`rgba(186,230,253,${alpha})`;
+    ctx.beginPath(); ctx.ellipse(wx,wy,8-i,3,0.1,0,Math.PI*2); ctx.fill();
+  }
+}
+
+function drawRock(obs){
+  const x=obs.x, y=waveY(obs.x)+obs.h*.3;
+  // Shadow
+  ctx.fillStyle='rgba(0,0,0,0.18)';
+  ctx.beginPath(); ctx.ellipse(x,y+obs.h*.5,obs.w*.7,6,0,0,Math.PI*2); ctx.fill();
+  // Rock body (jagged polygon)
+  ctx.save(); ctx.translate(x,y);
+  ctx.fillStyle=obs.col1;
+  ctx.beginPath();
+  const verts=[[-obs.w*.55,-obs.h*.2],[-obs.w*.4,-obs.h*.85],[-obs.w*.1,-obs.h],
+    [obs.w*.22,-obs.h*.9],[obs.w*.5,-obs.h*.55],[obs.w*.55,-obs.h*.1],
+    [obs.w*.3,obs.h*.25],[obs.w*.05,obs.h*.35],[-obs.w*.35,obs.h*.25]];
+  ctx.moveTo(verts[0][0],verts[0][1]);
+  for(const v of verts) ctx.lineTo(v[0],v[1]);
+  ctx.closePath(); ctx.fill();
+  // Highlight face
+  ctx.fillStyle=obs.col2;
+  ctx.beginPath();
+  ctx.moveTo(-obs.w*.38,-obs.h*.82); ctx.lineTo(-obs.w*.08,-obs.h*.95);
+  ctx.lineTo(obs.w*.2,-obs.h*.88); ctx.lineTo(-obs.w*.05,-obs.h*.5);
+  ctx.closePath(); ctx.fill();
+  // Small highlight
+  ctx.fillStyle=obs.col3;
+  ctx.beginPath(); ctx.ellipse(-obs.w*.12,-obs.h*.68,obs.w*.1,obs.h*.08,-0.3,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
+function drawBoat(obs){
+  const x=obs.x, y=waveY(obs.x)+obs.h*.1;
+  ctx.save(); ctx.translate(x,y);
+  // Hull
+  ctx.fillStyle=obs.col1;
+  ctx.beginPath();
+  ctx.moveTo(-obs.w*.55,0); ctx.lineTo(-obs.w*.45,-obs.h*.65);
+  ctx.lineTo(obs.w*.45,-obs.h*.65); ctx.lineTo(obs.w*.6,0);
+  ctx.quadraticCurveTo(0,obs.h*.5,-obs.w*.55,0);
+  ctx.fill();
+  // Deck
+  ctx.fillStyle=obs.col2;
+  ctx.fillRect(-obs.w*.45,-obs.h*.75,obs.w*.9,obs.h*.15);
+  // Cabin
+  ctx.fillStyle='#1e293b';
+  ctx.fillRect(-obs.w*.15,-obs.h*1.3,obs.w*.3,obs.h*.6);
+  // Windows
+  ctx.fillStyle='rgba(250,204,21,0.8)';
+  ctx.fillRect(-obs.w*.1,-obs.h*1.2,obs.w*.08,obs.h*.14);
+  ctx.fillRect(obs.w*.02,-obs.h*1.2,obs.w*.08,obs.h*.14);
+  // Mast
+  ctx.strokeStyle='#374151'; ctx.lineWidth=3; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(0,-obs.h*.75); ctx.lineTo(0,-obs.h*2.2); ctx.stroke();
+  // Flag
+  ctx.fillStyle='#ef4444';
+  ctx.beginPath(); ctx.moveTo(0,-obs.h*2.2); ctx.lineTo(obs.w*.22,-obs.h*2.0); ctx.lineTo(0,-obs.h*1.8); ctx.closePath(); ctx.fill();
+  // Wake
+  ctx.fillStyle='rgba(186,230,253,0.35)';
+  ctx.beginPath(); ctx.ellipse(-obs.w*.3,obs.h*.3,obs.w*.5,8,-.15,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
+function drawBird(b){
+  ctx.save(); ctx.translate(b.x,b.y);
+  const w=Math.sin(b.wingPhase)*.5;
+  ctx.fillStyle='#1e293b';
+  // Left wing
+  ctx.beginPath(); ctx.moveTo(0,0);
+  ctx.bezierCurveTo(-10,-6+w*8,-20,-4+w*10,-26,2+w);
+  ctx.bezierCurveTo(-14,-1+w*5,0,2,0,0); ctx.fill();
+  // Right wing
+  ctx.beginPath(); ctx.moveTo(0,0);
+  ctx.bezierCurveTo(10,-6+w*8,20,-4+w*10,26,2+w);
+  ctx.bezierCurveTo(14,-1+w*5,0,2,0,0); ctx.fill();
+  // Body + head
+  ctx.fillStyle='#1e293b';
+  ctx.beginPath(); ctx.ellipse(0,1,7,4,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#374151';
+  ctx.beginPath(); ctx.arc(7,-1,3.5,0,Math.PI*2); ctx.fill();
+  // Beak
+  ctx.fillStyle='#fbbf24';
+  ctx.beginPath(); ctx.moveTo(9.5,-1); ctx.lineTo(14,-1.5); ctx.lineTo(9.5,1); ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+function drawPickup(pu){
+  ctx.save(); ctx.translate(pu.x, pu.y);
+  pu.rot+=0.06;
+  ctx.rotate(pu.rot);
+  if(pu.type==='ring'){
+    // Glowing ring
+    ctx.strokeStyle='#38bdf8'; ctx.lineWidth=4;
+    const rg=ctx.createRadialGradient(0,0,8,0,0,20);
+    rg.addColorStop(0,'rgba(56,189,248,0.4)');
+    rg.addColorStop(1,'rgba(56,189,248,0)');
+    ctx.fillStyle=rg; ctx.beginPath(); ctx.arc(0,0,20,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(0,0,14,0,Math.PI*2); ctx.stroke();
+    // Inner star
+    ctx.fillStyle='rgba(56,189,248,0.6)';
+    for(let i=0;i<5;i++){
+      const a=(i/5)*Math.PI*2-Math.PI/2;
+      const a2=((i+.5)/5)*Math.PI*2-Math.PI/2;
+      if(i===0)ctx.beginPath();
+      ctx.lineTo(Math.cos(a)*10,Math.sin(a)*10);
+      ctx.lineTo(Math.cos(a2)*5,Math.sin(a2)*5);
+    }
+    ctx.closePath(); ctx.fill();
+  } else {
+    // Gem
+    const gems=ctx.createRadialGradient(-3,-3,1,0,0,14);
+    gems.addColorStop(0,'#a78bfa');
+    gems.addColorStop(.5,'#7c3aed');
+    gems.addColorStop(1,'#4c1d95');
+    ctx.fillStyle=gems;
+    ctx.beginPath();
+    ctx.moveTo(0,-14); ctx.lineTo(10,-4); ctx.lineTo(10,4);
+    ctx.lineTo(0,14); ctx.lineTo(-10,4); ctx.lineTo(-10,-4);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='rgba(167,139,250,0.7)'; ctx.lineWidth=1.5;
+    ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,0.4)';
+    ctx.beginPath(); ctx.moveTo(-2,-12); ctx.lineTo(4,-4); ctx.lineTo(-2,-2); ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawSurfer(py, lean, dead, frame){
+  ctx.save(); ctx.translate(PLAYER_X, py);
+  if(dead) ctx.rotate(Math.PI*.35);
+  ctx.rotate(lean*0.05);
+
+  // Board
+  const bg=ctx.createLinearGradient(-32,0,32,0);
+  bg.addColorStop(0,'#ea580c'); bg.addColorStop(.5,'#f97316'); bg.addColorStop(1,'#ea580c');
+  ctx.fillStyle=bg;
+  ctx.beginPath(); ctx.ellipse(0,3,32,5.5,.06,0,Math.PI*2); ctx.fill();
+  // Board stripe
+  ctx.fillStyle='rgba(255,255,255,0.45)';
+  ctx.fillRect(-22,1,44,2.5);
+  // Fins
+  ctx.fillStyle='#c2410c';
+  ctx.beginPath(); ctx.moveTo(24,3); ctx.lineTo(31,13); ctx.lineTo(20,7); ctx.closePath(); ctx.fill();
+
+  // Legs
+  ctx.fillStyle='#0c4a6e';
+  ctx.fillRect(-8,-2,6,12); ctx.fillRect(2,-2,6,12);
+
+  // Body
+  const bodyG=ctx.createLinearGradient(0,-24,0,0);
+  bodyG.addColorStop(0,'#0ea5e9'); bodyG.addColorStop(1,'#0284c7');
+  ctx.fillStyle=bodyG; ctx.fillRect(-7,-24,14,22);
+
+  // Arms (wave with run frame)
+  const armB=Math.sin(frame*.1)*.25;
+  ctx.strokeStyle='#0ea5e9'; ctx.lineWidth=5; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(-7,-15); ctx.lineTo(-25,-9+armB*8); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(7,-15);  ctx.lineTo(25,-9-armB*8); ctx.stroke();
+
+  // Head
+  ctx.fillStyle='#f4a261';
+  ctx.beginPath(); ctx.arc(0,-30,9,0,Math.PI*2); ctx.fill();
+
+  // Hair
+  ctx.fillStyle='#92400e';
+  ctx.beginPath(); ctx.ellipse(0,-37,9,5,0,0,Math.PI); ctx.fill();
+
+  // Sunglasses
+  ctx.fillStyle='#0f172a';
+  ctx.beginPath(); ctx.arc(-3.5,-30.5,3.5,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(3.5,-30.5,3.5,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#1e293b'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(0,-30.5); ctx.lineTo(1,-30.5); ctx.stroke();
+  // Smile
+  ctx.strokeStyle='#92400e'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.arc(0,-28,4,.2,Math.PI-.2); ctx.stroke();
+
+  ctx.restore();
+
+  // Jump glow
+  if(P.jumpGlow>0){
+    const jg=ctx.createRadialGradient(PLAYER_X,py,5,PLAYER_X,py,40);
+    jg.addColorStop(0,`rgba(56,189,248,${P.jumpGlow*.4})`);
+    jg.addColorStop(1,'rgba(56,189,248,0)');
+    ctx.fillStyle=jg; ctx.beginPath(); ctx.arc(PLAYER_X,py,40,0,Math.PI*2); ctx.fill();
+    P.jumpGlow=Math.max(0,P.jumpGlow-.06);
+  }
+}
+
+function drawParticles(){
+  for(const p of particles){
+    const f=p.life/p.maxLife;
+    if(p.type==='text'){
+      ctx.globalAlpha=f;
+      ctx.fillStyle=p.col;
+      ctx.font=`bold ${18-f*2}px 'Segoe UI',system-ui`;
+      ctx.textAlign='center';
+      ctx.fillText(p.txt,p.x,p.y);
+      ctx.globalAlpha=1;
+    } else {
+      ctx.globalAlpha=f*.9;
+      ctx.fillStyle=p.col;
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r*f+.5,0,Math.PI*2); ctx.fill();
+      ctx.globalAlpha=1;
+    }
+  }
+  ctx.textAlign='left';
+}
+
+function drawHUD(){
+  // Score bar background
+  ctx.fillStyle='rgba(0,0,0,0.38)';
+  ctx.beginPath(); ctx.roundRect(12,12,220,38,10); ctx.fill();
+
+  // Score
+  ctx.fillStyle='#fff'; ctx.font='bold 20px "Segoe UI",system-ui';
+  ctx.fillText(String(Math.floor(score)).padStart(6,'0'),22,38);
+
+  // Hi
+  ctx.fillStyle='rgba(255,255,255,0.5)'; ctx.font='11px "Segoe UI",system-ui';
+  ctx.fillText('HI  '+String(hiScore).padStart(6,'0'),22,56);
+
+  // Lives (heart icons)
+  for(let i=0;i<3;i++){
+    drawHeart(GW-24-i*28, 28, i<lives);
+  }
+
+  // Speed
+  const spLabel=`SPEED ${Math.round(speed/SPEED_INIT*10)/10}×`;
+  ctx.fillStyle='rgba(56,189,248,0.85)';
+  ctx.font='bold 11px "Segoe UI",system-ui';
+  ctx.textAlign='right';
+  ctx.fillText(spLabel, GW-18, 52);
+  ctx.textAlign='left';
+
+  // Invincibility flicker bar
+  if(invTimer>0){
+    ctx.fillStyle='rgba(56,189,248,0.2)';
+    ctx.fillRect(0,0,GW,GH);
+    // Shield ring around player
+    ctx.strokeStyle=`rgba(56,189,248,${0.4+Math.sin(frame*.3)*.3})`;
+    ctx.lineWidth=3;
+    ctx.beginPath(); ctx.arc(PLAYER_X,P.y,48,0,Math.PI*2); ctx.stroke();
+  }
+}
+
+function drawHeart(x,y,filled){
+  ctx.save(); ctx.translate(x,y); ctx.scale(.85,.85);
+  if(filled){
+    ctx.fillStyle='#ef4444';
+    const hg=ctx.createRadialGradient(-3,-3,1,0,0,12);
+    hg.addColorStop(0,'#f87171'); hg.addColorStop(1,'#b91c1c');
+    ctx.fillStyle=hg;
+  } else {
+    ctx.fillStyle='rgba(255,255,255,0.15)';
+  }
+  ctx.beginPath();
+  ctx.moveTo(0,3);
+  ctx.bezierCurveTo(-12,-8,-16,8,-4,14);
+  ctx.bezierCurveTo(0,17,4,14,4,14);
+  ctx.bezierCurveTo(16,8,12,-8,0,3);
+  ctx.fill();
+  if(filled){ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=1;ctx.stroke();}
+  ctx.restore();
+}
+
+function drawTitle(){
+  // Big SURF text
+  ctx.save();
+  ctx.font='bold 96px "Segoe UI",system-ui';
+  ctx.textAlign='center';
+  const tg=ctx.createLinearGradient(GW/2-120,0,GW/2+120,0);
+  tg.addColorStop(0,'#38bdf8'); tg.addColorStop(.5,'#7dd3fc'); tg.addColorStop(1,'#0ea5e9');
+  ctx.fillStyle=tg;
+  ctx.shadowColor='rgba(14,165,233,0.6)'; ctx.shadowBlur=24;
+  ctx.fillText('SURF', GW/2, GH/2-40);
+  ctx.shadowBlur=0;
+  ctx.font='16px "Segoe UI",system-ui';
+  ctx.fillStyle='rgba(255,255,255,0.75)';
+  ctx.fillText('Press SPACE or Tap to Start', GW/2, GH/2+20);
+  ctx.font='12px "Segoe UI",system-ui';
+  ctx.fillStyle='rgba(255,255,255,0.4)';
+  ctx.fillText('Jump over rocks, birds & boats — collect rings & gems!', GW/2, GH/2+50);
+  if(hiScore>0){
+    ctx.fillStyle='#fbbf24'; ctx.font='bold 14px "Segoe UI",system-ui';
+    ctx.fillText('HI SCORE  ' + hiScore, GW/2, GH/2+82);
+  }
+  ctx.textAlign='left'; ctx.restore();
+}
+
+function drawGameOver(){
+  ctx.save();
+  ctx.fillStyle='rgba(0,0,0,0.55)';
+  ctx.fillRect(0,0,GW,GH);
+  ctx.font='bold 62px "Segoe UI",system-ui';
+  ctx.textAlign='center';
+  ctx.fillStyle='#ef4444';
+  ctx.shadowColor='rgba(239,68,68,.6)'; ctx.shadowBlur=20;
+  ctx.fillText('WIPED OUT', GW/2, GH/2-30);
+  ctx.shadowBlur=0;
+  ctx.font='bold 22px "Segoe UI",system-ui';
+  ctx.fillStyle='#fbbf24';
+  ctx.fillText('Score: ' + Math.floor(score), GW/2, GH/2+20);
+  if(Math.floor(score)>=hiScore&&hiScore>0){
+    ctx.fillStyle='#fbbf24';
+    ctx.font='15px "Segoe UI",system-ui';
+    ctx.fillText('🏆  NEW HIGH SCORE!', GW/2, GH/2+52);
+  }
+  ctx.font='15px "Segoe UI",system-ui';
+  ctx.fillStyle='rgba(255,255,255,.6)';
+  ctx.fillText('Press SPACE or Tap to Surf Again', GW/2, GH/2+82);
+  ctx.textAlign='left'; ctx.restore();
+}
+
+// ── Obstacle/pickup hitbox helpers ────────────────────────────────────────────
+function obsHitBox(obs){
+  const y=waveY(obs.x)-obs.h*.8;
+  return{x1:obs.x-obs.w*.45,x2:obs.x+obs.w*.45,y1:y,y2:y+obs.h*.9};
+}
+function birdHitBox(b){return{x1:b.x-20,x2:b.x+20,y1:b.y-8,y2:b.y+8};}
+
+function playerBox(){
+  return{x1:PLAYER_X-12,x2:PLAYER_X+14,y1:P.y-36,y2:P.y+4};
+}
+
+function boxOverlap(a,b){
+  return a.x1<b.x2&&a.x2>b.x1&&a.y1<b.y2&&a.y2>b.y1;
+}
+
+// ── Main update ───────────────────────────────────────────────────────────────
+let obsGap=0, puGap=0;
+const OBS_INTERVAL = ()=>Math.max(60,160-speed*6);
+const PU_INTERVAL  = ()=>Math.max(80,200-speed*5);
 
 function update(){
-  const dt=Math.min(clock.getDelta(),.05);
-  if(gSt!=='playing')return;
+  if(state!=='playing') return;
 
-  gameTime+=dt;
-  scroll+=dt*gameSpeed*.012;
-  dist+=dt*gameSpeed;
-  score+=dt*gameSpeed*0.08;
+  frame++;
+  scrollX += speed;
+  dist += speed;
+  score = dist * 0.04 + (score - dist * 0.04) * 1; // preserve collected pts
+  score += speed * 0.04;
+  speed = Math.min(SPEED_MAX, SPEED_INIT + dist * 0.0012);
+  if(invTimer>0) invTimer--;
 
-  // Speed ramp
-  gameSpeed=Math.min(280,80+dist*0.018);
-
-  waveMat.uniforms.uTime.value=gameTime;
-  waveMat.uniforms.uScroll.value=scroll;
-
-  // ── Player ──────────────────────────────────────────────────────────────
-  const left=K['ArrowLeft']||K['KeyA']||TC.l;
-  const right=K['ArrowRight']||K['KeyD']||TC.r;
-  const jump=K['Space']||K['ArrowUp']||K['KeyW']||TC.j;
-
-  if(left)  P.vx=Math.max(P.vx-800*dt,-120);
-  else if(right) P.vx=Math.min(P.vx+800*dt,120);
-  else P.vx*=Math.pow(.04,dt);
-
-  if(jump&&P.onGround)doJump();
-
-  P.x+=P.vx*dt;
-  P.x=Math.max(-70,Math.min(70,P.x));
-
-  // Ground = wave height at player
-  const wSurf=waveH(P.x,0,gameTime,scroll);
-  const groundY=wSurf+1;
-
+  // ── Player physics ────────────────────────────────────────────────────────
+  const surfaceY = waveY(PLAYER_X);
   if(!P.onGround){
-    P.vy-=360*dt;
-    P.y+=P.vy*dt;
-    if(P.y<=groundY){P.y=groundY;P.vy=0;P.onGround=true;}
+    P.vy += GRAVITY;
+    P.y  += P.vy;
+    if(P.y >= surfaceY){ P.y=surfaceY; P.vy=0; P.onGround=true; spawnSplash(PLAYER_X,P.y,'#7dd3fc'); }
   } else {
-    P.y=groundY;
-    P.onGround=true;
+    P.y = surfaceY;
+    // Wake particles
+    if(frame%4===0) spawnParticle(PLAYER_X-30,P.y,'rgba(186,230,253,0.7)',
+      -speed*.8,-1-Math.random()*.5,.45+Math.random()*.3,3);
   }
+  P.lean+=(0-P.lean)*.15;
 
-  // Lean on turn
-  P.lean+=((-P.vx*.012)-P.lean)*8*dt;
-  P.roll+=((-P.vx*.008)-P.roll)*6*dt;
+  // ── Clouds ────────────────────────────────────────────────────────────────
+  for(const c of clouds) c.x -= c.spd;
+  clouds=clouds.filter(c=>c.x>-150);
+  if(clouds.length<7) spawnCloud(GW+80);
 
-  // Surfer position
-  surfer.group.position.set(P.x,P.y,0);
-  surfer.group.rotation.set(P.lean,Math.PI,P.roll);
+  // ── Obstacles ────────────────────────────────────────────────────────────
+  obsGap++;
+  if(obsGap>=OBS_INTERVAL()){obsGap=0;spawnObstacle();}
+  // Move obstacles
+  for(const ob of obstacles){ ob.x-=speed; ob.wob+=0.07; }
+  obstacles=obstacles.filter(o=>o.x>-120);
+  // Move birds
+  for(const b of birds){ b.x-=b.spd; b.wingPhase+=0.14; }
+  birds=birds.filter(b=>b.x>-60);
 
-  // Jump squash/stretch on board
-  const jStr=P.onGround?1:1+Math.abs(P.vy)*.001;
-  surfer.board.scale.set(jStr,1/jStr,jStr);
+  // ── Pickups ───────────────────────────────────────────────────────────────
+  puGap++;
+  if(puGap>=PU_INTERVAL()){puGap=0;spawnPickup();}
+  for(const p of pickups) p.x-=speed;
+  pickups=pickups.filter(p=>p.x>-60);
 
-  // Arm wave anim (when surfing)
-  if(P.onGround){
-    const bob=Math.sin(gameTime*2.5)*.12;
-    surfer.lA.rotation.z=.6+bob;surfer.rA.rotation.z=-.6-bob;
-  }
-
-  // ── Wake ────────────────────────────────────────────────────────────────
-  wakeTimer+=dt;
-  if(wakeTimer>.04&&P.onGround){wakeTimer=0;spawnWake(P.x,P.y-1,4);}
-
-  for(let i=wakeParticles.length-1;i>=0;i--){
-    const w=wakeParticles[i];w.life-=dt;
-    if(w.life<=0){w.m.visible=false;wakeParticles.splice(i,1);continue;}
-    w.m.position.x+=w.vx*dt; w.m.position.y+=w.vy*dt; w.m.position.z+=w.vz*dt;
-    w.vy-=20*dt;
-    const f=w.life/w.maxLife;
-    w.m.scale.setScalar((.5+Math.random()*.1)*f);
-    w.m.material.opacity=f*.7;
-  }
-
-  // ── Explosion particles ──────────────────────────────────────────────────
-  for(let i=xpParticles.length-1;i>=0;i--){
-    const p=xpParticles[i];p.life-=dt;
-    if(p.life<=0){p.m.visible=false;xpParticles.splice(i,1);continue;}
-    p.vx*=.95;p.vy-=120*dt;p.m.position.x+=p.vx*dt;p.m.position.y+=p.vy*dt;p.m.position.z+=p.vz*dt;
-    const f=p.life/p.maxLife;p.m.scale.setScalar(f*1.2);p.m.material.emissiveIntensity=f*5;
-  }
-
-  // ── Move obstacles ────────────────────────────────────────────────────────
-  for(let i=obstacles.length-1;i>=0;i--){
-    const ob=obstacles[i];
-    ob.mesh.position.z+=gameSpeed*dt;
-    ob.mesh.position.y=waveH(ob.x,ob.mesh.position.z,gameTime,scroll)+(ob.type==='rock'?6:8);
-    ob.mesh.rotation.y+=dt*.3;
-    // Collision: when obstacle approaches player Z
-    if(ob.mesh.position.z>-30&&ob.mesh.position.z<25){
-      const dx=Math.abs(P.x-ob.x);
-      const needH=ob.clearH+8; // need to be this high to clear
-      if(dx<22&&P.y-groundY<(P.onGround?2:needH*.5)){
-        // HIT
-        ob.alive=false;ob.mesh.visible=false;obstacles.splice(i,1);
-        spawnSplash(P.x,P.y,0,0x38bdf8);
-        lives--;combo=0;hudLives();shake=.5;
-        if(lives<=0){
-          gSt='gameover';surfer.group.visible=false;
-          hiScore=Math.max(hiScore,Math.floor(score));
-          document.getElementById('gPts').textContent='Score: '+Math.floor(score);
-          document.getElementById('gHi').textContent=Math.floor(score)>=hiScore&&hiScore>0?'🏆 NEW HIGH SCORE!':'Hi Score: '+hiScore;
-          document.getElementById('ovG').style.display='flex';
-        }
-        continue;
+  // ── Collision detection ────────────────────────────────────────────────────
+  if(invTimer<=0 && !P.dead){
+    const pb=playerBox();
+    for(const ob of obstacles){
+      if(boxOverlap(pb,obsHitBox(ob))){
+        hitPlayer(ob.x, P.y);
+        obstacles=obstacles.filter(o=>o!==ob);
+        break;
       }
     }
-    if(ob.mesh.position.z>60){ob.alive=false;ob.mesh.visible=false;obstacles.splice(i,1);}
+    for(const b of birds){
+      if(boxOverlap(pb,birdHitBox(b))){
+        hitPlayer(b.x,b.y);
+        birds=birds.filter(x=>x!==b);
+        break;
+      }
+    }
   }
 
-  // ── Move pickups ──────────────────────────────────────────────────────────
+  // Pickup collection
+  const pb=playerBox();
   for(let i=pickups.length-1;i>=0;i--){
     const pu=pickups[i];
-    pu.mesh.position.z+=gameSpeed*dt;
-    pu.mesh.position.y=waveH(pu.x,pu.mesh.position.z,gameTime,scroll)+10;
-    pu.mesh.rotation.y+=dt*2;
-    // Collect
-    if(pu.mesh.position.z>-35&&pu.mesh.position.z<25){
-      const dx=Math.abs(P.x-pu.x);
-      if(dx<28&&Math.abs(P.y-pu.mesh.position.y)<18){
-        pu.alive=false;pu.mesh.visible=false;pickups.splice(i,1);
-        const pts=pu.type==='star'?50:20;
-        combo++;score+=pts*Math.max(1,Math.floor(combo/2));
-        spawnSplash(pu.mesh.position.x,pu.mesh.position.y,pu.mesh.position.z,0xfbbf24);
-        showCombo(combo);hudScore();
-        continue;
-      }
+    if(Math.abs(pu.x-PLAYER_X)<30&&Math.abs(pu.y-P.y)<44){
+      const pts=pu.type==='ring'?50:120;
+      score+=pts;
+      spawnSplash(pu.x,pu.y,pu.type==='ring'?'#38bdf8':'#a78bfa');
+      spawnScorePopup(pu.x,pu.y-30,'+'+pts,pu.type==='ring'?'#38bdf8':'#a78bfa');
+      pickups.splice(i,1);
     }
-    if(pu.mesh.position.z>60){pu.alive=false;pu.mesh.visible=false;pickups.splice(i,1);}
   }
 
-  // ── Spawn timing ─────────────────────────────────────────────────────────
-  const obsInterval=Math.max(.8,2.2-gameSpeed*.004);
-  const puInterval=Math.max(1.5,3.0-gameSpeed*.003);
-  lastObs+=dt; lastPu+=dt;
-  if(lastObs>obsInterval){lastObs=0;spawnObs();}
-  if(lastPu>puInterval){lastPu=0;spawnPickup();}
-
-  // ── Camera ────────────────────────────────────────────────────────────────
-  camLX+=(P.x*.3-camLX)*3*dt;
-  camLY+=(Math.max(P.y+55,55)-camLY)*2.5*dt;
-  shake*=.88;
-  const sx=(Math.random()-.5)*shake*14,sy=(Math.random()-.5)*shake*8;
-  camera.position.set(camLX+sx,camLY+sy,155);
-  camera.lookAt(camLX+sx,P.y+6+sy,-40);
-  sun.position.set(camLX+60,120,80);
-
-  hudScore();hudSpeed();
+  // ── Particles ─────────────────────────────────────────────────────────────
+  for(const p of particles){
+    p.x+=p.vx||0; p.y+=p.vy||0;
+    if(p.vy!==undefined&&p.type!=='text') p.vy+=0.08;
+    p.life-=0.016;
+  }
+  particles=particles.filter(p=>p.life>0);
 }
 
-// ── Render loop ────────────────────────────────────────────────────────────
+function hitPlayer(hx,hy){
+  lives--;
+  spawnSplash(PLAYER_X,P.y,'#ef4444');
+  spawnScorePopup(PLAYER_X,P.y-50,'💥','#ef4444');
+  P.vy=JUMP_VEL*.7; P.onGround=false; // bump up
+  P.lean=lives>0?-8:0;
+  P.jumpGlow=0.6;
+  if(lives<=0){
+    state='gameover';
+    hiScore=Math.max(hiScore,Math.floor(score));
+  } else {
+    invTimer=120; // 2 seconds invincibility
+  }
+}
+
+// ── Main loop ─────────────────────────────────────────────────────────────────
 function loop(){
   requestAnimationFrame(loop);
+
+  // Idle wave scroll on title/gameover
+  if(state!=='playing') scrollX+=1.5;
+
+  ctx.clearRect(0,0,GW,GH);
+
+  drawSky();
+  drawClouds();
+  drawOcean();
+  drawParticles();
+
+  if(state==='playing'||state==='gameover'){
+    // Obstacles
+    for(const ob of obstacles){
+      if(ob.type==='rock') drawRock(ob);
+      else drawBoat(ob);
+    }
+    for(const b of birds) drawBird(b);
+    for(const pu of pickups) drawPickup(pu);
+
+    // Wake trail
+    if(state==='playing') drawWake(PLAYER_X,P.y);
+
+    // Player
+    const blink=invTimer>0&&Math.floor(invTimer/4)%2===0;
+    if(!blink) drawSurfer(P.y, P.lean, P.dead, frame);
+
+    drawHUD();
+  }
+
+  if(state==='title') drawTitle();
+  if(state==='gameover'){ drawSurfer(P.y,P.lean,true,frame); drawGameOver(); }
+
   update();
-  composer.render();
 }
 
-// ── UI ────────────────────────────────────────────────────────────────────
-function start(){
-  document.getElementById('ovT').style.display='none';
-  document.getElementById('ovG').style.display='none';
-  gSt='playing';initGame();
-}
-document.getElementById('bS').addEventListener('click',start);
-document.getElementById('bR').addEventListener('click',start);
-
-// Title screen — show surfer on waves
-camera.position.set(0,55,155);camera.lookAt(0,6,-40);
-
+// ── Boot ─────────────────────────────────────────────────────────────────────
+// Seed background clouds for title
+for(let i=0;i<6;i++) spawnCloud(Math.random()*GW);
 loop();
 </script>
 </body>
