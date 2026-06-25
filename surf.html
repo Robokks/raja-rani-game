@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Edge Surf — Three.js WebGL</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;background:#000;overflow:hidden;font-family:'Segoe UI',system-ui,sans-serif}
+canvas{display:block;width:100%;height:100%}
+#hud{position:fixed;top:0;left:0;right:0;pointer-events:none;z-index:10;
+  display:flex;align-items:center;gap:16px;padding:12px 20px;
+  background:linear-gradient(180deg,rgba(0,0,0,0.55) 0%,transparent 100%)}
+#sc{font-size:22px;font-weight:900;color:#fff;letter-spacing:1px;
+  text-shadow:0 2px 8px rgba(0,0,0,.5),0 0 20px rgba(0,220,255,.4)}
+#hi{font-size:12px;color:rgba(255,255,255,.55);font-weight:600}
+#spd{margin-left:auto;font-size:11px;color:#7dd3fc;font-weight:700;letter-spacing:2px;
+  text-shadow:0 0 10px #38bdf8}
+#lives{display:flex;gap:5px;align-items:center}
+.lv{width:14px;height:14px;background:#ef4444;
+  clip-path:polygon(50% 0%,100% 35%,80% 100%,20% 100%,0% 35%);
+  filter:drop-shadow(0 0 5px rgba(239,68,68,.7));transition:all .2s}
+.lv.gone{background:#1e293b;filter:none}
+#combo{position:fixed;top:60px;left:50%;transform:translateX(-50%);
+  font-size:16px;font-weight:800;color:#fbbf24;letter-spacing:2px;
+  text-shadow:0 0 14px #fbbf24;pointer-events:none;opacity:0;transition:opacity .4s;z-index:10}
+/* mobile */
+#mc{position:fixed;bottom:0;left:0;width:100%;height:130px;display:none;pointer-events:none;z-index:20}
+.mbt{position:absolute;width:72px;height:72px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:22px;
+  pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none}
+#ml{bottom:28px;left:20px;background:rgba(255,255,255,.12);border:2px solid rgba(255,255,255,.28)}
+#mr{bottom:28px;left:100px;background:rgba(255,255,255,.12);border:2px solid rgba(255,255,255,.28)}
+#mj{bottom:28px;right:20px;background:rgba(251,191,36,.18);border:2px solid rgba(251,191,36,.45);
+  color:#fbbf24;font-weight:900;font-size:13px}
+/* overlays */
+.ov{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;z-index:50;backdrop-filter:blur(6px);
+  background:rgba(0,10,30,.78);color:#fff;text-align:center}
+.ov h1{font-size:56px;font-weight:900;letter-spacing:6px;margin-bottom:6px}
+.ov p{font-size:14px;opacity:.68;margin:3px 0;letter-spacing:.5px}
+.ov .pts{font-size:34px;font-weight:800;color:#fbbf24;
+  text-shadow:0 0 20px #fbbf24;margin:14px 0}
+.pbtn{margin-top:22px;padding:14px 44px;border:none;border-radius:50px;
+  font-size:16px;font-weight:800;cursor:pointer;letter-spacing:2px;
+  background:linear-gradient(135deg,#0ea5e9,#38bdf8);color:#fff;
+  box-shadow:0 8px 30px rgba(14,165,233,.5);transition:transform .15s,box-shadow .15s}
+.pbtn:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(14,165,233,.65)}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud">
+  <span id="sc">0</span>
+  <span id="hi">HI: 0</span>
+  <span id="spd">SPEED 1×</span>
+  <div id="lives"></div>
+</div>
+<div id="combo"></div>
+<div id="mc">
+  <div class="mbt" id="ml">◀</div>
+  <div class="mbt" id="mr">▶</div>
+  <div class="mbt" id="mj">JUMP</div>
+</div>
+<div class="ov" id="ovT">
+  <h1 style="color:#38bdf8;text-shadow:0 0 40px #0ea5e9,0 0 80px #0ea5e9">SURF</h1>
+  <p style="font-size:11px;letter-spacing:4px;color:#7dd3fc;margin-bottom:18px">THREE.JS WebGL EDITION</p>
+  <p>← → / A D — Dodge &nbsp;&nbsp; SPACE / ↑ — Jump</p>
+  <p style="margin-top:4px">Collect ⭐ starfish &amp; survive as long as possible!</p>
+  <button class="pbtn" id="bS">🏄 START SURFING</button>
+</div>
+<div class="ov" id="ovG" style="display:none">
+  <h1 style="color:#ef4444;text-shadow:0 0 30px #ef4444">WIPED OUT</h1>
+  <div class="pts" id="gPts">0</div>
+  <p id="gHi" style="color:#fbbf24"></p>
+  <button class="pbtn" id="bR">🏄 SURF AGAIN</button>
+</div>
+
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass }     from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass }     from 'three/addons/postprocessing/OutputPass.js';
+
+// ── Renderer ───────────────────────────────────────────────────────────────
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true, powerPreference:'high-performance'});
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(62, 1, 0.5, 2000);
+
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(1,1), 1.1, 0.4, 0.78);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+
+function resize(){
+  const w=window.innerWidth, h=window.innerHeight;
+  renderer.setSize(w,h); renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  camera.aspect=w/h; camera.updateProjectionMatrix();
+  composer.setSize(w,h); bloom.resolution.set(w,h);
+}
+window.addEventListener('resize',resize); resize();
+
+// ── Lights ─────────────────────────────────────────────────────────────────
+scene.add(new THREE.AmbientLight(0x4466aa, 3));
+const sun = new THREE.DirectionalLight(0xffd580, 5);
+sun.position.set(60, 120, 80);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048,2048);
+Object.assign(sun.shadow.camera, {left:-200,right:200,top:150,bottom:-50});
+sun.shadow.bias = -0.001;
+scene.add(sun);
+const fill = new THREE.DirectionalLight(0x2255aa, 1.5);
+fill.position.set(-80, 40, -100);
+scene.add(fill);
+
+// ── Wave shader ────────────────────────────────────────────────────────────
+const waveVert = `
+uniform float uTime;
+uniform float uScroll;
+varying vec2 vUv;
+varying float vH;
+
+void main(){
+  vUv = uv;
+  vec3 p = position;
+  float h = 0.0;
+  h += sin(p.x*0.030 + uScroll*1.10 + uTime*0.85)*6.0;
+  h += sin(p.x*0.075 - uScroll*0.55 + uTime*1.60)*3.0;
+  h += sin(p.z*0.045 + uTime*1.30)*4.5;
+  h += sin(p.z*0.110 - uTime*0.95)*2.0;
+  h += sin(p.x*0.130 + p.z*0.090 + uTime*2.10)*1.2;
+  vH = h;
+  p.y += h;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(p,1.0);
+}`;
+
+const waveFrag = `
+uniform float uTime;
+varying vec2 vUv;
+varying float vH;
+
+void main(){
+  vec3 deep  = vec3(0.01,0.10,0.35);
+  vec3 mid   = vec3(0.04,0.32,0.68);
+  vec3 light = vec3(0.12,0.60,0.92);
+  vec3 foam  = vec3(0.82,0.94,1.00);
+
+  float t = clamp((vH+12.0)/24.0, 0.0, 1.0);
+  vec3 col = mix(deep, mid, t);
+  col = mix(col, light, clamp(vH*0.07,0.0,1.0));
+
+  float foamA = smoothstep(4.0,9.0,vH);
+  float stripe = abs(sin(vUv.y*80.0 + uTime*4.0)) * 0.04 * max(0.0,vH*0.1);
+  col = mix(col, foam, foamA*0.65 + stripe);
+
+  float glint = pow(max(0.0, sin(vUv.x*55.0+uTime*6.0)*0.5+0.5),30.0)*0.25;
+  col += glint;
+
+  gl_FragColor = vec4(col, 1.0);
+}`;
+
+const waveMat = new THREE.ShaderMaterial({
+  uniforms:{ uTime:{value:0}, uScroll:{value:0} },
+  vertexShader: waveVert, fragmentShader: waveFrag,
+});
+const waterGeo = new THREE.PlaneGeometry(600, 1200, 60, 80);
+waterGeo.rotateX(-Math.PI/2);
+const water = new THREE.Mesh(waterGeo, waveMat);
+water.position.set(0,0,-500);
+scene.add(water);
+
+// ── Wave height JS (must match shader) ────────────────────────────────────
+function waveH(x, z, t, sc){
+  return Math.sin(x*.030 + sc*1.10 + t*.85)*6
+       + Math.sin(x*.075 - sc*.55  + t*1.60)*3
+       + Math.sin(z*.045 + t*1.30)*4.5
+       + Math.sin(z*.110 - t*.95)*2
+       + Math.sin(x*.130 + z*.090 + t*2.10)*1.2;
+}
+
+// ── Sky ────────────────────────────────────────────────────────────────────
+const skyM = new THREE.ShaderMaterial({
+  side: THREE.BackSide,
+  uniforms:{
+    sunDir:{value:new THREE.Vector3(0.3,0.18,-0.9).normalize()},
+    sunColor:{value:new THREE.Color(1.0,0.75,0.3)},
+  },
+  vertexShader:`varying vec3 vW;void main(){vW=(modelMatrix*vec4(position,1.0)).xyz;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+  fragmentShader:`
+    uniform vec3 sunDir,sunColor;
+    varying vec3 vW;
+    void main(){
+      vec3 n=normalize(vW);
+      float h=clamp(n.y,0.0,1.0);
+      vec3 hor=vec3(0.9,0.55,0.22);
+      vec3 zen=vec3(0.04,0.14,0.48);
+      vec3 col=mix(hor,zen,pow(h,.55));
+      float sd=max(dot(n,sunDir),0.0);
+      col+=sunColor*pow(sd,120.0)*2.5;
+      col+=sunColor*pow(sd,8.0)*0.18;
+      gl_FragColor=vec4(col,1.0);
+    }`
+});
+scene.add(new THREE.Mesh(new THREE.SphereGeometry(1400,20,12),skyM));
+
+// Stars (few visible at horizon)
+const sv=new Float32Array(600);
+for(let i=0;i<200;i++){const θ=Math.random()*Math.PI*2,φ=Math.acos(2*Math.random()-1),r=1300;sv[i*3]=r*Math.sin(φ)*Math.cos(θ);sv[i*3+1]=Math.abs(r*Math.cos(φ));sv[i*3+2]=r*Math.sin(φ)*Math.sin(θ);}
+const sg=new THREE.BufferGeometry();sg.setAttribute('position',new THREE.Float32BufferAttribute(sv,3));
+scene.add(new THREE.Points(sg,new THREE.PointsMaterial({color:0xfff8e0,size:2,sizeAttenuation:false,transparent:true,opacity:.6})));
+
+// ── Distant islands ────────────────────────────────────────────────────────
+[[-220,-600],[-80,-750],[180,-650],[300,-800]].forEach(([x,z])=>{
+  const h=60+Math.random()*60;
+  const isle=new THREE.Mesh(new THREE.ConeGeometry(30+Math.random()*20,h,8),
+    new THREE.MeshStandardMaterial({color:0x1a5c30,roughness:1}));
+  isle.position.set(x,-8,z);scene.add(isle);
+  const base=new THREE.Mesh(new THREE.CylinderGeometry(28+Math.random()*18,32,12,8),
+    new THREE.MeshStandardMaterial({color:0xd4a96a,roughness:1}));
+  base.position.set(x,-14,z);scene.add(base);
+});
+
+// ── Surfer character ───────────────────────────────────────────────────────
+function mkSurfer(){
+  const g=new THREE.Group();
+  const cast=(m)=>{m.castShadow=true;return m;}
+
+  // Board
+  const board=cast(new THREE.Mesh(new THREE.BoxGeometry(22,1.5,8),
+    new THREE.MeshStandardMaterial({color:0x0891b2,emissive:0x0369a1,emissiveIntensity:.3,roughness:.3,metalness:.3})));
+  board.position.y=-1.5; g.add(board);
+
+  // Board stripe
+  const stripe=new THREE.Mesh(new THREE.BoxGeometry(22,1.6,2.5),
+    new THREE.MeshStandardMaterial({color:0xf97316,emissive:0xea580c,emissiveIntensity:.4,roughness:.3}));
+  stripe.position.set(0,-1.4,0); g.add(stripe);
+
+  // Legs
+  const lm=new THREE.MeshStandardMaterial({color:0x0c4a6e,roughness:.7});
+  const lL=cast(new THREE.Mesh(new THREE.BoxGeometry(3.5,7,3.5),lm));lL.position.set(-3,2.5,0);g.add(lL);
+  const rL=cast(new THREE.Mesh(new THREE.BoxGeometry(3.5,7,3.5),lm));rL.position.set(3,2.5,0);g.add(rL);
+
+  // Torso
+  const tm=new THREE.MeshStandardMaterial({color:0x0ea5e9,roughness:.6});
+  const torso=cast(new THREE.Mesh(new THREE.BoxGeometry(10,12,7),tm));torso.position.y=11;g.add(torso);
+
+  // Arms (outstretched for balance)
+  const am=new THREE.MeshStandardMaterial({color:0xf4a261,roughness:.7});
+  const lA=cast(new THREE.Mesh(new THREE.BoxGeometry(3,9,3),tm));
+  lA.position.set(-9,11,0);lA.rotation.z=.6;g.add(lA);
+  const rA=cast(new THREE.Mesh(new THREE.BoxGeometry(3,9,3),tm));
+  rA.position.set(9,11,0);rA.rotation.z=-.6;g.add(rA);
+
+  // Head
+  const head=cast(new THREE.Mesh(new THREE.BoxGeometry(7,8,7),am));head.position.y=21;g.add(head);
+
+  // Hair
+  const hair=new THREE.Mesh(new THREE.BoxGeometry(8,3,7.5),
+    new THREE.MeshStandardMaterial({color:0x92400e,roughness:.9}));
+  hair.position.y=26;g.add(hair);
+
+  // Sunglasses
+  const sg=new THREE.Mesh(new THREE.BoxGeometry(8,2,1),
+    new THREE.MeshStandardMaterial({color:0x000000,emissive:0x1e40af,emissiveIntensity:.5}));
+  sg.position.set(0,22,3.6);g.add(sg);
+
+  return{group:g,board,torso,lA,rA,lL,rL,head};
+}
+
+// ── Obstacle + pickup factories ────────────────────────────────────────────
+function mkRock(){
+  const geo=new THREE.SphereGeometry(10+Math.random()*4,8,6);
+  const pos=geo.attributes.position;
+  for(let i=0;i<pos.count;i++){
+    pos.setY(i,pos.getY(i)*(0.45+Math.random()*.55));
+    pos.setX(i,pos.getX(i)*(0.7+Math.random()*.6));
+    pos.setZ(i,pos.getZ(i)*(0.7+Math.random()*.6));
+  }
+  geo.computeVertexNormals();
+  const m=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:0x374151+Math.floor(Math.random()*0x111111),roughness:.9,metalness:.05}));
+  m.castShadow=true; m.receiveShadow=true; return m;
+}
+
+function mkBuoy(){
+  const g=new THREE.Group();
+  const body=new THREE.Mesh(new THREE.CylinderGeometry(5,5,18,10),
+    new THREE.MeshStandardMaterial({color:0xef4444,roughness:.5}));
+  body.castShadow=true;
+  const stripe=new THREE.Mesh(new THREE.CylinderGeometry(5.1,5.1,4,10),
+    new THREE.MeshStandardMaterial({color:0xfbbf24,emissive:0xf59e0b,emissiveIntensity:.5,roughness:.4}));
+  stripe.position.y=2;
+  const top=new THREE.Mesh(new THREE.SphereGeometry(5,10,8),
+    new THREE.MeshStandardMaterial({color:0xef4444,roughness:.5}));
+  top.position.y=9;
+  const light=new THREE.Mesh(new THREE.SphereGeometry(2.5,6,5),
+    new THREE.MeshStandardMaterial({color:0xfff,emissive:0xfde047,emissiveIntensity:4}));
+  light.position.y=14;
+  g.add(body,stripe,top,light);
+  g.castShadow=true; return g;
+}
+
+function mkStarfish(){
+  const g=new THREE.Group();
+  const mat=new THREE.MeshStandardMaterial({color:0xfbbf24,emissive:0xf59e0b,emissiveIntensity:2.5,roughness:.3,metalness:.2});
+  // 5 arms
+  for(let i=0;i<5;i++){
+    const arm=new THREE.Mesh(new THREE.CylinderGeometry(1.5,2.5,10,6),mat);
+    arm.rotation.z=Math.PI/2;arm.rotation.y=(i/5)*Math.PI*2;
+    arm.position.set(Math.cos((i/5)*Math.PI*2)*4,0,Math.sin((i/5)*Math.PI*2)*4);
+    g.add(arm);
+  }
+  const center=new THREE.Mesh(new THREE.SphereGeometry(3.5,8,6),mat);g.add(center);
+  return g;
+}
+
+function mkCoin(){
+  const m=new THREE.Mesh(new THREE.CylinderGeometry(5,5,2,12),
+    new THREE.MeshStandardMaterial({color:0xfbbf24,emissive:0xf59e0b,emissiveIntensity:3,roughness:.2,metalness:.8}));
+  m.castShadow=true; return m;
+}
+
+// ── Wake particles ─────────────────────────────────────────────────────────
+const WAKE_N=60;
+const wakePool=[];
+const wakeMat=new THREE.MeshStandardMaterial({color:0xfff,emissive:0x7dd3fc,emissiveIntensity:1.5,transparent:true,opacity:.7,roughness:1});
+for(let i=0;i<WAKE_N;i++){
+  const m=new THREE.Mesh(new THREE.SphereGeometry(2,5,3),wakeMat.clone());
+  m.visible=false;scene.add(m);wakePool.push(m);
+}
+let wakeParticles=[];
+
+function spawnWake(x,y,z){
+  const m=wakePool.find(w=>!w.visible);if(!m)return;
+  m.visible=true;m.position.set(x+(Math.random()-.5)*6,y,z+(Math.random()-.5)*4);
+  m.scale.setScalar(.5+Math.random()*.5);
+  wakeParticles.push({m,life:.8+Math.random()*.4,maxLife:0,vx:(Math.random()-.5)*8,vy:1+Math.random()*3,vz:6+Math.random()*6});
+  wakeParticles[wakeParticles.length-1].maxLife=wakeParticles[wakeParticles.length-1].life;
+}
+
+// ── Explosion particles ────────────────────────────────────────────────────
+const XP_N=80;
+const xpPool=[];
+const xpMat=new THREE.MeshStandardMaterial({color:0x38bdf8,emissive:0x0ea5e9,emissiveIntensity:4,roughness:.2});
+for(let i=0;i<XP_N;i++){
+  const m=new THREE.Mesh(new THREE.SphereGeometry(2.5,4,3),xpMat.clone());
+  m.visible=false;scene.add(m);xpPool.push(m);
+}
+let xpParticles=[];
+
+function spawnSplash(x,y,z,col=0x38bdf8){
+  for(let i=0;i<14;i++){
+    const m=xpPool.find(p=>!p.visible);if(!m)continue;
+    m.visible=true;m.position.set(x,y,z);
+    m.material.color.setHex(col);m.material.emissive.setHex(col);
+    const a=Math.random()*Math.PI*2,sp=20+Math.random()*50;
+    const lf=.5+Math.random()*.5;
+    xpParticles.push({m,vx:Math.cos(a)*sp,vy:15+Math.random()*30,vz:Math.sin(a)*sp*.4,life:lf,maxLife:lf});
+  }
+  const xl=new THREE.PointLight(col,8,80);xl.position.set(x,y,z);scene.add(xl);
+  setTimeout(()=>scene.remove(xl),350);
+}
+
+// ── Game state ────────────────────────────────────────────────────────────
+let gSt='title';
+let score=0,hiScore=0,dist=0,starCount=0,combo=0;
+let lives=3,gameSpeed=80,scroll=0,gameTime=0;
+let lastObs=0,lastPu=0,wakeTimer=0;
+
+const P={x:0,y:0,vy:0,vx:0,onGround:true,lean:0,roll:0};
+const surfer=mkSurfer();
+scene.add(surfer.group);
+
+let obstacles=[];
+let pickups=[];
+
+// Obstacle pool
+const obsPool=[];
+for(let i=0;i<20;i++){
+  const type=i%2===0?'rock':'buoy';
+  const obj=type==='rock'?mkRock():mkBuoy();
+  obj.visible=false; scene.add(obj);
+  obsPool.push({mesh:obj,type,alive:false});
+}
+
+// Pickup pool
+const puPool=[];
+for(let i=0;i<12;i++){
+  const type=i%3===0?'star':'coin';
+  const obj=type==='star'?mkStarfish():mkCoin();
+  obj.visible=false;scene.add(obj);
+  puPool.push({mesh:obj,type,alive:false});
+}
+
+// ── Input ─────────────────────────────────────────────────────────────────
+const K={};
+window.addEventListener('keydown',e=>K[e.code]=true);
+window.addEventListener('keyup',e=>K[e.code]=false);
+const TC={l:false,r:false,j:false};
+document.getElementById('ml').addEventListener('touchstart',e=>{e.preventDefault();TC.l=true;},{passive:false});
+document.getElementById('ml').addEventListener('touchend',e=>{e.preventDefault();TC.l=false;},{passive:false});
+document.getElementById('mr').addEventListener('touchstart',e=>{e.preventDefault();TC.r=true;},{passive:false});
+document.getElementById('mr').addEventListener('touchend',e=>{e.preventDefault();TC.r=false;},{passive:false});
+document.getElementById('mj').addEventListener('touchstart',e=>{e.preventDefault();TC.j=true;},{passive:false});
+document.getElementById('mj').addEventListener('touchend',e=>{e.preventDefault();TC.j=false;},{passive:false});
+if('ontouchstart' in window||navigator.maxTouchPoints>0)document.getElementById('mc').style.display='block';
+
+// Swipe detection
+let tX0=0,tY0=0;
+window.addEventListener('touchstart',e=>{tX0=e.touches[0].clientX;tY0=e.touches[0].clientY;},{passive:true});
+window.addEventListener('touchend',e=>{
+  const dx=e.changedTouches[0].clientX-tX0,dy=e.changedTouches[0].clientY-tY0;
+  if(Math.abs(dy)>40&&dy<-40&&P.onGround)doJump();
+},{passive:true});
+
+function doJump(){
+  if(P.onGround){P.vy=135;P.onGround=false;}
+}
+
+// ── HUD ───────────────────────────────────────────────────────────────────
+function hudScore(){document.getElementById('sc').textContent=String(Math.floor(score)).padStart(5,'0');document.getElementById('hi').textContent='HI: '+String(hiScore).padStart(5,'0');}
+function hudSpeed(){document.getElementById('spd').textContent='SPEED '+Math.floor(gameSpeed/80*10)/10+'×';}
+function hudLives(){
+  const el=document.getElementById('lives');el.innerHTML='';
+  for(let i=0;i<3;i++){const d=document.createElement('div');d.className='lv'+(i>=lives?' gone':'');el.appendChild(d);}
+}
+function showCombo(n){
+  const el=document.getElementById('combo');
+  el.textContent=n>=3?`COMBO ×${n} 🔥`:`⭐ +50`;
+  el.style.opacity='1';clearTimeout(el._t);el._t=setTimeout(()=>el.style.opacity='0',1200);
+}
+
+// ── Obstacle / pickup spawning ────────────────────────────────────────────
+function spawnObs(){
+  const lanes=[-50,0,50];
+  // Pick 1 or 2 obstacles
+  const n=Math.random()<.3?2:1;
+  const usedLanes=[];
+  for(let i=0;i<n;i++){
+    let lane;do{lane=lanes[Math.floor(Math.random()*3)];}while(usedLanes.includes(lane));
+    usedLanes.push(lane);
+    const ob=obsPool.find(o=>!o.alive);if(!ob)continue;
+    const h=ob.type==='rock'?10:12;
+    ob.mesh.position.set(lane,-h*.5,-380+(Math.random()-.5)*80);
+    ob.mesh.position.y=waveH(lane,ob.mesh.position.z,gameTime,scroll)+(ob.type==='rock'?6:8);
+    ob.mesh.visible=true;ob.alive=true;ob.x=lane;ob.clearH=h;
+    ob.mesh.rotation.set(Math.random()*.3,Math.random()*Math.PI*2,Math.random()*.2);
+    obstacles.push(ob);
+  }
+}
+
+function spawnPickup(){
+  const lanes=[-50,0,50];
+  const lane=lanes[Math.floor(Math.random()*3)];
+  const pu=puPool.find(p=>!p.alive);if(!pu)return;
+  pu.mesh.position.set(lane,10,-380+(Math.random()-.5)*60);
+  pu.mesh.visible=true;pu.alive=true;pu.x=lane;
+  pickups.push(pu);
+}
+
+// ── Init / reset ─────────────────────────────────────────────────────────
+function initGame(){
+  score=0;dist=0;starCount=0;combo=0;lives=3;gameSpeed=80;scroll=0;gameTime=0;
+  lastObs=0;lastPu=0;wakeTimer=0;
+  P.x=0;P.y=0;P.vy=0;P.vx=0;P.onGround=true;P.lean=0;P.roll=0;
+  obstacles.forEach(o=>{o.alive=false;o.mesh.visible=false;});obstacles=[];
+  pickups.forEach(p=>{p.alive=false;p.mesh.visible=false;});pickups=[];
+  wakeParticles.forEach(w=>{w.m.visible=false;});wakeParticles=[];
+  xpParticles.forEach(p=>{p.m.visible=false;});xpParticles=[];
+  surfer.group.visible=true;surfer.group.rotation.set(0,Math.PI,0);
+  hudScore();hudSpeed();hudLives();
+}
+
+// ── Update ────────────────────────────────────────────────────────────────
+const clock=new THREE.Clock();
+let camLX=0,camLY=60,shake=0;
+
+function update(){
+  const dt=Math.min(clock.getDelta(),.05);
+  if(gSt!=='playing')return;
+
+  gameTime+=dt;
+  scroll+=dt*gameSpeed*.012;
+  dist+=dt*gameSpeed;
+  score+=dt*gameSpeed*0.08;
+
+  // Speed ramp
+  gameSpeed=Math.min(280,80+dist*0.018);
+
+  waveMat.uniforms.uTime.value=gameTime;
+  waveMat.uniforms.uScroll.value=scroll;
+
+  // ── Player ──────────────────────────────────────────────────────────────
+  const left=K['ArrowLeft']||K['KeyA']||TC.l;
+  const right=K['ArrowRight']||K['KeyD']||TC.r;
+  const jump=K['Space']||K['ArrowUp']||K['KeyW']||TC.j;
+
+  if(left)  P.vx=Math.max(P.vx-800*dt,-120);
+  else if(right) P.vx=Math.min(P.vx+800*dt,120);
+  else P.vx*=Math.pow(.04,dt);
+
+  if(jump&&P.onGround)doJump();
+
+  P.x+=P.vx*dt;
+  P.x=Math.max(-70,Math.min(70,P.x));
+
+  // Ground = wave height at player
+  const wSurf=waveH(P.x,0,gameTime,scroll);
+  const groundY=wSurf+1;
+
+  if(!P.onGround){
+    P.vy-=360*dt;
+    P.y+=P.vy*dt;
+    if(P.y<=groundY){P.y=groundY;P.vy=0;P.onGround=true;}
+  } else {
+    P.y=groundY;
+    P.onGround=true;
+  }
+
+  // Lean on turn
+  P.lean+=((-P.vx*.012)-P.lean)*8*dt;
+  P.roll+=((-P.vx*.008)-P.roll)*6*dt;
+
+  // Surfer position
+  surfer.group.position.set(P.x,P.y,0);
+  surfer.group.rotation.set(P.lean,Math.PI,P.roll);
+
+  // Jump squash/stretch on board
+  const jStr=P.onGround?1:1+Math.abs(P.vy)*.001;
+  surfer.board.scale.set(jStr,1/jStr,jStr);
+
+  // Arm wave anim (when surfing)
+  if(P.onGround){
+    const bob=Math.sin(gameTime*2.5)*.12;
+    surfer.lA.rotation.z=.6+bob;surfer.rA.rotation.z=-.6-bob;
+  }
+
+  // ── Wake ────────────────────────────────────────────────────────────────
+  wakeTimer+=dt;
+  if(wakeTimer>.04&&P.onGround){wakeTimer=0;spawnWake(P.x,P.y-1,4);}
+
+  for(let i=wakeParticles.length-1;i>=0;i--){
+    const w=wakeParticles[i];w.life-=dt;
+    if(w.life<=0){w.m.visible=false;wakeParticles.splice(i,1);continue;}
+    w.m.position.x+=w.vx*dt; w.m.position.y+=w.vy*dt; w.m.position.z+=w.vz*dt;
+    w.vy-=20*dt;
+    const f=w.life/w.maxLife;
+    w.m.scale.setScalar((.5+Math.random()*.1)*f);
+    w.m.material.opacity=f*.7;
+  }
+
+  // ── Explosion particles ──────────────────────────────────────────────────
+  for(let i=xpParticles.length-1;i>=0;i--){
+    const p=xpParticles[i];p.life-=dt;
+    if(p.life<=0){p.m.visible=false;xpParticles.splice(i,1);continue;}
+    p.vx*=.95;p.vy-=120*dt;p.m.position.x+=p.vx*dt;p.m.position.y+=p.vy*dt;p.m.position.z+=p.vz*dt;
+    const f=p.life/p.maxLife;p.m.scale.setScalar(f*1.2);p.m.material.emissiveIntensity=f*5;
+  }
+
+  // ── Move obstacles ────────────────────────────────────────────────────────
+  for(let i=obstacles.length-1;i>=0;i--){
+    const ob=obstacles[i];
+    ob.mesh.position.z+=gameSpeed*dt;
+    ob.mesh.position.y=waveH(ob.x,ob.mesh.position.z,gameTime,scroll)+(ob.type==='rock'?6:8);
+    ob.mesh.rotation.y+=dt*.3;
+    // Collision: when obstacle approaches player Z
+    if(ob.mesh.position.z>-30&&ob.mesh.position.z<25){
+      const dx=Math.abs(P.x-ob.x);
+      const needH=ob.clearH+8; // need to be this high to clear
+      if(dx<22&&P.y-groundY<(P.onGround?2:needH*.5)){
+        // HIT
+        ob.alive=false;ob.mesh.visible=false;obstacles.splice(i,1);
+        spawnSplash(P.x,P.y,0,0x38bdf8);
+        lives--;combo=0;hudLives();shake=.5;
+        if(lives<=0){
+          gSt='gameover';surfer.group.visible=false;
+          hiScore=Math.max(hiScore,Math.floor(score));
+          document.getElementById('gPts').textContent='Score: '+Math.floor(score);
+          document.getElementById('gHi').textContent=Math.floor(score)>=hiScore&&hiScore>0?'🏆 NEW HIGH SCORE!':'Hi Score: '+hiScore;
+          document.getElementById('ovG').style.display='flex';
+        }
+        continue;
+      }
+    }
+    if(ob.mesh.position.z>60){ob.alive=false;ob.mesh.visible=false;obstacles.splice(i,1);}
+  }
+
+  // ── Move pickups ──────────────────────────────────────────────────────────
+  for(let i=pickups.length-1;i>=0;i--){
+    const pu=pickups[i];
+    pu.mesh.position.z+=gameSpeed*dt;
+    pu.mesh.position.y=waveH(pu.x,pu.mesh.position.z,gameTime,scroll)+10;
+    pu.mesh.rotation.y+=dt*2;
+    // Collect
+    if(pu.mesh.position.z>-35&&pu.mesh.position.z<25){
+      const dx=Math.abs(P.x-pu.x);
+      if(dx<28&&Math.abs(P.y-pu.mesh.position.y)<18){
+        pu.alive=false;pu.mesh.visible=false;pickups.splice(i,1);
+        const pts=pu.type==='star'?50:20;
+        combo++;score+=pts*Math.max(1,Math.floor(combo/2));
+        spawnSplash(pu.mesh.position.x,pu.mesh.position.y,pu.mesh.position.z,0xfbbf24);
+        showCombo(combo);hudScore();
+        continue;
+      }
+    }
+    if(pu.mesh.position.z>60){pu.alive=false;pu.mesh.visible=false;pickups.splice(i,1);}
+  }
+
+  // ── Spawn timing ─────────────────────────────────────────────────────────
+  const obsInterval=Math.max(.8,2.2-gameSpeed*.004);
+  const puInterval=Math.max(1.5,3.0-gameSpeed*.003);
+  lastObs+=dt; lastPu+=dt;
+  if(lastObs>obsInterval){lastObs=0;spawnObs();}
+  if(lastPu>puInterval){lastPu=0;spawnPickup();}
+
+  // ── Camera ────────────────────────────────────────────────────────────────
+  camLX+=(P.x*.3-camLX)*3*dt;
+  camLY+=(Math.max(P.y+55,55)-camLY)*2.5*dt;
+  shake*=.88;
+  const sx=(Math.random()-.5)*shake*14,sy=(Math.random()-.5)*shake*8;
+  camera.position.set(camLX+sx,camLY+sy,155);
+  camera.lookAt(camLX+sx,P.y+6+sy,-40);
+  sun.position.set(camLX+60,120,80);
+
+  hudScore();hudSpeed();
+}
+
+// ── Render loop ────────────────────────────────────────────────────────────
+function loop(){
+  requestAnimationFrame(loop);
+  update();
+  composer.render();
+}
+
+// ── UI ────────────────────────────────────────────────────────────────────
+function start(){
+  document.getElementById('ovT').style.display='none';
+  document.getElementById('ovG').style.display='none';
+  gSt='playing';initGame();
+}
+document.getElementById('bS').addEventListener('click',start);
+document.getElementById('bR').addEventListener('click',start);
+
+// Title screen — show surfer on waves
+camera.position.set(0,55,155);camera.lookAt(0,6,-40);
+
+loop();
+</script>
+</body>
+</html>
