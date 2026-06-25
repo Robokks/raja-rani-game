@@ -2,61 +2,412 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Highway Racer 3D</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-html,body{width:100%;height:100%;overflow:hidden;background:#111}
-#wrap{position:relative;width:100%;height:100%}
-iframe{position:absolute;inset:0;width:100%;height:100%;border:none;display:block;}
-#fallback{
-  display:none;position:absolute;inset:0;
-  flex-direction:column;align-items:center;justify-content:center;
-  background:#111;color:#fff;font-family:system-ui,sans-serif;
-  text-align:center;padding:24px;
-}
-#fallback h1{font-size:2rem;margin-bottom:12px}
-#fallback p{font-size:1rem;opacity:.7;margin-bottom:24px;max-width:480px}
-#fallback a{
-  color:#fff;background:rgba(255,165,0,.25);
-  padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:600;
-  border:2px solid rgba(255,165,0,.6);
-}
-#fallback a:hover{background:rgba(255,165,0,.4)}
-#back{
-  position:absolute;top:12px;left:12px;z-index:10;
-  color:#fff;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.2);
-  padding:6px 14px;border-radius:6px;text-decoration:none;font-family:system-ui,sans-serif;font-size:13px;
-}
-#back:hover{background:rgba(0,0,0,.75)}
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+    font-family: 'Arial Black', sans-serif;
+    touch-action: none;
+  }
+  #gameWrapper {
+    position: relative;
+    width: 390px;
+    height: 844px;
+    background: #111;
+    overflow: hidden;
+    border-radius: 40px;
+    box-shadow: 0 0 60px rgba(0,200,255,0.3);
+  }
+  canvas {
+    display: block;
+    width: 390px;
+    height: 560px;
+    position: absolute;
+    top: 0; left: 0;
+  }
+  #hud {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 560px;
+    pointer-events: none;
+    z-index: 10;
+  }
+  #speedDisplay {
+    position: absolute;
+    top: 16px; right: 16px;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,200,0,0.5);
+    border-radius: 12px;
+    padding: 8px 14px;
+    color: #ffe100;
+    font-size: 13px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    text-align: center;
+  }
+  #speedDisplay .val { font-size: 28px; display: block; line-height: 1; }
+  #scoreDisplay {
+    position: absolute;
+    top: 16px; left: 16px;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(0,200,255,0.5);
+    border-radius: 12px;
+    padding: 8px 14px;
+    color: #00cfff;
+    font-size: 13px;
+    letter-spacing: 1px;
+    text-align: center;
+  }
+  #scoreDisplay .val { font-size: 22px; display: block; font-weight: bold; }
+  #controlZone {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 284px;
+    background: linear-gradient(180deg, #0a0a0a 0%, #111 100%);
+    border-top: 2px solid #222;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+  }
+  #joystickBase {
+    width: 180px; height: 180px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, #1e1e1e, #0a0a0a);
+    border: 2px solid #333;
+    position: relative;
+    box-shadow: 0 0 30px rgba(255,30,30,0.15), inset 0 2px 4px rgba(255,255,255,0.05);
+    touch-action: none;
+    cursor: grab;
+  }
+  #joystickBase::before {
+    content: '';
+    position: absolute;
+    inset: 20px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,40,40,0.2);
+  }
+  #crosshairRing {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 60px; height: 60px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,40,40,0.35);
+    pointer-events: none;
+  }
+  .arrow { position: absolute; width: 0; height: 0; opacity: 0.5; transition: opacity 0.1s; }
+  .arrow.top { border-left: 10px solid transparent; border-right: 10px solid transparent; border-bottom: 16px solid #ff2222; top: 12px; left: 50%; transform: translateX(-50%); }
+  .arrow.bottom { border-left: 10px solid transparent; border-right: 10px solid transparent; border-top: 16px solid #ff2222; bottom: 12px; left: 50%; transform: translateX(-50%); }
+  .arrow.left { border-top: 10px solid transparent; border-bottom: 10px solid transparent; border-right: 16px solid #ff2222; left: 12px; top: 50%; transform: translateY(-50%); }
+  .arrow.right { border-top: 10px solid transparent; border-bottom: 10px solid transparent; border-left: 16px solid #ff2222; right: 12px; top: 50%; transform: translateY(-50%); }
+  .arrow.active { opacity: 1; }
+  #joystickKnob {
+    position: absolute;
+    width: 60px; height: 60px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 38% 35%, #444, #111);
+    border: 2px solid #555;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.8);
+    pointer-events: none;
+  }
+  #controlHints {
+    position: absolute;
+    bottom: 16px; width: 100%;
+    text-align: center;
+    color: #444;
+    font-size: 10px;
+    letter-spacing: 1px;
+    pointer-events: none;
+    user-select: none;
+  }
+  .screen {
+    position: absolute;
+    inset: 0; z-index: 50;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.88);
+    border-radius: 40px;
+  }
+  .screen h1 { color: #ffe100; font-size: 32px; letter-spacing: 3px; text-shadow: 0 0 20px rgba(255,225,0,0.6); margin-bottom: 8px; }
+  .screen h2 { color: #ff2222; font-size: 28px; letter-spacing: 2px; margin-bottom: 8px; }
+  .screen p { color: #aaa; font-size: 13px; margin-bottom: 24px; letter-spacing: 1px; }
+  .btn {
+    background: linear-gradient(135deg, #ff2222, #cc0000);
+    color: #fff; border: none;
+    padding: 14px 40px; font-size: 16px;
+    font-weight: bold; border-radius: 30px;
+    cursor: pointer; letter-spacing: 2px;
+    box-shadow: 0 4px 20px rgba(255,30,30,0.4);
+    margin-top: 8px; touch-action: manipulation;
+  }
+  .btn:active { transform: scale(0.96); }
+  #gameOverScore { color: #00cfff; font-size: 18px; margin: 8px 0 16px; letter-spacing: 1px; }
+  .logo-icon { font-size: 64px; margin-bottom: 12px; filter: drop-shadow(0 0 16px rgba(255,225,0,0.5)); }
+  #back {
+    position: fixed; top: 14px; left: 14px; z-index: 200;
+    color: #fff; background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,255,255,0.25);
+    padding: 6px 14px; border-radius: 6px;
+    text-decoration: none; font-family: system-ui, sans-serif;
+    font-size: 13px; font-weight: 500;
+  }
+  #back:hover { background: rgba(0,0,0,0.85); }
 </style>
 </head>
 <body>
 <a id="back" href="index.html">← Back</a>
-<div id="wrap">
-  <iframe
-    id="gf"
-    src="https://githubgames.gitlab.io/game/highway-racer-3d.html"
-    allowfullscreen
-    allow="fullscreen; autoplay"
-    title="Highway Racer 3D"
-    sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms"
-  ></iframe>
-  <div id="fallback">
-    <h1>Highway Racer 3D</h1>
-    <p>The game couldn't load in this frame. Open it directly in a new tab.</p>
-    <a href="https://githubgames.gitlab.io/game/highway-racer-3d.html" target="_blank" rel="noopener">
-      Play Highway Racer 3D ↗
-    </a>
+<div id="gameWrapper">
+  <canvas id="gameCanvas" width="390" height="560"></canvas>
+  <div id="hud">
+    <div id="scoreDisplay">SCORE<span class="val" id="scoreVal">0</span></div>
+    <div id="speedDisplay">KM/H<span class="val" id="speedVal">0</span></div>
+  </div>
+  <div id="controlZone">
+    <div id="joystickBase">
+      <div class="arrow top" id="arrowUp"></div>
+      <div class="arrow bottom" id="arrowDown"></div>
+      <div class="arrow left" id="arrowLeft"></div>
+      <div class="arrow right" id="arrowRight"></div>
+      <div id="crosshairRing"></div>
+      <div id="joystickKnob"></div>
+    </div>
+    <div id="controlHints">↑ BRAKE &nbsp; ↓ ACCELERATE &nbsp; ← → STEER</div>
+  </div>
+  <div class="screen" id="startScreen">
+    <div class="logo-icon">🚗</div>
+    <h1>HIGHWAY RACER</h1>
+    <p>DODGE TRAFFIC · SURVIVE · SCORE</p>
+    <div style="color:#555;font-size:11px;margin-bottom:20px;text-align:center;line-height:1.8;">
+      DRAG DOWN → Accelerate<br>DRAG UP → Brake<br>DRAG LEFT/RIGHT → Steer
+    </div>
+    <button class="btn" id="startBtn">START RACE</button>
+  </div>
+  <div class="screen" id="gameOverScreen" style="display:none;">
+    <h2>CRASH!</h2>
+    <p>GAME OVER</p>
+    <div id="gameOverScore">SCORE: 0</div>
+    <button class="btn" id="restartBtn">RESTART</button>
   </div>
 </div>
 <script>
-const fr = document.getElementById('gf');
-const fb = document.getElementById('fallback');
-fr.addEventListener('error', () => { fr.style.display='none'; fb.style.display='flex'; });
-let loaded = false;
-fr.addEventListener('load', () => { loaded = true; });
-setTimeout(() => { if (!loaded) { fr.style.display='none'; fb.style.display='flex'; } }, 8000);
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+let state = 'idle', score = 0, frameCount = 0;
+const ROAD_LEFT = 30, ROAD_RIGHT = 360, ROAD_WIDTH = ROAD_RIGHT - ROAD_LEFT, NUM_LANES = 4;
+const LANE_WIDTH = ROAD_WIDTH / NUM_LANES, VP_X = W / 2, VP_Y = H * 0.22, HORIZON = VP_Y;
+const player = { x: W/2, y: H-100, w: 44, h: 80, speed: 0, maxSpeed: 18, steerX: 0 };
+let roadOffset = 0, traffic = [], trafficSpawnTimer = 0, trafficSpawnInterval = 90;
+const joystickBase = document.getElementById('joystickBase');
+const knob = document.getElementById('joystickKnob');
+const KNOB_RADIUS = 60;
+let joyActive = false, joyStartX = 0, joyStartY = 0, joyDX = 0, joyDY = 0;
+const aUp = document.getElementById('arrowUp'), aDown = document.getElementById('arrowDown');
+const aLeft = document.getElementById('arrowLeft'), aRight = document.getElementById('arrowRight');
+
+function getPointerPos(e, el) {
+  const rect = el.getBoundingClientRect();
+  const src = e.touches ? e.touches[0] : e;
+  return { x: src.clientX - rect.left, y: src.clientY - rect.top };
+}
+function joystickStart(e) {
+  e.preventDefault(); joyActive = true;
+  const pos = getPointerPos(e, joystickBase);
+  joyStartX = pos.x; joyStartY = pos.y; joyDX = 0; joyDY = 0;
+}
+function joystickMove(e) {
+  if (!joyActive) return; e.preventDefault();
+  const pos = getPointerPos(e, joystickBase);
+  let dx = pos.x - joyStartX, dy = pos.y - joyStartY;
+  const dist = Math.sqrt(dx*dx + dy*dy);
+  if (dist > KNOB_RADIUS) { dx = dx/dist*KNOB_RADIUS; dy = dy/dist*KNOB_RADIUS; }
+  joyDX = dx; joyDY = dy;
+  knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+  const t = 15;
+  aUp.classList.toggle('active', dy < -t); aDown.classList.toggle('active', dy > t);
+  aLeft.classList.toggle('active', dx < -t); aRight.classList.toggle('active', dx > t);
+}
+function joystickEnd(e) {
+  e.preventDefault(); joyActive = false; joyDX = 0; joyDY = 0;
+  knob.style.transform = 'translate(-50%, -50%)';
+  aUp.classList.remove('active'); aDown.classList.remove('active');
+  aLeft.classList.remove('active'); aRight.classList.remove('active');
+}
+joystickBase.addEventListener('touchstart', joystickStart, { passive: false });
+joystickBase.addEventListener('touchmove', joystickMove, { passive: false });
+joystickBase.addEventListener('touchend', joystickEnd, { passive: false });
+joystickBase.addEventListener('mousedown', joystickStart);
+window.addEventListener('mousemove', joystickMove);
+window.addEventListener('mouseup', joystickEnd);
+
+function depthFromY(screenY) { return screenY <= HORIZON ? 1 : 1-(screenY-HORIZON)/(H-HORIZON); }
+function laneXAtY(frac, screenY) {
+  const depth = depthFromY(screenY);
+  const half = 60 + (ROAD_WIDTH/2 - 60)*(1-depth);
+  return VP_X - half + frac*half*2;
+}
+
+function drawRoad() {
+  const skyGrad = ctx.createLinearGradient(0,0,0,HORIZON);
+  skyGrad.addColorStop(0,'#87CEEB'); skyGrad.addColorStop(1,'#d4a96a');
+  ctx.fillStyle = skyGrad; ctx.fillRect(0,0,W,HORIZON);
+  ctx.fillStyle = '#c8935a'; ctx.fillRect(0,HORIZON,W,H);
+  ctx.beginPath();
+  ctx.moveTo(ROAD_LEFT,H); ctx.lineTo(ROAD_RIGHT,H);
+  ctx.lineTo(VP_X+60,HORIZON); ctx.lineTo(VP_X-60,HORIZON); ctx.closePath();
+  const rg = ctx.createLinearGradient(0,HORIZON,0,H);
+  rg.addColorStop(0,'#555'); rg.addColorStop(1,'#6a6a6a');
+  ctx.fillStyle = rg; ctx.fill();
+  for (let lane=1; lane<NUM_LANES; lane++) drawDashedLane(lane/NUM_LANES, '#ffe100');
+  [0,1].forEach(f => { drawEdgeLine(f); drawGuardrail(f); });
+}
+function drawDashedLane(frac, color) {
+  const DASH=80, GAP=60, TOTAL=DASH+GAP;
+  ctx.strokeStyle = color;
+  for (let i=0; i<=30; i++) {
+    const t1=i/30, t2=Math.min((i+0.5)/30,1);
+    const y1=HORIZON+(H-HORIZON)*t1, y2=HORIZON+(H-HORIZON)*t2;
+    const phase=((((1-t1)*600+roadOffset)%TOTAL)+TOTAL)%TOTAL;
+    if (phase>DASH) continue;
+    ctx.beginPath(); ctx.moveTo(laneXAtY(frac,y1),y1); ctx.lineTo(laneXAtY(frac,y2),y2);
+    ctx.lineWidth=Math.max(1,3*(1-t1)+0.5); ctx.stroke();
+  }
+}
+function drawEdgeLine(frac) {
+  ctx.beginPath();
+  ctx.moveTo(laneXAtY(frac,H),H); ctx.lineTo(laneXAtY(frac,HORIZON),HORIZON);
+  ctx.strokeStyle='#ffe100'; ctx.lineWidth=2; ctx.setLineDash([]); ctx.stroke();
+}
+function drawGuardrail(side) {
+  ctx.beginPath();
+  for (let y=HORIZON; y<=H; y+=4) {
+    const x=laneXAtY(side,y)+(side===0?-15:15);
+    y===HORIZON ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+  }
+  ctx.strokeStyle='#aaa'; ctx.lineWidth=3; ctx.setLineDash([]); ctx.stroke();
+}
+
+function roundRect(ctx,x,y,w,h,r) { ctx.beginPath(); ctx.roundRect(x,y,w,h,r); }
+function shadeColor(hex,pct) {
+  const n=parseInt(hex.replace('#',''),16);
+  const r=Math.min(255,Math.max(0,(n>>16)+pct));
+  const g=Math.min(255,Math.max(0,((n>>8)&0xff)+pct));
+  const b=Math.min(255,Math.max(0,(n&0xff)+pct));
+  return `rgb(${r},${g},${b})`;
+}
+function drawCar(x,y,w,h,color,isPlayer) {
+  const bodyH=h*0.55, cabW=w*0.75, cabH=h*0.32;
+  ctx.fillStyle='rgba(0,0,0,0.25)';
+  ctx.beginPath(); ctx.ellipse(x,y+h*0.07,w*0.6,8,0,0,Math.PI*2); ctx.fill();
+  roundRect(ctx,x-w/2,y-h*0.05,w,bodyH*0.5,5); ctx.fillStyle=color; ctx.fill();
+  roundRect(ctx,x-w/2,y-h*0.05-bodyH*0.5,w,bodyH,6); ctx.fillStyle=color; ctx.fill();
+  roundRect(ctx,x-cabW/2,y-h*0.05-bodyH*0.5-cabH,cabW,cabH,6); ctx.fillStyle=shadeColor(color,-20); ctx.fill();
+  ctx.fillStyle='rgba(80,180,220,0.65)';
+  roundRect(ctx,x-cabW/2+5,y-h*0.05-bodyH*0.5-cabH+4,cabW-10,cabH*0.55,3); ctx.fill();
+  const lY=isPlayer?(y-h*0.05+4):(y-h*0.05-bodyH*0.5-4);
+  ctx.fillStyle=isPlayer?'#ff3333':'#ffff99';
+  ctx.beginPath(); ctx.ellipse(x-w/2+7,lY,5,3,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(x+w/2-7,lY,5,3,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#1a1a1a';
+  const wy=y-h*0.05-bodyH*0.15;
+  [[x-w/2-3,wy-10],[x+w/2+3,wy-10],[x-w/2-3,wy-35],[x+w/2+3,wy-35]].forEach(([wx,wY])=>{
+    ctx.beginPath(); ctx.ellipse(wx,wY,5,8,0.2,0,Math.PI*2); ctx.fill();
+  });
+}
+
+const CAR_COLORS=['#e74c3c','#2ecc71','#f39c12','#9b59b6','#1abc9c','#e67e22','#ffffff','#ff69b4'];
+function spawnTraffic() {
+  const lane=Math.floor(Math.random()*NUM_LANES), frac=(lane+0.5)/NUM_LANES;
+  traffic.push({ x:laneXAtY(frac,HORIZON+20), y:HORIZON+20, frac, color:CAR_COLORS[Math.floor(Math.random()*CAR_COLORS.length)], speed:0.6+Math.random()*0.8, scale:0.15 });
+}
+function updateTraffic() {
+  for (let i=traffic.length-1; i>=0; i--) {
+    const t=traffic[i];
+    t.y += t.speed*(player.speed/6+0.5);
+    t.scale = 1-depthFromY(t.y);
+    t.x = laneXAtY(t.frac,t.y);
+    if (t.y>H+120) traffic.splice(i,1);
+  }
+}
+function drawTraffic() {
+  [...traffic].sort((a,b)=>a.y-b.y).forEach(t=>{
+    const s=t.scale, w=44*s, h=80*s;
+    if (s>=0.05) drawCar(t.x,t.y,w,h,t.color,false);
+  });
+}
+function checkCollision() {
+  const pw=player.w*0.6, ph=player.h*0.7;
+  return traffic.some(t=>{ const s=t.scale; return Math.abs(player.x-t.x)<pw/2+44*s*0.55/2 && Math.abs(player.y-t.y)<ph/2+80*s*0.6/2; });
+}
+function updatePlayer() {
+  const normY=joyDY/KNOB_RADIUS, normX=joyDX/KNOB_RADIUS;
+  if (normY>0.1) player.speed=Math.min(player.maxSpeed,player.speed+normY*0.6);
+  else if (normY<-0.1) player.speed=Math.max(0,player.speed+normY*0.5);
+  else player.speed=Math.max(0,player.speed-0.15);
+  player.x+=normX*5;
+  player.x=Math.max(laneXAtY(0,player.y)+player.w/2+5, Math.min(laneXAtY(1,player.y)-player.w/2-5, player.x));
+  roadOffset+=player.speed;
+  score+=Math.floor(player.speed*0.1); frameCount++;
+  if (++trafficSpawnTimer>=trafficSpawnInterval) {
+    trafficSpawnTimer=0; spawnTraffic();
+    if (Math.random()<0.4) spawnTraffic();
+    trafficSpawnInterval=Math.max(40,trafficSpawnInterval-0.3);
+  }
+}
+function drawScenery() {
+  [0,1].forEach(side=>{
+    for (let i=0; i<5; i++) {
+      const t=((i/5+(side?0.5:0))+(roadOffset/400))%1;
+      const y=HORIZON+(H-HORIZON)*t;
+      const x=laneXAtY(side,y)+(side?1:-1)*(35+(1-t)*10);
+      const s=0.3+t*0.7;
+      ctx.fillStyle='#8B6914'; ctx.fillRect(x-3*s,y-40*s,6*s,40*s);
+      ctx.fillStyle='#2d8a2d';
+      for (let a=0;a<6;a++) {
+        const ang=(a/6)*Math.PI*2;
+        ctx.beginPath(); ctx.ellipse(x+Math.cos(ang)*14*s,y-40*s+Math.sin(ang)*8*s,12*s,5*s,ang,0,Math.PI*2); ctx.fill();
+      }
+    }
+  });
+}
+function updateHUD() {
+  document.getElementById('scoreVal').textContent=score;
+  document.getElementById('speedVal').textContent=Math.floor(player.speed*15);
+}
+function gameLoop() {
+  if (state!=='playing') return;
+  ctx.clearRect(0,0,W,H);
+  drawRoad(); drawScenery(); updateTraffic(); drawTraffic(); updatePlayer(); drawCar(player.x,player.y,player.w,player.h,'#2196F3',true); updateHUD();
+  if (checkCollision()) { gameOver(); return; }
+  requestAnimationFrame(gameLoop);
+}
+function startGame() {
+  state='playing'; score=0; frameCount=0; player.x=W/2; player.speed=0;
+  traffic=[]; trafficSpawnTimer=0; trafficSpawnInterval=90; roadOffset=0;
+  document.getElementById('startScreen').style.display='none';
+  document.getElementById('gameOverScreen').style.display='none';
+  requestAnimationFrame(gameLoop);
+}
+function gameOver() {
+  state='over';
+  document.getElementById('gameOverScore').textContent=`SCORE: ${score}`;
+  document.getElementById('gameOverScreen').style.display='flex';
+}
+document.getElementById('startBtn').addEventListener('click',startGame);
+document.getElementById('restartBtn').addEventListener('click',startGame);
+ctx.clearRect(0,0,W,H); drawRoad(); drawScenery(); drawCar(W/2,player.y,player.w,player.h,'#2196F3',true);
 </script>
 </body>
 </html>
