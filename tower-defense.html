@@ -6,73 +6,80 @@
 <title>Tower Defense</title>
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-html,body{width:100%;height:100%;background:#070b14;overflow:hidden;
-  font-family:'Segoe UI',system-ui,sans-serif;color:#e2e8f0}
+html,body{width:100%;height:100%;background:#c8e8ff;overflow:hidden;
+  font-family:'Segoe UI',system-ui,sans-serif;color:#0f3460}
 
 /* ── Layout ── */
 #wrap{display:flex;flex-direction:column;width:100%;height:100%}
-#topbar{flex:0 0 46px;display:flex;align-items:center;gap:14px;
-  padding:0 14px;
-  background:linear-gradient(90deg,#0f172a,#1e293b);
-  border-bottom:1px solid rgba(255,255,255,0.07);z-index:20}
-.hstat{display:flex;align-items:center;gap:5px;font-size:13px;font-weight:700}
-.hstat-icon{font-size:15px}
-.hstat-val{min-width:38px}
-.hsep{color:rgba(255,255,255,0.15)}
-#wave-info{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:12px;color:#94a3b8}
+#topbar{flex:0 0 50px;display:flex;align-items:center;gap:14px;
+  padding:0 16px;
+  background:linear-gradient(90deg,#0078D4,#00A8E8);
+  border-bottom:3px solid #005a9e;z-index:20;
+  box-shadow:0 3px 12px rgba(0,120,212,.35)}
+.hstat{display:flex;align-items:center;gap:5px;font-size:13px;font-weight:700;color:#fff}
+.hstat-icon{font-size:16px}
+.hstat-val{min-width:38px;color:#ffe085}
+.hsep{color:rgba(255,255,255,0.3)}
+#wave-info{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,.85)}
 #wave-pips{display:flex;gap:3px}
-.pip{width:11px;height:4px;border-radius:2px;border:1px solid #334155;background:#0f172a;transition:all .25s}
+.pip{width:12px;height:5px;border-radius:3px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.2);transition:all .25s}
 .pip.done{background:#22c55e;border-color:#16a34a}
-.pip.active{background:#fbbf24;border-color:#d97706}
+.pip.active{background:#fbbf24;border-color:#f59e0b}
 
 #body{flex:1;display:flex;min-height:0}
-#cvs-wrap{flex:1;position:relative;overflow:hidden;background:#070b14}
+#cvs-wrap{flex:1;position:relative;overflow:hidden;background:#87CEEB}
 #cvs-wrap canvas{display:block}
 
 /* ── Side panel ── */
-#panel{flex:0 0 152px;display:flex;flex-direction:column;gap:5px;
-  padding:10px 8px;overflow-y:auto;
-  background:linear-gradient(180deg,#0b1120,#0f172a);
-  border-left:1px solid rgba(255,255,255,0.06)}
-.ptitle{font-size:9px;letter-spacing:2px;color:#475569;text-align:center;
-  text-transform:uppercase;margin-bottom:2px}
+#panel{flex:0 0 156px;display:flex;flex-direction:column;gap:6px;
+  padding:12px 9px;overflow-y:auto;
+  background:linear-gradient(180deg,#f0f8ff,#e0f0ff);
+  border-left:2px solid #bee3f8}
+.ptitle{font-size:9px;letter-spacing:2px;color:#0078D4;text-align:center;
+  text-transform:uppercase;margin-bottom:4px;font-weight:700}
 
-.tbtn{width:100%;padding:8px 9px 6px;border-radius:8px;cursor:pointer;
-  color:#e2e8f0;text-align:left;transition:all .14s;
-  background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.09)}
-.tbtn:hover:not([disabled]){background:rgba(255,255,255,0.09);
-  border-color:rgba(255,255,255,0.18);transform:translateY(-1px)}
-.tbtn.sel{border-color:var(--tc);box-shadow:0 0 14px color-mix(in srgb,var(--tc) 40%,transparent);
-  background:color-mix(in srgb,var(--tc) 18%,transparent)}
-.tbtn[disabled]{opacity:.32;cursor:not-allowed}
+.tbtn{width:100%;padding:8px 9px 7px;border-radius:10px;cursor:pointer;
+  color:#0f3460;text-align:left;transition:all .14s;
+  background:#fff;border:2px solid #bee3f8}
+.tbtn:hover:not([disabled]){background:#e8f4ff;
+  border-color:#0078D4;transform:translateY(-1px);
+  box-shadow:0 4px 12px rgba(0,120,212,.18)}
+.tbtn.sel{border-color:var(--tc);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--tc) 25%,transparent);
+  background:color-mix(in srgb,var(--tc) 10%,#fff)}
+.tbtn[disabled]{opacity:.4;cursor:not-allowed;background:#f1f5f9}
 .tbtn-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:2px}
 .tbtn-name{font-size:12px;font-weight:700}
-.tbtn-cost{font-size:11px;color:#fbbf24;font-weight:700}
+.tbtn-cost{font-size:11px;color:#d97706;font-weight:700}
 .tbtn-desc{font-size:9px;color:#64748b}
 
-#actions{margin-top:auto;display:flex;flex-direction:column;gap:5px}
-.abtn{width:100%;padding:9px;border-radius:7px;border:none;font-size:12px;
+#actions{margin-top:auto;display:flex;flex-direction:column;gap:6px}
+.abtn{width:100%;padding:10px;border-radius:8px;border:none;font-size:12px;
   font-weight:700;cursor:pointer;transition:all .14s;letter-spacing:.3px}
-#bwave{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff}
-#bwave:hover:not([disabled]){filter:brightness(1.12);transform:translateY(-1px);
-  box-shadow:0 4px 14px rgba(34,197,94,.4)}
-#bwave[disabled]{background:#1e293b;color:#475569;cursor:not-allowed;transform:none;box-shadow:none}
-#bspd{background:rgba(59,130,246,.15);color:#60a5fa;border:1px solid rgba(59,130,246,.25)}
-#bspd:hover{background:rgba(59,130,246,.25)}
-#hint{font-size:9px;color:#475569;text-align:center;min-height:13px;margin-top:2px}
+#bwave{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;
+  box-shadow:0 3px 10px rgba(34,197,94,.35)}
+#bwave:hover:not([disabled]){filter:brightness(1.1);transform:translateY(-1px);
+  box-shadow:0 5px 16px rgba(34,197,94,.45)}
+#bwave[disabled]{background:#e2e8f0;color:#94a3b8;cursor:not-allowed;transform:none;box-shadow:none}
+#bspd{background:#fff;color:#0078D4;border:2px solid #bee3f8;font-weight:700}
+#bspd:hover{background:#e8f4ff;border-color:#0078D4}
+#hint{font-size:9px;color:#64748b;text-align:center;min-height:13px;margin-top:2px;
+  background:rgba(0,120,212,.06);border-radius:6px;padding:3px}
 
 /* ── Overlay ── */
 #ov{display:none;position:absolute;inset:0;z-index:50;
   align-items:center;justify-content:center;flex-direction:column;
-  background:rgba(0,0,0,0.82);backdrop-filter:blur(5px)}
+  background:rgba(0,80,160,0.7);backdrop-filter:blur(8px)}
 #ov.on{display:flex}
-#ov h1{font-size:34px;font-weight:800;letter-spacing:2px;margin-bottom:8px}
-#ov .sub{font-size:13px;color:#94a3b8;margin-bottom:4px}
-#ov .pts{font-size:28px;color:#fbbf24;font-weight:700;margin:8px 0 20px}
-.rbtn{padding:11px 32px;border:none;border-radius:8px;font-size:14px;font-weight:700;
-  cursor:pointer;background:linear-gradient(135deg,#6366f1,#7c3aed);color:#fff;
-  box-shadow:0 4px 20px rgba(99,102,241,.4);transition:filter .15s,transform .15s}
-.rbtn:hover{filter:brightness(1.1);transform:translateY(-1px)}
+#ov h1{font-size:34px;font-weight:800;letter-spacing:2px;margin-bottom:8px;color:#fff;
+  text-shadow:0 2px 16px rgba(0,0,0,.3)}
+#ov .sub{font-size:13px;color:rgba(255,255,255,.8);margin-bottom:4px}
+#ov .pts{font-size:28px;color:#ffe085;font-weight:700;margin:8px 0 20px;
+  text-shadow:0 2px 8px rgba(0,0,0,.3)}
+.rbtn{padding:12px 36px;border:none;border-radius:10px;font-size:14px;font-weight:700;
+  cursor:pointer;background:linear-gradient(135deg,#0078D4,#00B4D8);color:#fff;
+  box-shadow:0 4px 20px rgba(0,120,212,.5);transition:filter .15s,transform .15s}
+.rbtn:hover{filter:brightness(1.1);transform:translateY(-2px)}
 </style>
 </head>
 <body>
@@ -259,160 +266,232 @@ class BootScene extends Phaser.Scene {
   create(){
     const S=TS;
 
-    // Grass tile — top-down green
+    // Grass tile — bright Edge Surf green
     mkTex(this,'t_grass',S,S,(ctx)=>{
-      ctx.fillStyle='#1a4a2e'; ctx.fillRect(0,0,S,S);
-      // subtle texture specks
-      ctx.fillStyle='rgba(255,255,255,0.04)';
-      for(let i=0;i<10;i++) ctx.fillRect(Math.random()*S|0, Math.random()*S|0, 2, 2);
-      ctx.strokeStyle='rgba(0,0,0,0.18)'; ctx.lineWidth=0.5;
-      ctx.strokeRect(0,0,S,S);
+      const g=ctx.createLinearGradient(0,0,S,S);
+      g.addColorStop(0,'#4ade80'); g.addColorStop(1,'#22c55e');
+      ctx.fillStyle=g; ctx.fillRect(0,0,S,S);
+      // subtle grass texture
+      ctx.strokeStyle='rgba(0,100,0,0.08)'; ctx.lineWidth=1;
+      for(let i=1;i<3;i++){
+        ctx.beginPath(); ctx.moveTo(S*i/3,0); ctx.lineTo(S*i/3,S); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0,S*i/3); ctx.lineTo(S,S*i/3); ctx.stroke();
+      }
+      // lighter highlight corner
+      ctx.fillStyle='rgba(255,255,255,0.07)';
+      ctx.fillRect(0,0,S/2,S/2);
+      ctx.strokeStyle='rgba(0,0,0,0.06)'; ctx.lineWidth=0.5; ctx.strokeRect(0,0,S,S);
     });
 
-    // Path tile — sandy cobble
+    // Path tile — warm sandy gold
     mkTex(this,'t_path',S,S,(ctx)=>{
-      ctx.fillStyle='#8b6914'; ctx.fillRect(0,0,S,S);
-      // cobble grid lines
-      ctx.strokeStyle='rgba(0,0,0,0.22)'; ctx.lineWidth=1;
-      [S*0.33,S*0.66].forEach(x=>{ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,S); ctx.stroke(); });
-      [S*0.5].forEach(y=>{ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(S,y); ctx.stroke(); });
-      ctx.strokeStyle='rgba(0,0,0,0.12)'; ctx.lineWidth=0.5;
-      ctx.strokeRect(0,0,S,S);
+      const g=ctx.createLinearGradient(0,0,S,S);
+      g.addColorStop(0,'#fde68a'); g.addColorStop(1,'#fbbf24');
+      ctx.fillStyle=g; ctx.fillRect(0,0,S,S);
+      // cobblestone pattern
+      ctx.fillStyle='rgba(180,120,0,0.12)';
+      [[0,0,S/2,S/2],[S/2,S/2,S/2,S/2],[S/4,S/4,S/2,S/2]].forEach(([x,y,w,h])=>ctx.fillRect(x+2,y+2,w-4,h-4));
+      ctx.strokeStyle='rgba(180,120,0,0.18)'; ctx.lineWidth=1;
+      [S/2].forEach(v=>{ ctx.beginPath(); ctx.moveTo(v,0); ctx.lineTo(v,S); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0,v); ctx.lineTo(S,v); ctx.stroke(); });
+      ctx.strokeStyle='rgba(0,0,0,0.06)'; ctx.lineWidth=0.5; ctx.strokeRect(0,0,S,S);
     });
 
-    // Start tile
+    // Start tile — bright green portal
     mkTex(this,'t_start',S,S,(ctx)=>{
-      ctx.fillStyle='#14532d'; ctx.fillRect(0,0,S,S);
-      ctx.fillStyle='#22c55e';
-      ctx.beginPath(); ctx.arc(S/2,S/2,S/2-3,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='#fff'; ctx.font=`bold ${S*0.32}px monospace`;
-      ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText('S',S/2,S/2+1);
+      const g=ctx.createLinearGradient(0,0,S,S);
+      g.addColorStop(0,'#86efac'); g.addColorStop(1,'#22c55e');
+      ctx.fillStyle=g; ctx.fillRect(0,0,S,S);
+      ctx.fillStyle='#fff';
+      ctx.beginPath(); ctx.arc(S/2,S/2,S/2-6,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#16a34a'; ctx.font=`bold ${S*0.34}px sans-serif`;
+      ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('▶',S/2,S/2+1);
     });
 
-    // End tile
+    // End tile — red flag/target
     mkTex(this,'t_end',S,S,(ctx)=>{
-      ctx.fillStyle='#450a0a'; ctx.fillRect(0,0,S,S);
-      ctx.fillStyle='#ef4444';
-      ctx.beginPath(); ctx.arc(S/2,S/2,S/2-3,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='#fff'; ctx.font=`bold ${S*0.32}px monospace`;
-      ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText('E',S/2,S/2+1);
+      const g=ctx.createLinearGradient(0,0,S,S);
+      g.addColorStop(0,'#fca5a5'); g.addColorStop(1,'#ef4444');
+      ctx.fillStyle=g; ctx.fillRect(0,0,S,S);
+      ctx.fillStyle='#fff';
+      ctx.beginPath(); ctx.arc(S/2,S/2,S/2-6,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#dc2626'; ctx.font=`bold ${S*0.34}px sans-serif`;
+      ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('🏁',S/2,S/2+2);
     });
 
-    // Hover tile
+    // Hover tile — blue selection ring
     mkTex(this,'t_hover',S,S,(ctx)=>{
-      ctx.fillStyle='rgba(100,238,160,0.22)'; ctx.fillRect(0,0,S,S);
-      ctx.strokeStyle='rgba(100,238,160,0.8)'; ctx.lineWidth=2;
-      ctx.strokeRect(1,1,S-2,S-2);
+      ctx.fillStyle='rgba(0,180,230,0.18)'; ctx.fillRect(0,0,S,S);
+      ctx.strokeStyle='#00B4D8'; ctx.lineWidth=2.5;
+      ctx.strokeRect(2,2,S-4,S-4);
+      // corner accents
+      [[0,0],[S,0],[S,S],[0,S]].forEach(([x,y])=>{
+        ctx.beginPath(); ctx.moveTo(x===0?x+6:x-6,y); ctx.lineTo(x,y); ctx.lineTo(x,y===0?y+6:y-6); ctx.stroke();
+      });
     });
 
-    // ── Tower sprites (top-down circles/shapes) ───────────────────────────
+    // ── Tower sprites (top-down, bright Edge Surf style) ─────────────────
     const R=S*0.44;
 
-    // Arrow tower
+    // Arrow tower — warm amber wood
     mkTex(this,'tw_arrow',S,S,(ctx)=>{
       const cx=S/2, cy=S/2;
-      ctx.fillStyle='#78350f'; ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='#d97706'; ctx.beginPath(); ctx.arc(cx,cy,R*0.72,0,Math.PI*2); ctx.fill();
-      // arrow pointer north
-      ctx.fillStyle='#fbbf24';
-      ctx.beginPath(); ctx.moveTo(cx,cy-R*0.65); ctx.lineTo(cx+R*0.3,cy+R*0.4); ctx.lineTo(cx-R*0.3,cy+R*0.4); ctx.closePath(); ctx.fill();
-      ctx.strokeStyle='rgba(255,220,80,0.5)'; ctx.lineWidth=1.5;
+      // outer ring shadow
+      ctx.fillStyle='rgba(0,0,0,0.15)'; ctx.beginPath(); ctx.arc(cx+1,cy+2,R,0,Math.PI*2); ctx.fill();
+      // base
+      const bg=ctx.createRadialGradient(cx-R*.3,cy-R*.3,0,cx,cy,R);
+      bg.addColorStop(0,'#fcd34d'); bg.addColorStop(1,'#b45309');
+      ctx.fillStyle=bg; ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.fill();
+      // inner platform
+      const ig=ctx.createRadialGradient(cx-R*.2,cy-R*.2,0,cx,cy,R*0.7);
+      ig.addColorStop(0,'#fde68a'); ig.addColorStop(1,'#d97706');
+      ctx.fillStyle=ig; ctx.beginPath(); ctx.arc(cx,cy,R*0.7,0,Math.PI*2); ctx.fill();
+      // arrow head (pointing up = north)
+      ctx.fillStyle='#fff'; ctx.shadowColor='#f59e0b'; ctx.shadowBlur=6;
+      ctx.beginPath(); ctx.moveTo(cx,cy-R*0.55); ctx.lineTo(cx+R*0.28,cy+R*0.32); ctx.lineTo(cx,cy+R*0.12); ctx.lineTo(cx-R*0.28,cy+R*0.32); ctx.closePath(); ctx.fill();
+      ctx.shadowBlur=0;
+      // rim
+      ctx.strokeStyle='#92400e'; ctx.lineWidth=1.5;
       ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.stroke();
     });
 
-    // Cannon tower
+    // Cannon tower — cool stone blue-gray
     mkTex(this,'tw_cannon',S,S,(ctx)=>{
       const cx=S/2, cy=S/2;
-      ctx.fillStyle='#374151'; ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='#6b7280'; ctx.beginPath(); ctx.arc(cx,cy,R*0.72,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='rgba(0,0,0,0.15)'; ctx.beginPath(); ctx.arc(cx+1,cy+2,R,0,Math.PI*2); ctx.fill();
+      const bg=ctx.createRadialGradient(cx-R*.3,cy-R*.3,0,cx,cy,R);
+      bg.addColorStop(0,'#cbd5e1'); bg.addColorStop(1,'#475569');
+      ctx.fillStyle=bg; ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.fill();
+      const ig=ctx.createRadialGradient(cx-R*.2,cy-R*.2,0,cx,cy,R*0.7);
+      ig.addColorStop(0,'#e2e8f0'); ig.addColorStop(1,'#64748b');
+      ctx.fillStyle=ig; ctx.beginPath(); ctx.arc(cx,cy,R*0.7,0,Math.PI*2); ctx.fill();
       // cannon barrel north
-      ctx.fillStyle='#1f2937';
-      ctx.fillRect(cx-R*0.18,cy-R*0.9,R*0.36,R*0.65);
-      ctx.beginPath(); ctx.arc(cx,cy-R*0.9,R*0.18,Math.PI,0); ctx.fill();
-      ctx.strokeStyle='rgba(150,163,175,0.4)'; ctx.lineWidth=1.5;
+      ctx.fillStyle='#1e293b';
+      ctx.fillRect(cx-R*0.17,cy-R*0.9,R*0.34,R*0.65);
+      ctx.beginPath(); ctx.arc(cx,cy-R*0.9,R*0.17,Math.PI,0); ctx.fill();
+      // cannon ball
+      ctx.fillStyle='#334155'; ctx.beginPath(); ctx.arc(cx,cy-R*0.15,R*0.22,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,0.25)'; ctx.beginPath(); ctx.arc(cx-R*0.07,cy-R*0.22,R*0.08,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle='#334155'; ctx.lineWidth=1.5;
       ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.stroke();
     });
 
-    // Magic tower
+    // Magic tower — vivid purple crystal
     mkTex(this,'tw_magic',S,S,(ctx)=>{
       const cx=S/2, cy=S/2;
-      ctx.fillStyle='#2e1065'; ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='#7c3aed'; ctx.beginPath(); ctx.arc(cx,cy,R*0.72,0,Math.PI*2); ctx.fill();
-      // star runes
-      ctx.fillStyle='#e0d4ff';
+      ctx.fillStyle='rgba(0,0,0,0.15)'; ctx.beginPath(); ctx.arc(cx+1,cy+2,R,0,Math.PI*2); ctx.fill();
+      const bg=ctx.createRadialGradient(cx-R*.3,cy-R*.3,0,cx,cy,R);
+      bg.addColorStop(0,'#e879f9'); bg.addColorStop(1,'#7c3aed');
+      ctx.fillStyle=bg; ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.fill();
+      const ig=ctx.createRadialGradient(cx-R*.2,cy-R*.2,0,cx,cy,R*0.7);
+      ig.addColorStop(0,'#f0abfc'); ig.addColorStop(1,'#a21caf');
+      ctx.fillStyle=ig; ctx.beginPath(); ctx.arc(cx,cy,R*0.7,0,Math.PI*2); ctx.fill();
+      // 6-pointed sparkle star
+      ctx.fillStyle='#fff'; ctx.shadowColor='#f0abfc'; ctx.shadowBlur=8;
       for(let i=0;i<6;i++){
         const a=i/6*Math.PI*2-Math.PI/2;
-        ctx.beginPath(); ctx.arc(cx+Math.cos(a)*R*0.45,cy+Math.sin(a)*R*0.45,2.5,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(cx+Math.cos(a)*R*0.42,cy+Math.sin(a)*R*0.42,3,0,Math.PI*2); ctx.fill();
       }
-      ctx.fillStyle='#f0e6ff';
-      ctx.beginPath(); ctx.arc(cx,cy,R*0.2,0,Math.PI*2); ctx.fill();
-      ctx.strokeStyle='rgba(196,181,253,0.6)'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.arc(cx,cy,R*0.18,0,Math.PI*2); ctx.fill();
+      ctx.shadowBlur=0;
+      ctx.strokeStyle='#9333ea'; ctx.lineWidth=1.5;
       ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.stroke();
     });
 
-    // Laser tower
+    // Laser tower — bright Microsoft cyan
     mkTex(this,'tw_laser',S,S,(ctx)=>{
       const cx=S/2, cy=S/2;
-      ctx.fillStyle='#0c2240'; ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='#1e3a5f'; ctx.beginPath(); ctx.arc(cx,cy,R*0.72,0,Math.PI*2); ctx.fill();
-      // concentric rings
-      [0.52,0.34,0.18].forEach((r,i)=>{
-        ctx.strokeStyle=['#38bdf8','#0ea5e9','#7dd3fc'][i];
-        ctx.lineWidth=2; ctx.beginPath(); ctx.arc(cx,cy,R*r,0,Math.PI*2); ctx.stroke();
+      ctx.fillStyle='rgba(0,0,0,0.15)'; ctx.beginPath(); ctx.arc(cx+1,cy+2,R,0,Math.PI*2); ctx.fill();
+      const bg=ctx.createRadialGradient(cx-R*.3,cy-R*.3,0,cx,cy,R);
+      bg.addColorStop(0,'#67e8f9'); bg.addColorStop(1,'#0078D4');
+      ctx.fillStyle=bg; ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.fill();
+      const ig=ctx.createRadialGradient(cx-R*.2,cy-R*.2,0,cx,cy,R*0.7);
+      ig.addColorStop(0,'#a5f3fc'); ig.addColorStop(1,'#0ea5e9');
+      ctx.fillStyle=ig; ctx.beginPath(); ctx.arc(cx,cy,R*0.7,0,Math.PI*2); ctx.fill();
+      // concentric energy rings
+      ctx.shadowColor='#38bdf8'; ctx.shadowBlur=6;
+      [0.48,0.32,0.16].forEach((r,i)=>{
+        ctx.strokeStyle=['#fff','#7dd3fc','#38bdf8'][i];
+        ctx.lineWidth=i===0?1:1.5;
+        ctx.beginPath(); ctx.arc(cx,cy,R*r,0,Math.PI*2); ctx.stroke();
       });
-      ctx.fillStyle='#7dd3fc'; ctx.beginPath(); ctx.arc(cx,cy,R*0.1,0,Math.PI*2); ctx.fill();
-      ctx.strokeStyle='rgba(56,189,248,0.5)'; ctx.lineWidth=1.5;
+      ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(cx,cy,R*0.09,0,Math.PI*2); ctx.fill();
+      ctx.shadowBlur=0;
+      ctx.strokeStyle='#0078D4'; ctx.lineWidth=1.5;
       ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.stroke();
     });
 
-    // ── Enemy sprites (top-down) ──────────────────────────────────────────
-    // Grunt
-    mkTex(this,'e_grunt',20,20,(ctx)=>{
-      const g=ctx.createRadialGradient(10,10,2,10,10,9);
-      g.addColorStop(0,'#f87171'); g.addColorStop(1,'#991b1b');
-      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(10,10,9,0,Math.PI*2); ctx.fill();
-      ctx.strokeStyle='#fca5a5'; ctx.lineWidth=1.5; ctx.stroke();
-      ctx.fillStyle='rgba(0,0,0,0.4)'; ctx.fillRect(7,7,6,6);
+    // ── Enemy sprites (bright cartoon, Edge Surf style) ───────────────────
+    // Grunt — bright red bouncy ball enemy
+    mkTex(this,'e_grunt',22,22,(ctx)=>{
+      const g=ctx.createRadialGradient(8,7,2,11,11,10);
+      g.addColorStop(0,'#fca5a5'); g.addColorStop(0.6,'#ef4444'); g.addColorStop(1,'#991b1b');
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(11,11,10,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle='#fecaca'; ctx.lineWidth=1.5; ctx.stroke();
+      // visor
+      ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.beginPath(); ctx.ellipse(11,10,6,4,0,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.beginPath(); ctx.ellipse(9,9,2,1.5,0.4,0,Math.PI*2); ctx.fill();
+      // angry brows
+      ctx.strokeStyle='#fff'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.moveTo(7,7); ctx.lineTo(10,8); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(15,7); ctx.lineTo(12,8); ctx.stroke();
     });
 
-    // Armor
-    mkTex(this,'e_armor',24,24,(ctx)=>{
-      const g=ctx.createRadialGradient(12,12,3,12,12,11);
-      g.addColorStop(0,'#e2e8f0'); g.addColorStop(1,'#334155');
-      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(12,12,11,0,Math.PI*2); ctx.fill();
-      ctx.strokeStyle='#94a3b8'; ctx.lineWidth=2; ctx.stroke();
-      ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.fillRect(9,7,6,10); ctx.fillRect(5,11,14,4);
+    // Armor — silver knight with shield
+    mkTex(this,'e_armor',26,26,(ctx)=>{
+      const g=ctx.createRadialGradient(10,9,2,13,13,12);
+      g.addColorStop(0,'#f1f5f9'); g.addColorStop(0.5,'#94a3b8'); g.addColorStop(1,'#334155');
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(13,13,12,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle='#e2e8f0'; ctx.lineWidth=2; ctx.stroke();
+      // shield cross
+      ctx.fillStyle='rgba(255,255,255,0.45)';
+      ctx.fillRect(11,6,4,14); ctx.fillRect(6,10,14,4);
+      ctx.strokeStyle='rgba(255,255,255,0.6)'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.arc(13,13,6,0,Math.PI*2); ctx.stroke();
     });
 
-    // Speeder
-    mkTex(this,'e_speeder',16,16,(ctx)=>{
-      const g=ctx.createRadialGradient(8,8,1,8,8,7);
-      g.addColorStop(0,'#bef264'); g.addColorStop(1,'#4d7c0f');
-      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(8,8,7,0,Math.PI*2); ctx.fill();
-      ctx.strokeStyle='#84cc16'; ctx.lineWidth=1.5; ctx.stroke();
-      // speed chevron
-      ctx.strokeStyle='#fff'; ctx.lineWidth=1;
-      ctx.beginPath(); ctx.moveTo(3,8); ctx.lineTo(6,5); ctx.lineTo(9,8); ctx.stroke();
+    // Speeder — bright lime green dart
+    mkTex(this,'e_speeder',18,18,(ctx)=>{
+      const g=ctx.createRadialGradient(7,6,1,9,9,8);
+      g.addColorStop(0,'#d9f99d'); g.addColorStop(0.6,'#84cc16'); g.addColorStop(1,'#3f6212');
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(9,9,8,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle='#bef264'; ctx.lineWidth=1.5; ctx.stroke();
+      // speed streaks
+      ctx.strokeStyle='rgba(255,255,255,0.7)'; ctx.lineWidth=1.2; ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(2,6); ctx.lineTo(7,7); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(1,9); ctx.lineTo(6,9); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(2,12); ctx.lineTo(7,11); ctx.stroke();
+      // eyes
+      ctx.fillStyle='#fde047'; ctx.beginPath(); ctx.arc(7,8,1.8,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(11,8,1.8,0,Math.PI*2); ctx.fill();
     });
 
-    // Boss
-    mkTex(this,'e_boss',36,36,(ctx)=>{
-      const g=ctx.createRadialGradient(18,18,4,18,18,17);
-      g.addColorStop(0,'#c084fc'); g.addColorStop(1,'#3b0764');
-      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(18,18,17,0,Math.PI*2); ctx.fill();
-      ctx.strokeStyle='#9333ea'; ctx.lineWidth=2.5; ctx.stroke();
-      // horns (top)
-      ctx.fillStyle='#6d28d9';
-      ctx.beginPath(); ctx.moveTo(12,3); ctx.lineTo(8,0); ctx.lineTo(14,6); ctx.closePath(); ctx.fill();
-      ctx.beginPath(); ctx.moveTo(24,3); ctx.lineTo(28,0); ctx.lineTo(22,6); ctx.closePath(); ctx.fill();
-      ctx.fillStyle='#fde047';
-      ctx.beginPath(); ctx.arc(12,16,4,0,Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(24,16,4,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='#dc2626';
-      ctx.beginPath(); ctx.arc(12,16,2,0,Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(24,16,2,0,Math.PI*2); ctx.fill();
+    // Boss — large vibrant purple sea monster
+    mkTex(this,'e_boss',40,40,(ctx)=>{
+      const g=ctx.createRadialGradient(15,14,4,20,20,19);
+      g.addColorStop(0,'#e879f9'); g.addColorStop(0.5,'#9333ea'); g.addColorStop(1,'#4c1d95');
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(20,20,19,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle='#c084fc'; ctx.lineWidth=2.5; ctx.stroke();
+      // aura glow
+      const au=ctx.createRadialGradient(20,20,16,20,20,24);
+      au.addColorStop(0,'rgba(192,132,252,0)'); au.addColorStop(1,'rgba(192,132,252,0.3)');
+      ctx.fillStyle=au; ctx.beginPath(); ctx.arc(20,20,24,0,Math.PI*2); ctx.fill();
+      // crown spikes
+      ctx.fillStyle='#fbbf24';
+      [[10,5],[16,2],[24,2],[30,5]].forEach(([x,y])=>{
+        ctx.beginPath(); ctx.moveTo(x,y+6); ctx.lineTo(x+4,y+6); ctx.lineTo(x+2,y); ctx.closePath(); ctx.fill();
+      });
+      // eyes
+      const eyeG1=ctx.createRadialGradient(14,18,1,14,18,5);
+      eyeG1.addColorStop(0,'#fde047'); eyeG1.addColorStop(1,'#f59e0b');
+      ctx.fillStyle=eyeG1; ctx.beginPath(); ctx.arc(14,18,5,0,Math.PI*2); ctx.fill();
+      const eyeG2=ctx.createRadialGradient(26,18,1,26,18,5);
+      eyeG2.addColorStop(0,'#fde047'); eyeG2.addColorStop(1,'#f59e0b');
+      ctx.fillStyle=eyeG2; ctx.beginPath(); ctx.arc(26,18,5,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#dc2626'; ctx.beginPath(); ctx.arc(14,18,2.5,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(26,18,2.5,0,Math.PI*2); ctx.fill();
+      // white eye glint
+      ctx.fillStyle='rgba(255,255,255,0.7)'; ctx.beginPath(); ctx.arc(13,17,1,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(25,17,1,0,Math.PI*2); ctx.fill();
     });
 
     // ── Projectiles ───────────────────────────────────────────────────────
@@ -459,9 +538,27 @@ class GameScene extends Phaser.Scene {
   }
 
   create(){
-    // ── Background fill ──────────────────────────────────────────────────
+    // ── Background: bright sky + ocean border (Edge Surf style) ─────────
     const bg=this.add.graphics().setDepth(-200);
-    bg.fillStyle(0x0b1020,1); bg.fillRect(0,0,GW,GH);
+    // sky gradient (top half)
+    bg.fillGradientStyle(0x87CEEB,0x87CEEB,0xC8E8FF,0xC8E8FF,1);
+    bg.fillRect(0,0,GW,GH*0.5);
+    // ocean below (Microsoft blue)
+    bg.fillGradientStyle(0x00B4D8,0x00B4D8,0x0078D4,0x0078D4,1);
+    bg.fillRect(0,GH*0.5,GW,GH*0.5);
+    // small cloud puffs in sky area
+    bg.fillStyle(0xFFFFFF,0.7);
+    [[80,30,40],[200,20,28],[360,35,36],[520,18,24],[680,28,32]].forEach(([x,y,r])=>{
+      bg.fillCircle(x,y,r); bg.fillCircle(x+r*0.6,y-r*0.3,r*0.7); bg.fillCircle(x-r*0.55,y-r*0.2,r*0.65);
+    });
+    // distant green hills on horizon
+    bg.fillStyle(0x4ade80,0.55);
+    bg.fillTriangle(0,GH*0.5,120,GH*0.28,240,GH*0.5);
+    bg.fillTriangle(180,GH*0.5,320,GH*0.22,460,GH*0.5);
+    bg.fillTriangle(400,GH*0.5,560,GH*0.26,700,GH*0.5);
+    bg.fillStyle(0x22c55e,0.45);
+    bg.fillTriangle(80,GH*0.5,200,GH*0.32,310,GH*0.5);
+    bg.fillTriangle(480,GH*0.5,620,GH*0.24,GW,GH*0.5);
 
     // ── Build tile map ───────────────────────────────────────────────────
     this.tiles={};
@@ -739,7 +836,7 @@ class GameScene extends Phaser.Scene {
 const game=new Phaser.Game({
   type:Phaser.AUTO,
   width:GW, height:GH,
-  backgroundColor:'#0b1020',
+  backgroundColor:'#87CEEB',
   parent:'cvs-wrap',
   scene:[BootScene,GameScene],
   scale:{ mode:Phaser.Scale.FIT, autoCenter:Phaser.Scale.CENTER_BOTH },
