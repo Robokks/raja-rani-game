@@ -19,15 +19,18 @@
   --sub-h:42px;
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html{scroll-behavior:smooth}
-body{
-  font-family:'Chakra Petch',system-ui,sans-serif;
+html{
+  scroll-behavior:smooth;
   background:var(--bg);
   background-image:
     linear-gradient(rgba(255,255,255,.022) 1px,transparent 1px),
     linear-gradient(90deg,rgba(255,255,255,.022) 1px,transparent 1px);
   background-size:48px 48px;
   animation:grid-drift 25s linear infinite;
+}
+body{
+  font-family:'Chakra Petch',system-ui,sans-serif;
+  background:transparent;
   color:var(--text);
   min-height:100vh;
   padding-top:var(--nav-h);

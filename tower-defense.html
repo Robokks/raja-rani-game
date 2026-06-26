@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-<title>Isometric Tower Defense</title>
+<title>Tower Defense</title>
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 html,body{width:100%;height:100%;background:#070b14;overflow:hidden;
@@ -155,32 +155,26 @@ html,body{width:100%;height:100%;background:#070b14;overflow:hidden;
 'use strict';
 
 // ── Grid constants ─────────────────────────────────────────────────────────
-const COLS=12, ROWS=8;
-const TW=82, TH=42, SIDE=22;   // larger tiles = stronger 3D look
-const GW=900, GH=504;
+const COLS=14, ROWS=9;
+const TS=52;   // tile size in pixels (square, top-down)
+const GW=COLS*TS, GH=ROWS*TS+2; // 728×470
 
-// Origin: centre the grid in GW×GH
-// grid screen extents: W=(COLS+ROWS)*TW/2, H=(COLS+ROWS)*TH/2+SIDE
-const GRID_SW = (COLS+ROWS)*(TW/2);
-const GRID_SH = (COLS+ROWS)*(TH/2)+SIDE;
-const OX = Math.round((GW-GRID_SW)/2 + ROWS*(TW/2));
-const OY = Math.round((GH-GRID_SH)/2) + 8;
-
-function iso(c,r){ return { x:(c-r)*(TW/2)+OX, y:(c+r)*(TH/2)+OY }; }
+// Top-down: tile (c,r) has top-left at (c*TS, r*TS)
+function tilePos(c,r){ return { x:c*TS+TS/2, y:r*TS+TS/2 }; }
 
 // ── Path ──────────────────────────────────────────────────────────────────
 const PATH=[
-  [0,5],[1,5],[2,5],[3,5],[3,4],[3,3],[3,2],[4,2],[5,2],[6,2],
-  [7,2],[7,3],[7,4],[7,5],[7,6],[8,6],[9,6],[10,6],[11,6]
+  [0,4],[1,4],[2,4],[3,4],[3,3],[3,2],[3,1],[4,1],[5,1],[6,1],[7,1],[8,1],
+  [8,2],[8,3],[8,4],[8,5],[8,6],[8,7],[9,7],[10,7],[11,7],[12,7],[13,7]
 ];
 const PATH_SET=new Set(PATH.map(([c,r])=>`${c},${r}`));
 
 // ── Tower data ────────────────────────────────────────────────────────────
 const TOWERS={
-  arrow: {cost:75, dmg:22, range:130, cd:36, splash:0,  multi:1, color:0xf59e0b, pclr:0xfbbf24},
-  cannon:{cost:125,dmg:72, range:108, cd:90, splash:55, multi:1, color:0x94a3b8, pclr:0x6b7280},
-  magic: {cost:175,dmg:40, range:155, cd:52, splash:0,  multi:3, color:0xa78bfa, pclr:0xc4b5fd},
-  laser: {cost:250,dmg:12, range:175, cd:4,  splash:0,  multi:1, color:0x38bdf8, pclr:0x7dd3fc},
+  arrow: {cost:75, dmg:22, range:TS*2.6, cd:36, splash:0,       multi:1, color:0xf59e0b, pclr:0xfbbf24},
+  cannon:{cost:125,dmg:72, range:TS*2.2, cd:90, splash:TS*1.1,  multi:1, color:0x94a3b8, pclr:0x6b7280},
+  magic: {cost:175,dmg:40, range:TS*3.0, cd:52, splash:0,       multi:3, color:0xa78bfa, pclr:0xc4b5fd},
+  laser: {cost:250,dmg:12, range:TS*3.4, cd:4,  splash:0,       multi:1, color:0x38bdf8, pclr:0x7dd3fc},
 };
 
 // ── Enemy data ────────────────────────────────────────────────────────────
@@ -259,256 +253,166 @@ function mkTex(scene,key,w,h,fn){
   fn(c.getContext('2d'),w,h); scene.textures.addCanvas(key,c);
 }
 
-function isoTile(ctx,tw,th,side,top,left,right,hiEdge=true){
-  const hw=tw/2, hh=th/2;
-  // top face
-  ctx.fillStyle=top;
-  ctx.beginPath();
-  ctx.moveTo(hw,0); ctx.lineTo(tw,hh); ctx.lineTo(hw,th); ctx.lineTo(0,hh);
-  ctx.closePath(); ctx.fill();
-  if(hiEdge){
-    ctx.strokeStyle='rgba(255,255,255,0.22)'; ctx.lineWidth=1;
-    ctx.beginPath(); ctx.moveTo(hw,0); ctx.lineTo(tw,hh); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(hw,0); ctx.lineTo(0,hh); ctx.stroke();
-  }
-  // left face
-  ctx.fillStyle=left;
-  ctx.beginPath();
-  ctx.moveTo(0,hh); ctx.lineTo(hw,th); ctx.lineTo(hw,th+side); ctx.lineTo(0,hh+side);
-  ctx.closePath(); ctx.fill();
-  // left edge
-  ctx.strokeStyle='rgba(0,0,0,0.18)'; ctx.lineWidth=0.6;
-  ctx.beginPath(); ctx.moveTo(0,hh); ctx.lineTo(0,hh+side); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(0,hh+side); ctx.lineTo(hw,th+side); ctx.stroke();
-  // right face
-  ctx.fillStyle=right;
-  ctx.beginPath();
-  ctx.moveTo(tw,hh); ctx.lineTo(hw,th); ctx.lineTo(hw,th+side); ctx.lineTo(tw,hh+side);
-  ctx.closePath(); ctx.fill();
-  ctx.strokeStyle='rgba(0,0,0,0.25)'; ctx.lineWidth=0.6;
-  ctx.beginPath(); ctx.moveTo(tw,hh); ctx.lineTo(tw,hh+side); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(tw,hh+side); ctx.lineTo(hw,th+side); ctx.stroke();
-}
-
 // ── BootScene ─────────────────────────────────────────────────────────────
 class BootScene extends Phaser.Scene {
   constructor(){ super('Boot'); }
   create(){
-    const W=TW, H=TH, S=SIDE;
+    const S=TS;
 
-    // Grass
-    mkTex(this,'t_grass',W,H+S,(ctx)=>{
-      isoTile(ctx,W,H,S,'#3cb96b','#1e8c4e','#136e38');
-      // subtle dot texture on top
-      ctx.fillStyle='rgba(255,255,255,0.08)';
-      for(let i=0;i<8;i++){
-        ctx.beginPath();
-        ctx.arc(6+Math.random()*(W-12),4+Math.random()*(H-8),1.5,0,Math.PI*2);
-        ctx.fill();
+    // Grass tile — top-down green
+    mkTex(this,'t_grass',S,S,(ctx)=>{
+      ctx.fillStyle='#1a4a2e'; ctx.fillRect(0,0,S,S);
+      // subtle texture specks
+      ctx.fillStyle='rgba(255,255,255,0.04)';
+      for(let i=0;i<10;i++) ctx.fillRect(Math.random()*S|0, Math.random()*S|0, 2, 2);
+      ctx.strokeStyle='rgba(0,0,0,0.18)'; ctx.lineWidth=0.5;
+      ctx.strokeRect(0,0,S,S);
+    });
+
+    // Path tile — sandy cobble
+    mkTex(this,'t_path',S,S,(ctx)=>{
+      ctx.fillStyle='#8b6914'; ctx.fillRect(0,0,S,S);
+      // cobble grid lines
+      ctx.strokeStyle='rgba(0,0,0,0.22)'; ctx.lineWidth=1;
+      [S*0.33,S*0.66].forEach(x=>{ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,S); ctx.stroke(); });
+      [S*0.5].forEach(y=>{ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(S,y); ctx.stroke(); });
+      ctx.strokeStyle='rgba(0,0,0,0.12)'; ctx.lineWidth=0.5;
+      ctx.strokeRect(0,0,S,S);
+    });
+
+    // Start tile
+    mkTex(this,'t_start',S,S,(ctx)=>{
+      ctx.fillStyle='#14532d'; ctx.fillRect(0,0,S,S);
+      ctx.fillStyle='#22c55e';
+      ctx.beginPath(); ctx.arc(S/2,S/2,S/2-3,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#fff'; ctx.font=`bold ${S*0.32}px monospace`;
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('S',S/2,S/2+1);
+    });
+
+    // End tile
+    mkTex(this,'t_end',S,S,(ctx)=>{
+      ctx.fillStyle='#450a0a'; ctx.fillRect(0,0,S,S);
+      ctx.fillStyle='#ef4444';
+      ctx.beginPath(); ctx.arc(S/2,S/2,S/2-3,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#fff'; ctx.font=`bold ${S*0.32}px monospace`;
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('E',S/2,S/2+1);
+    });
+
+    // Hover tile
+    mkTex(this,'t_hover',S,S,(ctx)=>{
+      ctx.fillStyle='rgba(100,238,160,0.22)'; ctx.fillRect(0,0,S,S);
+      ctx.strokeStyle='rgba(100,238,160,0.8)'; ctx.lineWidth=2;
+      ctx.strokeRect(1,1,S-2,S-2);
+    });
+
+    // ── Tower sprites (top-down circles/shapes) ───────────────────────────
+    const R=S*0.44;
+
+    // Arrow tower
+    mkTex(this,'tw_arrow',S,S,(ctx)=>{
+      const cx=S/2, cy=S/2;
+      ctx.fillStyle='#78350f'; ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#d97706'; ctx.beginPath(); ctx.arc(cx,cy,R*0.72,0,Math.PI*2); ctx.fill();
+      // arrow pointer north
+      ctx.fillStyle='#fbbf24';
+      ctx.beginPath(); ctx.moveTo(cx,cy-R*0.65); ctx.lineTo(cx+R*0.3,cy+R*0.4); ctx.lineTo(cx-R*0.3,cy+R*0.4); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle='rgba(255,220,80,0.5)'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.stroke();
+    });
+
+    // Cannon tower
+    mkTex(this,'tw_cannon',S,S,(ctx)=>{
+      const cx=S/2, cy=S/2;
+      ctx.fillStyle='#374151'; ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#6b7280'; ctx.beginPath(); ctx.arc(cx,cy,R*0.72,0,Math.PI*2); ctx.fill();
+      // cannon barrel north
+      ctx.fillStyle='#1f2937';
+      ctx.fillRect(cx-R*0.18,cy-R*0.9,R*0.36,R*0.65);
+      ctx.beginPath(); ctx.arc(cx,cy-R*0.9,R*0.18,Math.PI,0); ctx.fill();
+      ctx.strokeStyle='rgba(150,163,175,0.4)'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.stroke();
+    });
+
+    // Magic tower
+    mkTex(this,'tw_magic',S,S,(ctx)=>{
+      const cx=S/2, cy=S/2;
+      ctx.fillStyle='#2e1065'; ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#7c3aed'; ctx.beginPath(); ctx.arc(cx,cy,R*0.72,0,Math.PI*2); ctx.fill();
+      // star runes
+      ctx.fillStyle='#e0d4ff';
+      for(let i=0;i<6;i++){
+        const a=i/6*Math.PI*2-Math.PI/2;
+        ctx.beginPath(); ctx.arc(cx+Math.cos(a)*R*0.45,cy+Math.sin(a)*R*0.45,2.5,0,Math.PI*2); ctx.fill();
       }
+      ctx.fillStyle='#f0e6ff';
+      ctx.beginPath(); ctx.arc(cx,cy,R*0.2,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle='rgba(196,181,253,0.6)'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.stroke();
     });
 
-    // Path (stone/sand)
-    mkTex(this,'t_path',W,H+S,(ctx)=>{
-      isoTile(ctx,W,H,S,'#c8965a','#a06c38','#7a5228');
-      // cobble marks
-      ctx.strokeStyle='rgba(0,0,0,0.12)'; ctx.lineWidth=0.8;
-      ctx.beginPath(); ctx.moveTo(W/2,6); ctx.lineTo(W/2,H-6); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(W*0.27,9); ctx.lineTo(W*0.27,H-9); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(W*0.73,9); ctx.lineTo(W*0.73,H-9); ctx.stroke();
-    });
-
-    // Start (green glow)
-    mkTex(this,'t_start',W,H+S,(ctx)=>{
-      isoTile(ctx,W,H,S,'#22d36e','#14a050','#0d7a3a');
-      ctx.fillStyle='rgba(0,0,0,0.55)';
-      ctx.font='bold 11px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText('S',W/2,H/2);
-    });
-
-    // End (red glow)
-    mkTex(this,'t_end',W,H+S,(ctx)=>{
-      isoTile(ctx,W,H,S,'#f06060','#c03030','#901818');
-      ctx.fillStyle='rgba(0,0,0,0.55)';
-      ctx.font='bold 11px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText('E',W/2,H/2);
-    });
-
-    // Hover (bright grass)
-    mkTex(this,'t_hover',W,H+S,(ctx)=>{
-      isoTile(ctx,W,H,S,'#6aeea0','#3ec870','#28a058');
-      ctx.strokeStyle='rgba(255,255,255,0.6)'; ctx.lineWidth=2;
-      ctx.beginPath();
-      ctx.moveTo(W/2,0); ctx.lineTo(W,H/2); ctx.lineTo(W/2,H); ctx.lineTo(0,H/2);
-      ctx.closePath(); ctx.stroke();
-    });
-
-    // ── Tower sprites ─────────────────────────────────────────────────────
-    // Each tower: drawn ABOVE the tile top (origin 0.5,1 → bottom-centre = tile top vertex)
-    // Canvas height = TH (tower body) + a bit of overhang above
-
-    const TH2=TH*2;
-
-    // Arrow tower — wooden
-    mkTex(this,'tw_arrow',W,TH2+S,(ctx)=>{
-      isoTile(ctx,W,TH,S,'#92400e','#57270b','#3a1806');
-      const cx=W/2, by=TH; // base of tower = tile bottom
-      // Tower shaft
-      ctx.fillStyle='#b45309'; ctx.fillRect(cx-8,by-38,16,38);
-      ctx.fillStyle='#92400e'; ctx.fillRect(cx-8,by-38,8,38);
-      // Arrow slits
-      ctx.fillStyle='rgba(0,0,0,0.55)';
-      ctx.fillRect(cx-2,by-30,4,10);
-      // Battlements
-      ctx.fillStyle='#ca8a04';
-      [[cx-10,by-42],[cx-3,by-44],[cx+4,by-42]].forEach(([x,y])=>ctx.fillRect(x,y,6,7));
-      // Highlight
-      ctx.strokeStyle='rgba(255,200,80,0.3)'; ctx.lineWidth=1;
-      ctx.strokeRect(cx-8,by-38,16,38);
-    });
-
-    // Cannon tower — stone
-    mkTex(this,'tw_cannon',W,TH2+S,(ctx)=>{
-      isoTile(ctx,W,TH,S,'#6b7280','#3f4b58','#283040');
-      const cx=W/2, by=TH;
-      ctx.fillStyle='#52606e'; ctx.fillRect(cx-9,by-36,18,36);
-      ctx.fillStyle='#3f4b58'; ctx.fillRect(cx-9,by-36,9,36);
-      // Stone cracks
-      ctx.strokeStyle='rgba(0,0,0,0.2)'; ctx.lineWidth=0.7;
-      [[cx-4,by-28,cx+2,by-18],[cx+1,by-32,cx-3,by-22]].forEach(([x1,y1,x2,y2])=>{
-        ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+    // Laser tower
+    mkTex(this,'tw_laser',S,S,(ctx)=>{
+      const cx=S/2, cy=S/2;
+      ctx.fillStyle='#0c2240'; ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#1e3a5f'; ctx.beginPath(); ctx.arc(cx,cy,R*0.72,0,Math.PI*2); ctx.fill();
+      // concentric rings
+      [0.52,0.34,0.18].forEach((r,i)=>{
+        ctx.strokeStyle=['#38bdf8','#0ea5e9','#7dd3fc'][i];
+        ctx.lineWidth=2; ctx.beginPath(); ctx.arc(cx,cy,R*r,0,Math.PI*2); ctx.stroke();
       });
-      // Dome
-      ctx.fillStyle='#9ca3af';
-      ctx.beginPath(); ctx.arc(cx,by-36,11,Math.PI,0); ctx.fill();
-      ctx.fillStyle='#6b7280'; ctx.fillRect(cx-11,by-36,22,5);
-      // Barrel
-      ctx.fillStyle='#1f2937'; ctx.fillRect(cx+9,by-41,14,6);
-      ctx.beginPath(); ctx.arc(cx+23,by-38,3.5,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='rgba(255,255,255,0.1)';
-      ctx.beginPath(); ctx.arc(cx+22,by-39,1.5,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#7dd3fc'; ctx.beginPath(); ctx.arc(cx,cy,R*0.1,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle='rgba(56,189,248,0.5)'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.stroke();
     });
 
-    // Magic tower — crystal purple
-    mkTex(this,'tw_magic',W,TH2+S,(ctx)=>{
-      isoTile(ctx,W,TH,S,'#6d28d9','#4c1d95','#2e1065');
-      const cx=W/2, by=TH;
-      ctx.fillStyle='#5b21b6'; ctx.fillRect(cx-8,by-38,16,38);
-      ctx.fillStyle='#4c1d95'; ctx.fillRect(cx-8,by-38,8,38);
-      // Rune lines
-      ctx.strokeStyle='rgba(196,181,253,0.4)'; ctx.lineWidth=1;
-      ctx.beginPath(); ctx.moveTo(cx-4,by-30); ctx.lineTo(cx+4,by-20); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(cx+4,by-30); ctx.lineTo(cx-4,by-20); ctx.stroke();
-      // Crystal spike
-      const gy=ctx.createLinearGradient(cx-7,by-56,cx+7,by-38);
-      gy.addColorStop(0,'#e0d4ff'); gy.addColorStop(1,'#a78bfa');
-      ctx.fillStyle=gy;
-      ctx.beginPath();
-      ctx.moveTo(cx,by-58); ctx.lineTo(cx+7,by-38); ctx.lineTo(cx-7,by-38);
-      ctx.closePath(); ctx.fill();
-      ctx.fillStyle='rgba(220,200,255,0.5)';
-      ctx.beginPath();
-      ctx.moveTo(cx,by-58); ctx.lineTo(cx+3,by-46); ctx.lineTo(cx,by-38);
-      ctx.closePath(); ctx.fill();
-      // Glow halo
-      const grd=ctx.createRadialGradient(cx,by-50,0,cx,by-50,14);
-      grd.addColorStop(0,'rgba(167,139,250,0.4)'); grd.addColorStop(1,'rgba(139,92,246,0)');
-      ctx.fillStyle=grd;
-      ctx.beginPath(); ctx.arc(cx,by-50,14,0,Math.PI*2); ctx.fill();
-    });
-
-    // Laser tower — dark metal/tech
-    mkTex(this,'tw_laser',W,TH2+S,(ctx)=>{
-      isoTile(ctx,W,TH,S,'#1e3a5f','#0f2040','#061428');
-      const cx=W/2, by=TH;
-      ctx.fillStyle='#1e3a5f'; ctx.fillRect(cx-8,by-38,16,38);
-      ctx.fillStyle='#0f2040'; ctx.fillRect(cx-8,by-38,8,38);
-      // LED ring panels
-      const rings=[[by-38,8,0x38bdf8],[by-28,6.5,0x0ea5e9],[by-18,5,0x0284c7]];
-      rings.forEach(([y,r,col])=>{
-        const c='#'+(col).toString(16).padStart(6,'0');
-        ctx.fillStyle=c;
-        ctx.beginPath(); ctx.arc(cx,y,r,0,Math.PI*2); ctx.fill();
-        ctx.fillStyle='rgba(255,255,255,0.3)';
-        ctx.beginPath(); ctx.arc(cx-r*0.3,y-r*0.3,r*0.28,0,Math.PI*2); ctx.fill();
-      });
-      // Antenna
-      ctx.fillStyle='#7dd3fc'; ctx.fillRect(cx-1.5,by-58,3,22);
-      ctx.beginPath(); ctx.arc(cx,by-58,4,0,Math.PI*2); ctx.fill();
-      // Glow
-      const gl=ctx.createRadialGradient(cx,by-38,0,cx,by-38,18);
-      gl.addColorStop(0,'rgba(56,189,248,0.35)'); gl.addColorStop(1,'rgba(14,165,233,0)');
-      ctx.fillStyle=gl; ctx.beginPath(); ctx.arc(cx,by-38,18,0,Math.PI*2); ctx.fill();
-    });
-
-    // ── Enemy sprites ─────────────────────────────────────────────────────
-    // Grunt – red warrior
-    mkTex(this,'e_grunt',26,32,(ctx)=>{
-      const g=ctx.createRadialGradient(13,14,3,13,14,13);
+    // ── Enemy sprites (top-down) ──────────────────────────────────────────
+    // Grunt
+    mkTex(this,'e_grunt',20,20,(ctx)=>{
+      const g=ctx.createRadialGradient(10,10,2,10,10,9);
       g.addColorStop(0,'#f87171'); g.addColorStop(1,'#991b1b');
-      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(13,14,12,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(10,10,9,0,Math.PI*2); ctx.fill();
       ctx.strokeStyle='#fca5a5'; ctx.lineWidth=1.5; ctx.stroke();
-      // Helmet visor
-      ctx.fillStyle='#b91c1c';
-      ctx.beginPath(); ctx.arc(13,10,7,Math.PI,0); ctx.fill();
-      ctx.fillRect(6,10,14,4);
-      ctx.fillStyle='rgba(251,191,36,0.9)'; ctx.fillRect(8,9,10,3);
-      // Eyes
-      ctx.fillStyle='#1c1c1c'; ctx.fillRect(9,13,3,3); ctx.fillRect(15,13,3,3);
+      ctx.fillStyle='rgba(0,0,0,0.4)'; ctx.fillRect(7,7,6,6);
     });
 
-    // Armor – grey knight
-    mkTex(this,'e_armor',30,36,(ctx)=>{
-      const g=ctx.createRadialGradient(15,16,3,15,16,15);
-      g.addColorStop(0,'#e2e8f0'); g.addColorStop(0.6,'#94a3b8'); g.addColorStop(1,'#334155');
-      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(15,16,14,0,Math.PI*2); ctx.fill();
-      ctx.strokeStyle='#cbd5e1'; ctx.lineWidth=2; ctx.stroke();
-      // Shield emblem
-      ctx.fillStyle='rgba(255,255,255,0.35)';
-      ctx.fillRect(12,10,6,12); ctx.fillRect(8,14,14,4);
-      ctx.strokeStyle='rgba(255,255,255,0.2)'; ctx.lineWidth=0.8; ctx.stroke();
+    // Armor
+    mkTex(this,'e_armor',24,24,(ctx)=>{
+      const g=ctx.createRadialGradient(12,12,3,12,12,11);
+      g.addColorStop(0,'#e2e8f0'); g.addColorStop(1,'#334155');
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(12,12,11,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle='#94a3b8'; ctx.lineWidth=2; ctx.stroke();
+      ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.fillRect(9,7,6,10); ctx.fillRect(5,11,14,4);
     });
 
-    // Speeder – green rogue
-    mkTex(this,'e_speeder',22,28,(ctx)=>{
-      const g=ctx.createRadialGradient(11,12,2,11,12,11);
+    // Speeder
+    mkTex(this,'e_speeder',16,16,(ctx)=>{
+      const g=ctx.createRadialGradient(8,8,1,8,8,7);
       g.addColorStop(0,'#bef264'); g.addColorStop(1,'#4d7c0f');
-      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(11,12,10,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(8,8,7,0,Math.PI*2); ctx.fill();
       ctx.strokeStyle='#84cc16'; ctx.lineWidth=1.5; ctx.stroke();
-      // Speed lines
-      ctx.strokeStyle='rgba(255,255,255,0.5)'; ctx.lineWidth=1.2;
-      [10,14,18].forEach(y=>{ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(5,y); ctx.stroke(); });
-      // Eyes
-      ctx.fillStyle='#fde047'; ctx.beginPath(); ctx.arc(8,11,2,0,Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(14,11,2,0,Math.PI*2); ctx.fill();
+      // speed chevron
+      ctx.strokeStyle='#fff'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(3,8); ctx.lineTo(6,5); ctx.lineTo(9,8); ctx.stroke();
     });
 
-    // Boss – giant purple demon
-    mkTex(this,'e_boss',44,52,(ctx)=>{
-      const g=ctx.createRadialGradient(22,24,4,22,24,22);
-      g.addColorStop(0,'#c084fc'); g.addColorStop(0.55,'#7c3aed'); g.addColorStop(1,'#3b0764');
-      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(22,24,21,0,Math.PI*2); ctx.fill();
+    // Boss
+    mkTex(this,'e_boss',36,36,(ctx)=>{
+      const g=ctx.createRadialGradient(18,18,4,18,18,17);
+      g.addColorStop(0,'#c084fc'); g.addColorStop(1,'#3b0764');
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(18,18,17,0,Math.PI*2); ctx.fill();
       ctx.strokeStyle='#9333ea'; ctx.lineWidth=2.5; ctx.stroke();
-      // Aura
-      const au=ctx.createRadialGradient(22,24,18,22,24,28);
-      au.addColorStop(0,'rgba(168,85,247,0.0)'); au.addColorStop(1,'rgba(168,85,247,0.25)');
-      ctx.fillStyle=au; ctx.beginPath(); ctx.arc(22,24,28,0,Math.PI*2); ctx.fill();
-      // Horns
+      // horns (top)
       ctx.fillStyle='#6d28d9';
-      ctx.beginPath(); ctx.moveTo(13,7); ctx.lineTo(10,0); ctx.lineTo(17,8); ctx.closePath(); ctx.fill();
-      ctx.beginPath(); ctx.moveTo(31,7); ctx.lineTo(34,0); ctx.lineTo(27,8); ctx.closePath(); ctx.fill();
-      // Eyes
+      ctx.beginPath(); ctx.moveTo(12,3); ctx.lineTo(8,0); ctx.lineTo(14,6); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(24,3); ctx.lineTo(28,0); ctx.lineTo(22,6); ctx.closePath(); ctx.fill();
       ctx.fillStyle='#fde047';
-      ctx.beginPath(); ctx.arc(14,21,5,0,Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(30,21,5,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(12,16,4,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(24,16,4,0,Math.PI*2); ctx.fill();
       ctx.fillStyle='#dc2626';
-      ctx.beginPath(); ctx.arc(14,21,2.5,0,Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(30,21,2.5,0,Math.PI*2); ctx.fill();
-      // Mouth fangs
-      ctx.fillStyle='#fff';
-      ctx.beginPath(); ctx.moveTo(17,33); ctx.lineTo(20,38); ctx.lineTo(23,33); ctx.closePath(); ctx.fill();
-      ctx.fillStyle='#fff';
-      ctx.beginPath(); ctx.moveTo(23,33); ctx.lineTo(26,38); ctx.lineTo(29,33); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.arc(12,16,2,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(24,16,2,0,Math.PI*2); ctx.fill();
     });
 
     // ── Projectiles ───────────────────────────────────────────────────────
@@ -516,20 +420,20 @@ class BootScene extends Phaser.Scene {
       ctx.fillStyle='#fbbf24';
       ctx.beginPath(); ctx.moveTo(0,2.5); ctx.lineTo(8,2.5); ctx.lineTo(10,0); ctx.lineTo(10,5); ctx.lineTo(8,2.5); ctx.fill();
     });
-    mkTex(this,'pj_cannon',11,11,(ctx)=>{
-      const g=ctx.createRadialGradient(5.5,5.5,1,5.5,5.5,5.5);
+    mkTex(this,'pj_cannon',10,10,(ctx)=>{
+      const g=ctx.createRadialGradient(5,5,1,5,5,5);
       g.addColorStop(0,'#9ca3af'); g.addColorStop(1,'#111827');
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(5,5,5,0,Math.PI*2); ctx.fill();
+    });
+    mkTex(this,'pj_magic',11,11,(ctx)=>{
+      const g=ctx.createRadialGradient(5.5,5.5,1,5.5,5.5,5.5);
+      g.addColorStop(0,'#ffffff'); g.addColorStop(0.4,'#c4b5fd'); g.addColorStop(1,'rgba(139,92,246,0)');
       ctx.fillStyle=g; ctx.beginPath(); ctx.arc(5.5,5.5,5.5,0,Math.PI*2); ctx.fill();
     });
-    mkTex(this,'pj_magic',12,12,(ctx)=>{
-      const g=ctx.createRadialGradient(6,6,1,6,6,6);
-      g.addColorStop(0,'#ffffff'); g.addColorStop(0.35,'#c4b5fd'); g.addColorStop(1,'rgba(139,92,246,0)');
-      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(6,6,6,0,Math.PI*2); ctx.fill();
-    });
-    mkTex(this,'pj_laser',22,5,(ctx)=>{
-      const g=ctx.createLinearGradient(0,0,22,0);
+    mkTex(this,'pj_laser',20,4,(ctx)=>{
+      const g=ctx.createLinearGradient(0,0,20,0);
       g.addColorStop(0,'rgba(56,189,248,0)'); g.addColorStop(0.3,'#38bdf8'); g.addColorStop(1,'#fff');
-      ctx.fillStyle=g; ctx.fillRect(0,1.5,22,2);
+      ctx.fillStyle=g; ctx.fillRect(0,1,20,2);
     });
 
     // Spark particle
@@ -555,11 +459,9 @@ class GameScene extends Phaser.Scene {
   }
 
   create(){
-    // ── Background ──────────────────────────────────────────────────────
+    // ── Background fill ──────────────────────────────────────────────────
     const bg=this.add.graphics().setDepth(-200);
-    bg.fillGradientStyle(0x050b18,0x050b18,0x0b1628,0x0b1628,1);
-    bg.fillRect(0,0,GW,GH);
-    this.drawBg();
+    bg.fillStyle(0x0b1020,1); bg.fillRect(0,0,GW,GH);
 
     // ── Build tile map ───────────────────────────────────────────────────
     this.tiles={};
@@ -570,17 +472,15 @@ class GameScene extends Phaser.Scene {
         if(c===PATH[0][0]&&r===PATH[0][1]) tx='t_start';
         else if(c===PATH[PATH.length-1][0]&&r===PATH[PATH.length-1][1]) tx='t_end';
         else if(PATH_SET.has(k)) tx='t_path';
-        const p=iso(c,r);
-        const depth=(c+r)*10;
-        this.tiles[k]=this.add.image(p.x,p.y,tx)
-          .setOrigin(0.5,0).setDepth(depth);
+        const p=tilePos(c,r);
+        this.tiles[k]=this.add.image(p.x,p.y,tx).setOrigin(0.5,0.5).setDepth(0);
       }
     }
 
     // Range preview + hover highlight graphics
-    this.rangeGfx=this.add.graphics().setDepth(99900);
+    this.rangeGfx=this.add.graphics().setDepth(500);
     this.hoverSpr=this.add.image(0,0,'t_hover')
-      .setOrigin(0.5,0).setDepth(99800).setAlpha(0.75).setVisible(false);
+      .setOrigin(0.5,0.5).setDepth(400).setAlpha(0.85).setVisible(false);
 
     // Input
     this.input.on('pointermove',ptr=>{ this.hoverCell=this.pick(ptr.x,ptr.y); this.doHover(); });
@@ -589,54 +489,26 @@ class GameScene extends Phaser.Scene {
     this.emitHUD();
   }
 
-  drawBg(){
-    const g=this.add.graphics().setDepth(-100);
-    // Stars
-    g.fillStyle(0xffffff,0.6);
-    for(let i=0;i<90;i++) g.fillRect(Math.random()*GW,Math.random()*200,1+Math.random(),1+Math.random());
-    // Far mountain range
-    g.fillStyle(0x0c1e30,1);
-    const m1=[[0,310],[70,240],[150,265],[240,195],[330,220],[420,185],[510,205],[600,180],[690,205],[780,188],[870,210],[GW,225],[GW,400],[0,400]];
-    g.beginPath(); g.moveTo(m1[0][0],m1[0][1]);
-    m1.forEach(([x,y])=>g.lineTo(x,y)); g.closePath(); g.fillPath();
-    // Near mountain range
-    g.fillStyle(0x081828,1);
-    const m2=[[0,345],[90,285],[190,305],[290,265],[390,295],[490,255],[590,280],[690,260],[790,285],[870,268],[GW,285],[GW,420],[0,420]];
-    g.beginPath(); g.moveTo(m2[0][0],m2[0][1]);
-    m2.forEach(([x,y])=>g.lineTo(x,y)); g.closePath(); g.fillPath();
-    // Ambient fog near bottom
-    g.fillStyle(0x070b14,0.65);
-    g.fillRect(0,GH*0.72,GW,GH*0.28);
-  }
-
   pick(px,py){
-    // Diamond hit-test all cells (back-to-front for correct pick priority)
-    for(let depth=COLS+ROWS-2;depth>=0;depth--){
-      for(let c=0;c<COLS;c++){
-        const r=depth-c; if(r<0||r>=ROWS) continue;
-        const p=iso(c,r);
-        const dx=px-p.x, dy=py-(p.y+TH/2);
-        if(Math.abs(dx/(TW/2))+Math.abs(dy/(TH/2))<=1.0)
-          return {c,r,k:`${c},${r}`};
-      }
-    }
-    return null;
+    const c=Math.floor(px/TS), r=Math.floor(py/TS);
+    if(c<0||c>=COLS||r<0||r>=ROWS) return null;
+    return {c,r,k:`${c},${r}`};
   }
 
   doHover(){
     this.rangeGfx.clear();
     if(!this.hoverCell){ this.hoverSpr.setVisible(false); return; }
     const {c,r,k}=this.hoverCell;
-    const p=iso(c,r);
+    const p=tilePos(c,r);
     const tw=this.towerMap[k];
     if(tw){
-      this.drawRange(p.x,p.y+TH/2,tw.td.range,TOWERS[tw.type].color,0.14);
+      this.drawRange(p.x,p.y,tw.td.range,TOWERS[tw.type].color,0.12);
       this.hoverSpr.setVisible(false);
     } else if(!PATH_SET.has(k)&&selType){
       this.hoverSpr.setPosition(p.x,p.y).setVisible(true);
       const ok=this.gold>=TOWERS[selType].cost;
       this.hoverSpr.setTint(ok?0xffffff:0xff5555);
-      this.drawRange(p.x,p.y+TH/2,TOWERS[selType].range,TOWERS[selType].color,0.12);
+      this.drawRange(p.x,p.y,TOWERS[selType].range,TOWERS[selType].color,0.1);
     } else {
       this.hoverSpr.setVisible(false);
     }
@@ -666,18 +538,12 @@ class GameScene extends Phaser.Scene {
   }
 
   placeTower(c,r,type){
-    const p=iso(c,r);
-    const depth=(c+r)*10+5;
+    const p=tilePos(c,r);
     const td=TOWERS[type];
-    // Glowing platform base
-    const glow=this.add.graphics().setDepth(depth);
-    glow.fillStyle(td.color,0.18);
-    glow.fillCircle(p.x,p.y+TH/2,30);
-    glow.lineStyle(1.5,td.color,0.5);
-    glow.strokeCircle(p.x,p.y+TH/2,30);
-    // Tower sprite (origin bottom-centre = top of tile diamond)
+    const glow=this.add.graphics().setDepth(10);
+    glow.fillStyle(td.color,0.15); glow.fillCircle(p.x,p.y,TS*0.5);
     const projKeys={arrow:'pj_arrow',cannon:'pj_cannon',magic:'pj_magic',laser:'pj_laser'};
-    const sp=this.add.image(p.x,p.y,`tw_${type}`).setOrigin(0.5,1).setDepth(depth+2);
+    const sp=this.add.image(p.x,p.y,`tw_${type}`).setOrigin(0.5,0.5).setDepth(20);
     this.towerMap[`${c},${r}`]={c,r,type,td,sx:p.x,sy:p.y,sp,glow,cd:0,projKey:projKeys[type]};
   }
 
@@ -694,37 +560,36 @@ class GameScene extends Phaser.Scene {
 
   spawnEnemy(type){
     const ed=ENEMIES[type];
-    const [sc,sr]=PATH[0]; const p=iso(sc,sr);
-    const texK=`e_${type}`;
-    const s=this.add.image(p.x,p.y+TH/2,texK).setOrigin(0.5,1).setDepth(10000).setScale(ed.sz);
-    const bg=this.add.graphics().setDepth(10001);
-    const fg=this.add.graphics().setDepth(10002);
+    const [sc,sr]=PATH[0]; const p=tilePos(sc,sr);
+    const s=this.add.image(p.x,p.y,`e_${type}`).setOrigin(0.5,0.5).setDepth(100).setScale(ed.sz);
+    const hpBg=this.add.graphics().setDepth(101);
+    const hpFg=this.add.graphics().setDepth(102);
     const mult=1+(this.wave-1)*0.12;
     this.enemies.push({type,ed,hp:ed.hp*mult,maxHp:ed.hp*mult,
-      pathIdx:0,progress:0,sprite:s,bg,fg,alive:true});
+      pathIdx:0,progress:0,sprite:s,bg:hpBg,fg:hpFg,alive:true});
   }
 
   fireBullet(tw,tgt){
-    const s=this.add.image(tw.sx,tw.sy-4,tw.projKey).setDepth(20000);
+    const s=this.add.image(tw.sx,tw.sy,tw.projKey).setDepth(200);
     const a=Math.atan2(tgt.sprite.y-s.y,tgt.sprite.x-s.x);
     s.setRotation(a);
     const dmg=tw.td.dmg+this.wave*2;
-    this.bullets.push({s,tgt,spd:330,dmg,splash:tw.td.splash,type:tw.type,alive:true});
+    this.bullets.push({s,tgt,spd:320,dmg,splash:tw.td.splash,type:tw.type,alive:true});
   }
 
   spawnSparks(x,y,col,n=8){
     for(let i=0;i<n;i++){
-      const a=Math.random()*Math.PI*2, sp=45+Math.random()*65;
-      const s=this.add.image(x,y,'spark').setDepth(30000).setTint(col);
-      const lf=0.4+Math.random()*0.45;
+      const a=Math.random()*Math.PI*2, sp=40+Math.random()*60;
+      const s=this.add.image(x,y,'spark').setDepth(300).setTint(col);
+      const lf=0.35+Math.random()*0.4;
       this.sparks.push({s,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:lf,max:lf,alive:true});
     }
   }
 
   floatTxt(x,y,txt,col){
     const t=this.add.text(x,y,txt,{fontFamily:'monospace',fontSize:'11px',
-      color:col,stroke:'#000',strokeThickness:2}).setDepth(40000).setOrigin(0.5);
-    this.tweens.add({targets:t,y:y-34,alpha:0,duration:950,ease:'Power2',onComplete:()=>t.destroy()});
+      color:col,stroke:'#000',strokeThickness:2}).setDepth(400).setOrigin(0.5);
+    this.tweens.add({targets:t,y:y-30,alpha:0,duration:900,ease:'Power2',onComplete:()=>t.destroy()});
   }
 
   update(_t,delta){
@@ -752,20 +617,24 @@ class GameScene extends Phaser.Scene {
         continue;
       }
       const [fc,fr]=PATH[en.pathIdx],[tc,tr]=PATH[ni];
-      const fp=iso(fc,fr), tp=iso(tc,tr);
+      const fp=tilePos(fc,fr), tp=tilePos(tc,tr);
       const dist=Math.hypot(tp.x-fp.x,tp.y-fp.y)||1;
       en.progress+=(en.ed.spd*dt)/dist;
       if(en.progress>=1){ en.progress-=1; en.pathIdx++; }
       const t=en.progress;
-      const ex=fp.x+(tp.x-fp.x)*t, ey=fp.y+(tp.y-fp.y)*t+TH/2;
-      en.sprite.setPosition(ex,ey).setDepth(10000+ey);
+      const ex=fp.x+(tp.x-fp.x)*t, ey=fp.y+(tp.y-fp.y)*t;
+      en.sprite.setPosition(ex,ey);
 
-      // HP bar
-      const bw=28*en.ed.sz, bx=ex-bw/2, by=ey-34*en.ed.sz;
+      // rotate toward direction of travel
+      const dx2=tp.x-fp.x, dy2=tp.y-fp.y;
+      if(dx2!==0||dy2!==0) en.sprite.setRotation(Math.atan2(dy2,dx2)+Math.PI/2);
+
+      // HP bar above enemy
+      const bw=22*en.ed.sz, bx=ex-bw/2, by2=ey-16*en.ed.sz;
       const pct=Math.max(0,en.hp/en.maxHp);
       const hc=pct>0.6?0x22c55e:(pct>0.3?0xf59e0b:0xef4444);
-      en.bg.clear().fillStyle(0x000000,0.65).fillRect(bx-1,by-1,bw+2,5).setDepth(10000+ey+0.5);
-      en.fg.clear().fillStyle(hc,1).fillRect(bx,by,bw*pct,3).setDepth(10000+ey+1);
+      en.bg.clear().fillStyle(0x000000,0.7).fillRect(bx-1,by2-1,bw+2,5);
+      en.fg.clear().fillStyle(hc,1).fillRect(bx,by2,bw*pct,3);
     }
 
     // ── Tower AI ───────────────────────────────────────────────────────
@@ -773,9 +642,12 @@ class GameScene extends Phaser.Scene {
     for(const tw of Object.values(this.towerMap)){
       if(tw.cd>0){ tw.cd-=dt*60; continue; }
       const inR=live
-        .filter(e=>{ const dx=e.sprite.x-tw.sx,dy=e.sprite.y-(tw.sy+TH/2); return Math.hypot(dx,dy)<=tw.td.range; })
+        .filter(e=>{ const dx=e.sprite.x-tw.sx,dy=e.sprite.y-tw.sy; return Math.hypot(dx,dy)<=tw.td.range; })
         .sort((a,b)=>(b.pathIdx+b.progress)-(a.pathIdx+a.progress));
       if(!inR.length) continue;
+      // rotate tower sprite toward target
+      const tgt0=inR[0];
+      tw.sp.setRotation(Math.atan2(tgt0.sprite.y-tw.sy,tgt0.sprite.x-tw.sx)+Math.PI/2);
       const targets=tw.td.multi>1?inR.slice(0,tw.td.multi):[inR[0]];
       targets.forEach(t=>this.fireBullet(tw,t));
       tw.cd=tw.td.cd;
@@ -788,7 +660,7 @@ class GameScene extends Phaser.Scene {
       const tx=b.tgt.sprite.x, ty=b.tgt.sprite.y;
       const a=Math.atan2(ty-b.s.y,tx-b.s.x);
       b.s.setRotation(a); b.s.x+=Math.cos(a)*b.spd*dt; b.s.y+=Math.sin(a)*b.spd*dt;
-      if(Math.hypot(tx-b.s.x,ty-b.s.y)<14){
+      if(Math.hypot(tx-b.s.x,ty-b.s.y)<12){
         b.alive=false; b.s.destroy();
         this.hitEnemy(b.tgt,b.dmg,b.splash);
         this.spawnSparks(tx,ty,TOWERS[b.type].pclr,6);
@@ -799,7 +671,7 @@ class GameScene extends Phaser.Scene {
     for(const p of this.sparks){
       if(!p.alive) continue;
       p.life-=dt; if(p.life<=0){ p.alive=false; p.s.destroy(); continue; }
-      p.s.x+=p.vx*dt; p.s.y+=p.vy*dt; p.vy+=65*dt;
+      p.s.x+=p.vx*dt; p.s.y+=p.vy*dt;
       const f=p.life/p.max; p.s.setAlpha(f).setScale(f*1.1);
     }
 
@@ -820,13 +692,13 @@ class GameScene extends Phaser.Scene {
     }
 
     this.emitHUD();
-    this.doHover(); // keep range preview fresh
+    this.doHover();
   }
 
   hitEnemy(en,dmg,splash){
     if(!en.alive) return;
     en.hp-=dmg;
-    this.floatTxt(en.sprite.x,en.sprite.y-22,`-${dmg}`,'#fef08a');
+    this.floatTxt(en.sprite.x,en.sprite.y-18,`-${dmg}`,'#fef08a');
     if(en.hp<=0) this.killEnemy(en);
     if(splash>0){
       for(const o of this.enemies){
@@ -843,7 +715,7 @@ class GameScene extends Phaser.Scene {
     en.alive=false;
     this.score+=en.ed.reward; this.gold+=en.ed.reward;
     this.spawnSparks(en.sprite.x,en.sprite.y,en.ed.color,14);
-    this.floatTxt(en.sprite.x,en.sprite.y-32,`+${en.ed.reward}g`,'#22c55e');
+    this.floatTxt(en.sprite.x,en.sprite.y-28,`+${en.ed.reward}g`,'#22c55e');
     en.sprite.destroy(); en.bg.destroy(); en.fg.destroy();
   }
 
@@ -867,11 +739,11 @@ class GameScene extends Phaser.Scene {
 const game=new Phaser.Game({
   type:Phaser.AUTO,
   width:GW, height:GH,
-  backgroundColor:'#070b14',
+  backgroundColor:'#0b1020',
   parent:'cvs-wrap',
   scene:[BootScene,GameScene],
   scale:{ mode:Phaser.Scale.FIT, autoCenter:Phaser.Scale.CENTER_BOTH },
-  render:{ antialias:true, roundPixels:false },
+  render:{ antialias:true, roundPixels:true },
 });
 </script>
 </body>
