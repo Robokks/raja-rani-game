@@ -32,15 +32,13 @@ body{
   font-family:'Chakra Petch',system-ui,sans-serif;
   background:transparent;
   color:var(--text);
-  min-height:100vh;
-  padding-top:var(--nav-h);
-  isolation:isolate;
 }
 @keyframes grid-drift{
   0%{background-position:0 0,0 0}
   100%{background-position:48px 48px,48px 48px}
 }
-#bgc{position:fixed;inset:0;z-index:-1;pointer-events:none}
+#bgc{position:fixed;inset:0;z-index:0;pointer-events:none}
+#page{position:relative;z-index:1;min-height:100vh;padding-top:var(--nav-h)}
 /* subtle CRT scanline overlay */
 body::after{
   content:'';position:fixed;inset:0;pointer-events:none;z-index:9000;
@@ -121,7 +119,7 @@ nav{
   border-color:rgba(167,139,250,.5);
   color:#c4b5fd;
 }
-body.has-subbar{padding-top:calc(var(--nav-h) + var(--sub-h))}
+#page.has-subbar{padding-top:calc(var(--nav-h) + var(--sub-h))}
 
 /* ── Hero ── */
 .hero{
@@ -317,6 +315,7 @@ body.has-subbar{padding-top:calc(var(--nav-h) + var(--sub-h))}
 </head>
 <body>
 <canvas id="bgc"></canvas>
+<div id="page">
 
 <!-- ── Nav ── -->
 <nav>
@@ -538,6 +537,7 @@ body.has-subbar{padding-top:calc(var(--nav-h) + var(--sub-h))}
   </div>
 </div>
 
+</div><!-- #page -->
 <script>
 // ── Animated background ──────────────────────────────────────────────────────
 (function(){
@@ -645,18 +645,18 @@ mainTabs.forEach(tab => tab.addEventListener('click', () => {
     subOnline.classList.add('visible');
     subOffline.classList.remove('visible');
     subOnline.querySelector('.stab').classList.add('active');
-    document.body.classList.add('has-subbar');
+    document.getElementById('page').classList.add('has-subbar');
   } else if (curMode === 'offline') {
     subbar.classList.add('visible');
     subOnline.classList.remove('visible');
     subOffline.classList.add('visible');
     subOffline.querySelector('.stab').classList.add('active');
-    document.body.classList.add('has-subbar');
+    document.getElementById('page').classList.add('has-subbar');
   } else {
     subbar.classList.remove('visible');
     subOnline.classList.remove('visible');
     subOffline.classList.remove('visible');
-    document.body.classList.remove('has-subbar');
+    document.getElementById('page').classList.remove('has-subbar');
   }
   applyFilter();
 }));
@@ -888,7 +888,7 @@ function text(ctx,str,x,y,size,col,font){
   c.fillStyle=grad(c,0,0,c.w,c.h,'#060e24','#0a1836'); c.fillRect(0,0,c.w,c.h);
   // property cards
   const props=[['MUMBAI','#ef4444'],['DELHI','#3b82f6'],['BENGALURU','#22c55e'],['CHENNAI','#f59e0b'],['PUNE','#8b5cf6']];
-  props.forEach(([name,col],i){
+  props.forEach(([name,col],i)=>{
     const x=c.w*.08+(i%3)*(c.w*.3), y=c.h*.1+Math.floor(i/3)*(c.h*.38);
     c.fillStyle=col+'33'; c.beginPath(); c.roundRect(x,y,c.w*.26,c.h*.34,4); c.fill();
     c.strokeStyle=col+'66'; c.lineWidth=1; c.stroke();
