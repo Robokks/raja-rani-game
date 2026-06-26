@@ -34,6 +34,7 @@ body{
   color:var(--text);
   min-height:100vh;
   padding-top:var(--nav-h);
+  isolation:isolate;
 }
 @keyframes grid-drift{
   0%{background-position:0 0,0 0}
@@ -546,14 +547,14 @@ body.has-subbar{padding-top:calc(var(--nav-h) + var(--sub-h))}
   resize();
   window.addEventListener('resize',resize);
   const COLS=['#a78bfa','#818cf8','#6366f1','#ef4444','#f97316','#22c55e','#06b6d4','#ec4899','#3b82f6','#f59e0b'];
-  const pts=Array.from({length:55},()=>({
+  const pts=Array.from({length:70},()=>({
     x:Math.random()*innerWidth,
     y:Math.random()*innerHeight,
-    r:.7+Math.random()*1.6,
+    r:1.2+Math.random()*2.4,
     col:COLS[~~(Math.random()*COLS.length)],
-    vy:-(0.12+Math.random()*.35),
-    vx:(Math.random()-.5)*.22,
-    a:.15+Math.random()*.45,
+    vy:-(0.18+Math.random()*.45),
+    vx:(Math.random()-.5)*.28,
+    a:.35+Math.random()*.55,
     t:Math.random()*Math.PI*2,
   }));
   let shooters=[];
@@ -571,9 +572,9 @@ body.has-subbar{padding-top:calc(var(--nav-h) + var(--sub-h))}
       if(p.y<-4){p.y=cv.height+4;p.x=Math.random()*cv.width;}
       if(p.x<-4)p.x=cv.width+4;
       if(p.x>cv.width+4)p.x=-4;
-      const a=p.a*(.65+.35*Math.sin(p.t));
+      const a=p.a*(.7+.3*Math.sin(p.t));
       cx.save();cx.globalAlpha=a;
-      cx.shadowColor=p.col;cx.shadowBlur=12;
+      cx.shadowColor=p.col;cx.shadowBlur=18;
       cx.fillStyle=p.col;
       cx.beginPath();cx.arc(p.x,p.y,p.r,0,Math.PI*2);cx.fill();
       cx.restore();
