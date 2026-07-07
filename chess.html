@@ -823,7 +823,7 @@ function createOnline(){
   for(let i=0;i<4;i++)roomCode+='ABCDEFGHJKLMNPQRSTUVWXYZ'[~~(Math.random()*24)];
   myColor='w';
   S=startState();history=[];moveNames=[];gameOver=false;lastEnd=null;
-  roomRef=db.ref('chess/'+roomCode);
+  roomRef=db.ref('rooms/CH-'+roomCode);
   roomRef.set({
     status:'waiting',
     players:{w:myName()},
@@ -845,7 +845,7 @@ function joinOnline(){
   setOnlineErr('');
   const code=(document.getElementById('online-code').value||'').trim().toUpperCase();
   if(code.length!==4){setOnlineErr('Enter the 4-letter room code');return;}
-  const ref=db.ref('chess/'+code);
+  const ref=db.ref('rooms/CH-'+code);
   ref.get().then(snap=>{
     const d=snap.val();
     if(!d){setOnlineErr('Room not found');return;}
