@@ -19,8 +19,10 @@ const ALLOWED_ORIGINS = [
 const io = new Server(server, {
   cors: {
     origin: (origin, cb) => {
-      // allow no-origin (health checks) and any localhost port for dev
-      if (!origin || ALLOWED_ORIGINS.includes(origin) || /^https?:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)) cb(null, true);
+      // allow no-origin (health checks), localhost dev, GitHub Pages, and Render-hosted portal
+      if (!origin || ALLOWED_ORIGINS.includes(origin)
+        || /^https?:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)
+        || /^https:\/\/[a-z0-9-]+\.onrender\.com$/.test(origin)) cb(null, true);
       else cb(new Error('CORS blocked: ' + origin));
     },
   },

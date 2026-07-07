@@ -1,4 +1,5 @@
 services:
+  # Realtime game server (Neon Racer rooms)
   - type: web
     name: gamezone-race-server
     runtime: node
@@ -7,3 +8,10 @@ services:
     buildCommand: npm install
     startCommand: npm start
     healthCheckPath: /
+
+  # The Game Zone website itself (static hosting, free)
+  - type: web
+    name: gamezone-portal
+    runtime: static
+    buildCommand: ""
+    staticPublishPath: .
