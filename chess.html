@@ -179,6 +179,9 @@ label{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:upperca
     <p>Share this code with your friend:</p>
     <div style="font-size:40px;font-weight:800;letter-spacing:10px;color:var(--gold);text-shadow:0 0 24px rgba(251,191,36,.4);margin:12px 0;" id="wait-code"></div>
     <p id="wait-status">Waiting for opponent…</p>
+    <button class="btn" onclick="shareRoom()">📤 Share invite link</button>
+    <button class="btn ghost" onclick="copyRoomLink()">📋 Copy link</button>
+    <div id="share-feedback" style="font-size:12px;font-weight:700;color:var(--green);min-height:16px;margin-top:6px;"></div>
     <button class="btn ghost" onclick="cancelOnline()">Cancel</button>
   </div>
 </div>
@@ -798,7 +801,50 @@ function initFB(){
   }
 }
 function setOnlineErr(t){document.getElementById('online-err').textContent=t;}
-function myName(){return (document.getElementById('online-name').value||'').trim()||'Player';}
+function myName(){
+  const n=(document.getElementById('online-name').value||'').trim()||'Player';
+  try{localStorage.setItem('chess-name',n);}catch(e){}
+  return n;
+}
+
+/* ── Share invite link ── */
+function roomLink(){
+  return location.origin+location.pathname+'?join='+roomCode;
+}
+function shareRoom(){
+  const url=roomLink();
+  if(navigator.share){
+    navigator.share({title:'Chess ♞',text:'♞ Play chess with me! Tap to join my room ('+roomCode+'):',url}).catch(()=>{});
+  }else{
+    copyRoomLink();
+  }
+}
+function copyRoomLink(){
+  const url=roomLink();
+  const fb=document.getElementById('share-feedback');
+  const done=()=>{fb.textContent='✅ Link copied — paste it to your friend!';setTimeout(()=>fb.textContent='',3000);};
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(url).then(done).catch(()=>{fb.textContent=url;});
+  }else{
+    fb.textContent=url;
+  }
+}
+window.shareRoom=shareRoom;window.copyRoomLink=copyRoomLink;
+
+/* ── Auto-join from invite link (?join=CODE) ── */
+(function(){
+  try{
+    const saved=localStorage.getItem('chess-name');
+    if(saved)document.getElementById('online-name').value=saved;
+  }catch(e){}
+  const jp=new URLSearchParams(location.search).get('join');
+  if(jp&&/^[A-Za-z]{4}$/.test(jp)){
+    pickMode('online',document.querySelector('#seg-mode button[data-v="online"]'));
+    document.getElementById('online-code').value=jp.toUpperCase();
+    window.history.replaceState(null,'',location.pathname); // clean URL so refresh doesn't re-join
+    setTimeout(joinOnline,300);
+  }
+})();
 
 function encodeState(){
   return {
