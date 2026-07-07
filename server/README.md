@@ -4,8 +4,8 @@ One Render Blueprint deploys BOTH services from this repo:
 
 | Service | What | URL after deploy |
 |---|---|---|
-| gamezone-portal | The whole website (all games, static) | https://gamezone-portal.onrender.com |
-| gamezone-race-server | Realtime server for Neon Racer | https://gamezone-race-server.onrender.com |
+| gamezone-portal | The whole website (all games, static) | https://gamezone-portal-3fvw.onrender.com |
+| gamezone-race-server | Realtime server for Neon Racer | https://gamezone-race-server-3fvw.onrender.com |
 
 ## Deploy (one time, ~2 minutes)
 
@@ -13,7 +13,7 @@ One Render Blueprint deploys BOTH services from this repo:
 2. Click **New → Blueprint**
 3. Pick the repository **robokks/raja-rani-game** (Render reads render.yaml)
 4. Click **Deploy** (both services are on the free plan)
-5. Open https://gamezone-portal.onrender.com — the full site is live there
+5. Open https://gamezone-portal-3fvw.onrender.com — the full site is live there
 6. If Render assigned different URLs, update `SERVER_URL` near the top of
    `race.html` to the race-server URL and push.
 
