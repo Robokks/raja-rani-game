@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: gamezone-race-server
+    runtime: node
+    plan: free
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /

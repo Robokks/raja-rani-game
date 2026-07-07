@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>🏎 Neon Racer</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#08081a;
+  --s1:rgba(255,255,255,.07);
+  --s2:rgba(255,255,255,.10);
+  --b:rgba(255,255,255,.11);
+  --b2:rgba(255,255,255,.22);
+  --text:rgba(255,255,255,.93);
+  --dim:rgba(255,255,255,.55);
+  --muted:rgba(255,255,255,.32);
+  --gold:#fbbf24;
+  --green:#4ade80;
+  --red:#ff6b6b;
+  --cyan:#22d3ee;
+  --r:16px;--r-sm:12px;
+  --shadow:0 8px 32px rgba(0,0,0,.5),0 2px 8px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.09);
+  --spring:.2s cubic-bezier(.34,1.56,.64,1);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{min-height:100%;}
+body{
+  font-family:'Inter',system-ui,sans-serif;background:var(--bg);
+  background-image:radial-gradient(ellipse at 20% 0%,rgba(34,211,238,.14) 0%,transparent 55%),radial-gradient(ellipse at 80% 100%,rgba(99,50,220,.30) 0%,transparent 55%);
+  color:var(--text);display:flex;flex-direction:column;align-items:center;
+  padding:14px 12px 30px;user-select:none;-webkit-user-select:none;overflow-x:hidden;
+}
+#back{position:fixed;top:12px;left:12px;z-index:60;font-size:13px;font-weight:700;color:var(--dim);text-decoration:none;background:var(--s2);border:1px solid var(--b);padding:7px 13px;border-radius:20px;backdrop-filter:blur(12px);}
+.screen{display:none;width:100%;max-width:440px;animation:fadein .3s ease-out;}
+.screen.active{display:block;}
+@keyframes fadein{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:none;}}
+.logo{font-size:52px;text-align:center;line-height:1;margin-top:26px;filter:drop-shadow(0 0 20px rgba(34,211,238,.6));}
+h1{text-align:center;font-weight:800;font-size:36px;margin-top:6px;
+  background:linear-gradient(120deg,#22d3ee,#c8f8ff 30%,#22d3ee 55%,#0891b2 80%,#22d3ee);
+  background-size:200% auto;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  animation:shimmer 4s linear infinite;}
+@keyframes shimmer{to{background-position:200% center;}}
+.sub{text-align:center;font-size:11px;font-weight:600;color:var(--muted);letter-spacing:3px;text-transform:uppercase;margin-top:2px;}
+.panel{background:linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,.05));backdrop-filter:blur(20px);border-radius:var(--r);border:1px solid var(--b);box-shadow:var(--shadow);padding:18px 16px;margin-top:16px;}
+label{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);display:block;margin:12px 0 6px;}
+input[type=text]{width:100%;padding:11px 13px;font-family:'Inter',sans-serif;font-size:16px;font-weight:600;border:1px solid var(--b);border-radius:var(--r-sm);background:var(--s2);color:var(--text);outline:none;}
+input.code{text-transform:uppercase;letter-spacing:7px;text-align:center;font-size:22px;font-weight:700;}
+.btn{display:block;width:100%;margin-top:14px;padding:14px 0;font-family:'Inter',sans-serif;font-size:16px;font-weight:700;background:linear-gradient(180deg,rgba(34,211,238,.9),rgba(8,145,178,.95));color:#03181d;border:1px solid rgba(150,240,255,.4);border-radius:var(--r-sm);cursor:pointer;box-shadow:0 4px 18px rgba(34,211,238,.3),inset 0 1px 0 rgba(255,255,255,.35);transition:transform var(--spring),filter .15s;touch-action:manipulation;}
+.btn:active{transform:scale(.96);}
+.btn:hover{filter:brightness(1.08);}
+.btn.green{background:linear-gradient(180deg,rgba(74,222,128,.88),rgba(40,180,90,.92));color:#04160a;border-color:rgba(120,240,160,.35);box-shadow:0 4px 18px rgba(74,222,128,.25),inset 0 1px 0 rgba(255,255,255,.3);}
+.btn.ghost{background:var(--s2);color:var(--text);border:1px solid var(--b);box-shadow:none;font-size:14px;padding:10px 0;}
+.btn:disabled{opacity:.4;pointer-events:none;}
+.err{text-align:center;color:var(--red);font-weight:700;margin-top:8px;min-height:18px;font-size:13px;}
+.conn{text-align:center;font-size:12px;font-weight:600;color:var(--dim);margin-top:10px;}
+.conn .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--muted);margin-right:5px;vertical-align:middle;}
+.conn .dot.ok{background:var(--green);box-shadow:0 0 8px rgba(74,222,128,.6);}
+.conn .dot.wait{background:var(--gold);animation:blink 1s infinite;}
+@keyframes blink{50%{opacity:.35;}}
+.color-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;}
+.col-opt{width:42px;height:42px;border-radius:12px;border:2px solid transparent;cursor:pointer;transition:transform var(--spring);touch-action:manipulation;}
+.col-opt:active{transform:scale(.88);}
+.col-opt.sel{border-color:#fff;transform:scale(1.12);box-shadow:0 0 14px rgba(255,255,255,.35);}
+.seg{display:flex;gap:8px;}
+.seg button{flex:1;padding:10px 0;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;border:1px solid var(--b);border-radius:var(--r-sm);background:var(--s1);color:var(--dim);cursor:pointer;touch-action:manipulation;}
+.seg button.on{background:rgba(34,211,238,.16);color:var(--cyan);border-color:rgba(34,211,238,.4);}
+.roomcode{font-size:40px;font-weight:800;letter-spacing:10px;text-align:center;color:var(--cyan);text-shadow:0 0 24px rgba(34,211,238,.45);background:var(--s2);border:1px solid rgba(34,211,238,.35);border-radius:var(--r-sm);padding:13px 0;margin-top:10px;}
+.pl-row{display:flex;align-items:center;gap:10px;background:var(--s2);border-radius:var(--r-sm);padding:11px 14px;margin-top:8px;font-weight:600;font-size:15px;border:1px solid var(--b);}
+.pl-car{width:26px;height:16px;border-radius:4px;flex-shrink:0;box-shadow:0 0 10px currentColor;}
+.pl-row .tag{margin-left:auto;font-size:10px;font-weight:700;letter-spacing:1px;background:rgba(251,191,36,.2);color:var(--gold);border:1px solid rgba(251,191,36,.3);padding:2px 9px;border-radius:10px;}
+.share-fb{font-size:12px;font-weight:700;color:var(--green);min-height:16px;text-align:center;margin-top:6px;}
+
+/* ── Race view ── */
+#race-wrap{display:none;position:fixed;inset:0;z-index:40;background:#05050f;}
+#race-wrap.active{display:block;}
+#rc{position:absolute;inset:0;width:100%;height:100%;touch-action:none;}
+#hud{position:absolute;top:10px;left:12px;z-index:5;font-weight:800;pointer-events:none;text-shadow:0 2px 6px rgba(0,0,0,.7);}
+#hud .lap{font-size:22px;color:#fff;}
+#hud .postxt{font-size:15px;color:var(--gold);margin-top:2px;}
+#hud .time{font-size:12px;color:var(--dim);margin-top:2px;font-variant-numeric:tabular-nums;}
+#race-msg{position:absolute;top:34%;left:0;right:0;text-align:center;z-index:6;font-size:64px;font-weight:800;color:#fff;text-shadow:0 0 30px rgba(34,211,238,.8);pointer-events:none;}
+#leave-race{position:absolute;top:10px;right:12px;z-index:6;background:rgba(255,255,255,.1);border:1px solid var(--b);color:var(--dim);font-family:'Inter',sans-serif;font-size:12px;font-weight:700;padding:7px 12px;border-radius:16px;cursor:pointer;}
+.tbtn{position:absolute;bottom:22px;z-index:6;width:76px;height:76px;border-radius:50%;border:2px solid rgba(255,255,255,.25);background:rgba(255,255,255,.10);backdrop-filter:blur(6px);color:#fff;font-size:30px;display:flex;align-items:center;justify-content:center;touch-action:none;user-select:none;}
+.tbtn:active,.tbtn.pressed{background:rgba(34,211,238,.35);border-color:rgba(34,211,238,.7);}
+#t-left{left:18px;}
+#t-right{left:110px;}
+#t-brake{right:18px;background:rgba(255,107,107,.15);border-color:rgba(255,107,107,.4);font-size:22px;font-weight:800;}
+#t-brake:active,#t-brake.pressed{background:rgba(255,107,107,.4);}
+/* results overlay */
+.end-overlay{display:none;position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.66);backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:18px;}
+.end-overlay.open{display:flex;}
+.end-box{background:rgba(10,10,26,.96);border:1px solid rgba(34,211,238,.35);border-radius:20px;padding:24px 22px;text-align:center;max-width:360px;width:100%;box-shadow:0 32px 80px rgba(0,0,0,.7);animation:pop .4s cubic-bezier(.34,1.56,.64,1);}
+@keyframes pop{from{transform:scale(.7);opacity:0;}to{transform:scale(1);opacity:1;}}
+.end-box h2{font-size:24px;font-weight:800;}
+.res-row{display:flex;align-items:center;gap:10px;background:var(--s1);border:1px solid var(--b);border-radius:var(--r-sm);padding:10px 12px;margin-top:8px;font-weight:600;font-size:14px;text-align:left;}
+.res-row .place{font-size:18px;font-weight:800;width:34px;flex-shrink:0;}
+.res-row .rname{flex:1;}
+.res-row .rtime{color:var(--cyan);font-variant-numeric:tabular-nums;font-weight:700;}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms !important;transition-duration:.01ms !important;}}
+</style>
+</head>
+<body>
+<a id="back" href="index.html">‹ Games</a>
+
+<!-- SETUP -->
+<div class="screen active" id="scr-setup">
+  <div class="logo">🏎</div>
+  <h1>Neon Racer</h1>
+  <div class="sub">Online Multiplayer Racing</div>
+  <div class="panel">
+    <label>Your name</label>
+    <input type="text" id="p-name" maxlength="12" placeholder="Name" autocomplete="off">
+    <label>Car colour</label>
+    <div class="color-grid" id="color-grid"></div>
+    <label>Laps (when hosting)</label>
+    <div class="seg" id="seg-laps">
+      <button data-v="1" onclick="pickLaps(1,this)">1</button>
+      <button class="on" data-v="3" onclick="pickLaps(3,this)">3</button>
+      <button data-v="5" onclick="pickLaps(5,this)">5</button>
+    </div>
+    <button class="btn" onclick="createRoom()">➕ Create room</button>
+    <label style="margin-top:16px;">Or join with code</label>
+    <input type="text" class="code" id="p-code" maxlength="4" placeholder="ABCD" autocomplete="off"
+      autocapitalize="characters" autocorrect="off" spellcheck="false"
+      oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,'')">
+    <button class="btn green" onclick="joinRoom()">🚪 Join room</button>
+    <div class="err" id="setup-err"></div>
+    <button class="btn ghost" onclick="startPractice()">🏁 Practice solo (offline)</button>
+  </div>
+  <div class="conn"><span class="dot" id="conn-dot"></span><span id="conn-txt">Connecting to race server…</span></div>
+</div>
+
+<!-- LOBBY -->
+<div class="screen" id="scr-lobby">
+  <div class="logo" style="font-size:40px;margin-top:20px;">🏁</div>
+  <div class="panel">
+    <div style="text-align:center;font-weight:600;color:var(--dim);font-size:14px;">Room code — share with friends:</div>
+    <div class="roomcode" id="lobby-code"></div>
+    <button class="btn" onclick="shareRoom()">📤 Share invite link</button>
+    <button class="btn ghost" onclick="copyRoomLink()">📋 Copy link</button>
+    <div class="share-fb" id="share-fb"></div>
+    <div id="lobby-players"></div>
+    <button class="btn green" id="lobby-start" onclick="hostStart()" style="display:none;">🚦 Start race</button>
+    <div class="conn" id="lobby-wait">Waiting for players… (up to 6)</div>
+  </div>
+  <button class="btn ghost" onclick="leaveLobby()" style="margin-top:12px;">← Leave</button>
+</div>
+
+<!-- RACE -->
+<div id="race-wrap">
+  <canvas id="rc"></canvas>
+  <div id="hud">
+    <div class="lap" id="hud-lap"></div>
+    <div class="postxt" id="hud-pos"></div>
+    <div class="time" id="hud-time"></div>
+  </div>
+  <div id="race-msg"></div>
+  <button id="leave-race" onclick="leaveRace()">✕ Leave</button>
+  <div class="tbtn" id="t-left">◀</div>
+  <div class="tbtn" id="t-right">▶</div>
+  <div class="tbtn" id="t-brake">BRAKE</div>
+</div>
+
+<!-- RESULTS -->
+<div class="end-overlay" id="res-overlay">
+  <div class="end-box">
+    <h2>🏆 Race results</h2>
+    <div id="res-list"></div>
+    <button class="btn" id="res-rematch" style="display:none;" onclick="requestRematch()">⚔ Rematch</button>
+    <button class="btn ghost" onclick="backToLobbyOrSetup()">OK</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* ═══════════════════════════════════════════════════════════════════
+   CONFIG — set this to your deployed Render URL after deploying:
+   render.com → New → Blueprint → this repo → copy service URL here.
+   ═══════════════════════════════════════════════════════════════════ */
+const SERVER_URL = /^(localhost|127\.0\.0\.1)$/.test(location.hostname)
+  ? 'http://' + location.hostname + ':3000'
+  : 'https://gamezone-race-server.onrender.com';
+
+/* ── Setup state ── */
+const CAR_COLORS = ['#ff6b6b','#22d3ee','#4ade80','#fbbf24','#a78bfa','#f472b6','#fb923c','#e2e8f0'];
+let myColor = CAR_COLORS[0];
+let hostLaps = 3;
+let socket = null, connected = false;
+let roomCode = '', isHost = false, lobbyPlayers = {};
+let practice = false;
+
+const $ = id => document.getElementById(id);
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));if(id)$(id).classList.add('active');}
+
+/* colour picker */
+(function(){
+  const g = $('color-grid');
+  CAR_COLORS.forEach((c,i)=>{
+    const d = document.createElement('div');
+    d.className = 'col-opt'+(i===0?' sel':'');
+    d.style.background = `linear-gradient(150deg,${c},${c}99)`;
+    d.onclick = ()=>{myColor=c;g.querySelectorAll('.col-opt').forEach(x=>x.classList.remove('sel'));d.classList.add('sel');};
+    g.appendChild(d);
+  });
+  try{
+    const saved = localStorage.getItem('race-name');
+    if(saved)$('p-name').value = saved;
+  }catch(e){}
+})();
+function pickLaps(v,el){hostLaps=v;document.querySelectorAll('#seg-laps button').forEach(b=>b.classList.remove('on'));el.classList.add('on');}
+window.pickLaps=pickLaps;
+function myName(){
+  const n=($('p-name').value||'').trim()||'Racer';
+  try{localStorage.setItem('race-name',n);}catch(e){}
+  return n;
+}
+function setErr(t){$('setup-err').textContent=t;}
+
+/* ── Server connection (handles Render cold start) ── */
+function setConn(state,txt){
+  $('conn-dot').className='dot '+state;
+  $('conn-txt').textContent=txt;
+}
+function loadIO(){
+  if(window.io){connect();return;}
+  setConn('wait','Connecting… (free server can take ~1 min to wake up)');
+  const s=document.createElement('script');
+  s.src=SERVER_URL+'/socket.io/socket.io.js'; // served by the game server itself
+  s.onload=connect;
+  s.onerror=()=>{
+    s.remove();
+    setConn('wait','Waking up server… retrying (free hosting sleeps when idle)');
+    setTimeout(loadIO,4000);
+  };
+  document.head.appendChild(s);
+}
+function connect(){
+  setConn('wait','Connecting…');
+  socket = io(SERVER_URL,{transports:['websocket','polling'],reconnectionDelayMax:5000});
+  socket.on('connect',()=>{connected=true;setConn('ok','Race server connected');});
+  socket.on('disconnect',()=>{connected=false;setConn('wait','Reconnecting…');});
+  socket.on('connect_error',()=>{setConn('wait','Waking up server… hang on (free hosting sleeps when idle)');});
+  socket.on('lobby',renderLobby);
+  socket.on('countdown',onCountdown);
+  socket.on('go',onGo);
+  socket.on('state',onState);
+  socket.on('finished',()=>{});
+  socket.on('results',onResults);
+  socket.on('room-closed',()=>{leaveRace();show('scr-setup');setErr('Room closed (idle too long)');});
+}
+loadIO();
+
+/* ── Rooms ── */
+function createRoom(){
+  if(!connected){setErr('Server not connected yet — wait a few seconds');return;}
+  setErr('');
+  socket.emit('create',{name:myName(),color:myColor,laps:hostLaps},res=>{
+    if(!res||!res.ok){setErr(res&&res.err||'Failed');return;}
+    roomCode=res.code;isHost=true;
+    renderLobby(res.lobby);
+    show('scr-lobby');
+  });
+}
+function joinRoom(){
+  if(!connected){setErr('Server not connected yet — wait a few seconds');return;}
+  const code=($('p-code').value||'').trim().toUpperCase();
+  if(code.length!==4){setErr('Enter the 4-letter room code');return;}
+  setErr('');
+  socket.emit('join',{code,name:myName(),color:myColor},res=>{
+    if(!res||!res.ok){setErr(res&&res.err||'Failed');return;}
+    roomCode=res.code;isHost=false;
+    renderLobby(res.lobby);
+    show('scr-lobby');
+  });
+}
+window.createRoom=createRoom;window.joinRoom=joinRoom;
+
+function renderLobby(lb){
+  if(!lb)return;
+  lobbyPlayers=lb.players;
+  isHost=lb.host===socket.id;
+  $('lobby-code').textContent=lb.code||roomCode;
+  const wrap=$('lobby-players');
+  wrap.innerHTML='';
+  Object.entries(lb.players).forEach(([id,p])=>{
+    const d=document.createElement('div');
+    d.className='pl-row';
+    d.innerHTML=`<div class="pl-car" style="background:${p.color};color:${p.color}"></div>
+      <span>${esc(p.name)}${id===socket.id?' (you)':''}</span>
+      ${p.host?'<span class="tag">HOST</span>':''}`;
+    wrap.appendChild(d);
+  });
+  $('lobby-start').style.display=isHost?'':'none';
+  $('lobby-wait').style.display=isHost?'none':'';
+  // if we were in results and host reset to lobby
+  if(lb.phase==='lobby'&&$('res-overlay').classList.contains('open')){
+    $('res-overlay').classList.remove('open');
+    $('race-wrap').classList.remove('active');
+    show('scr-lobby');
+  }
+}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+function hostStart(){socket.emit('start');}
+window.hostStart=hostStart;
+function leaveLobby(){socket.emit('leave');roomCode='';show('scr-setup');}
+window.leaveLobby=leaveLobby;
+
+/* ── Share link ── */
+function roomLink(){return location.origin+location.pathname+'?join='+roomCode;}
+function shareRoom(){
+  const url=roomLink();
+  if(navigator.share)navigator.share({title:'Neon Racer 🏎',text:'🏎 Race with me! Join my room ('+roomCode+'):',url}).catch(()=>{});
+  else copyRoomLink();
+}
+function copyRoomLink(){
+  const fb=$('share-fb');
+  const done=()=>{fb.textContent='✅ Link copied!';setTimeout(()=>fb.textContent='',2500);};
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(roomLink()).then(done).catch(()=>fb.textContent=roomLink());
+  else fb.textContent=roomLink();
+}
+window.shareRoom=shareRoom;window.copyRoomLink=copyRoomLink;
+/* auto-join via ?join=CODE */
+(function(){
+  const jp=new URLSearchParams(location.search).get('join');
+  if(jp&&/^[A-Za-z]{4}$/.test(jp)){
+    $('p-code').value=jp.toUpperCase();
+    window.history.replaceState(null,'',location.pathname);
+    const t=setInterval(()=>{
+      if(connected){clearInterval(t);joinRoom();}
+    },400);
+    setTimeout(()=>clearInterval(t),90000);
+  }
+})();
+
+/* ═══════════════════════════════════════════════════════════════════
+   RACE — elliptical neon ring track, local car physics, remote ghosts
+   ═══════════════════════════════════════════════════════════════════ */
+const WORLD={cx:1100,cy:700,orx:1000,ory:600,irx:560,iry:260};
+const TAU=Math.PI*2;
+const cvs=$('rc');
+const ctx=cvs.getContext('2d');
+let DPR=1,VW=0,VH=0;
+function resize(){
+  DPR=Math.min(window.devicePixelRatio||1,2);
+  VW=innerWidth;VH=innerHeight;
+  cvs.width=VW*DPR;cvs.height=VH*DPR;
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+addEventListener('resize',resize);resize();
+
+let racing=false, raceLaps=3, raceStartT=0, countdownAt=0;
+let car=null, finished=false, lapTimes=[], lapStartT=0;
+let ghosts={};        // id -> {buf:[{t,x,y,a}], name, color, lap, cp}
+let posTimer=null;
+let raceMsgT=0;
+
+function trackAngle(x,y){return Math.atan2((y-WORLD.cy)/WORLD.ory,(x-WORLD.cx)/WORLD.orx);}
+function sectorOf(x,y){const a=((trackAngle(x,y)%TAU)+TAU)%TAU;return Math.floor(a/(TAU/8))&7;}
+function onTrack(x,y){
+  const dxo=(x-WORLD.cx)/WORLD.orx, dyo=(y-WORLD.cy)/WORLD.ory;
+  const dxi=(x-WORLD.cx)/WORLD.irx, dyi=(y-WORLD.cy)/WORLD.iry;
+  return dxo*dxo+dyo*dyo<=1 && dxi*dxi+dyi*dyi>=1;
+}
+
+function spawnCar(slot){
+  // grid near bottom point (θ=π/2), slightly staggered
+  const th=Math.PI/2 + 0.10 + slot*0.055;
+  const midx=(WORLD.orx+WORLD.irx)/2, midy=(WORLD.ory+WORLD.iry)/2;
+  const lane=(slot%2===0?-1:1)*((WORLD.orx-WORLD.irx)/4-30)/midx;
+  return {
+    x:WORLD.cx+Math.cos(th)*(midx*(1+lane*0)) + (slot%2===0?-70:70)*Math.sin(th),
+    y:WORLD.cy+Math.sin(th)*(midy) + (slot%2===0?-42:42)*0,
+    a:Math.PI,             // heading left = CCW direction of travel at bottom
+    v:0,
+    lap:0, lastSector:sectorOf(WORLD.cx,WORLD.cy+WORLD.ory), progress:0,
+  };
+}
+
+/* input */
+const keys={left:false,right:false,brake:false};
+addEventListener('keydown',e=>{
+  if(e.key==='ArrowLeft'||e.key==='a')keys.left=true;
+  if(e.key==='ArrowRight'||e.key==='d')keys.right=true;
+  if(e.key==='ArrowDown'||e.key===' '||e.key==='s')keys.brake=true;
+});
+addEventListener('keyup',e=>{
+  if(e.key==='ArrowLeft'||e.key==='a')keys.left=false;
+  if(e.key==='ArrowRight'||e.key==='d')keys.right=false;
+  if(e.key==='ArrowDown'||e.key===' '||e.key==='s')keys.brake=false;
+});
+[['t-left','left'],['t-right','right'],['t-brake','brake']].forEach(([id,k])=>{
+  const el=$(id);
+  const on=e=>{e.preventDefault();keys[k]=true;el.classList.add('pressed');};
+  const off=e=>{e.preventDefault();keys[k]=false;el.classList.remove('pressed');};
+  el.addEventListener('touchstart',on,{passive:false});
+  el.addEventListener('touchend',off);el.addEventListener('touchcancel',off);
+  el.addEventListener('mousedown',on);
+  addEventListener('mouseup',off);
+});
+
+/* physics */
+const MAXV=560, ACC=420, BRAKE=900, DRAG=.35, TURN=2.6;
+function stepCar(dt){
+  if(!car)return;
+  const throttling=racing&&!finished;
+  if(throttling)car.v+=ACC*(1-car.v/MAXV)*dt;
+  if(keys.brake)car.v-=BRAKE*dt;
+  car.v-=car.v*DRAG*dt;
+  if(car.v<0)car.v=0;
+  const steer=(keys.left?-1:0)+(keys.right?1:0);
+  const grip=.35+.65*Math.min(car.v/220,1);
+  car.a+=steer*TURN*grip*dt;
+  const nx=car.x+Math.cos(car.a)*car.v*dt;
+  const ny=car.y+Math.sin(car.a)*car.v*dt;
+  if(onTrack(nx,ny)){car.x=nx;car.y=ny;}
+  else{
+    // slide along wall: try axis-separated moves, kill speed
+    if(onTrack(nx,car.y))car.x=nx;
+    else if(onTrack(car.x,ny))car.y=ny;
+    car.v*=Math.pow(.02,dt); // heavy scrub
+  }
+  // sector progression (CCW = sector increasing)
+  const cur=sectorOf(car.x,car.y);
+  const d=(cur-car.lastSector+8)%8;
+  if(d===1){car.progress++;car.lastSector=cur;}
+  else if(d===7){car.progress--;car.lastSector=cur;}
+  if(car.progress>=8){
+    car.progress-=8;
+    car.lap++;
+    const now=performance.now();
+    lapTimes.push(now-lapStartT);
+    lapStartT=now;
+    if(car.lap>=raceLaps&&!finished){
+      finished=true;
+      if(!practice)socket.emit('finish',{lapTimes});
+      showRaceMsg('FINISH!');
+      if(practice)setTimeout(()=>showPracticeResults(),900);
+      else setTimeout(()=>{if(racing)showRaceMsg('Waiting for others…',1e9);},1200);
+    }else{
+      showRaceMsg('LAP '+(car.lap+1),900);
+    }
+  }
+}
+
+function showRaceMsg(t,ms=1200){
+  $('race-msg').textContent=t;
+  raceMsgT=performance.now()+ms;
+}
+
+/* ── Race lifecycle ── */
+function onCountdown(d){
+  raceLaps=d.laps||3;
+  countdownAt=Date.now();
+  const slots=Object.keys(d.lobby.players);
+  const mySlot=Math.max(0,slots.indexOf(socket.id));
+  beginRace(d.startAt-Date.now(),mySlot);
+}
+function onGo(){
+  racing=true;
+  raceStartT=performance.now();
+  lapStartT=raceStartT;
+  showRaceMsg('GO!',700);
+  if(!practice&&!posTimer){
+    posTimer=setInterval(()=>{
+      if(car&&racing&&!finished)socket.volatile.emit('pos',{x:car.x,y:car.y,a:car.a,s:car.v,lap:car.lap,cp:car.progress});
+    },66);
+  }
+}
+function beginRace(countdownMs,slot){
+  practice=practice&&!roomCode;
+  car=spawnCar(slot);
+  finished=false;lapTimes=[];ghosts={};racing=false;
+  $('race-wrap').classList.add('active');
+  $('res-overlay').classList.remove('open');
+  show(null);
+  // local countdown display synced to startAt
+  let n=Math.ceil(countdownMs/1000);
+  showRaceMsg(n>0?String(n):'GO!',1e9);
+  const iv=setInterval(()=>{
+    n--;
+    if(n>0)showRaceMsg(String(n),1e9);
+    else clearInterval(iv);
+  },1000);
+}
+function onState(d){
+  if(!d||!d.players)return;
+  const now=performance.now();
+  for(const [id,p] of Object.entries(d.players)){
+    if(id===socket.id)continue;
+    let g=ghosts[id];
+    if(!g)g=ghosts[id]={buf:[],name:p.n,color:p.c,lap:0,cp:0};
+    g.name=p.n;g.color=p.c;g.lap=p.lap;g.cp=p.cp;
+    g.buf.push({t:now,x:p.x,y:p.y,a:p.a});
+    if(g.buf.length>10)g.buf.shift();
+  }
+  for(const id of Object.keys(ghosts))if(!d.players[id])delete ghosts[id];
+}
+function onResults(d){
+  racing=false;
+  if(posTimer){clearInterval(posTimer);posTimer=null;}
+  const list=$('res-list');
+  list.innerHTML='';
+  const medals=['🥇','🥈','🥉'];
+  d.results.forEach((r,i)=>{
+    const row=document.createElement('div');
+    row.className='res-row';
+    row.innerHTML=`<span class="place">${medals[i]||(i+1)+'.'}</span>
+      <div class="pl-car" style="background:${r.color}"></div>
+      <span class="rname">${esc(r.name)}${r.id===socket.id?' (you)':''}</span>
+      <span class="rtime">${r.finished?fmtMs(r.totalMs):'DNF'}</span>`;
+    list.appendChild(row);
+  });
+  $('res-rematch').style.display=isHost?'':'none';
+  $('res-overlay').classList.add('open');
+}
+function showPracticeResults(){
+  racing=false;
+  const list=$('res-list');
+  list.innerHTML='';
+  const total=lapTimes.reduce((a,b)=>a+b,0);
+  const row=document.createElement('div');
+  row.className='res-row';
+  row.innerHTML=`<span class="place">🥇</span><div class="pl-car" style="background:${myColor}"></div>
+    <span class="rname">${esc(myName())}</span><span class="rtime">${fmtMs(total)}</span>`;
+  list.appendChild(row);
+  lapTimes.forEach((t,i)=>{
+    const r2=document.createElement('div');
+    r2.className='res-row';
+    r2.innerHTML=`<span class="place" style="font-size:12px;color:var(--muted)">L${i+1}</span><span class="rname" style="font-size:12px;color:var(--dim)">Lap ${i+1}</span><span class="rtime">${fmtMs(t)}</span>`;
+    list.appendChild(r2);
+  });
+  $('res-rematch').style.display='none';
+  $('res-overlay').classList.add('open');
+}
+function requestRematch(){socket.emit('rematch');}
+window.requestRematch=requestRematch;
+function backToLobbyOrSetup(){
+  $('res-overlay').classList.remove('open');
+  $('race-wrap').classList.remove('active');
+  if(practice||!roomCode){practice=false;show('scr-setup');}
+  else show('scr-lobby');
+}
+window.backToLobbyOrSetup=backToLobbyOrSetup;
+function leaveRace(){
+  racing=false;practice=false;
+  if(posTimer){clearInterval(posTimer);posTimer=null;}
+  $('race-wrap').classList.remove('active');
+  if(roomCode){socket.emit('leave');roomCode='';}
+  show('scr-setup');
+}
+window.leaveRace=leaveRace;
+
+/* practice mode: offline, no server */
+function startPractice(){
+  practice=true;roomCode='';raceLaps=hostLaps;
+  beginRace(3000,0);
+  setTimeout(()=>{racing=true;raceStartT=performance.now();lapStartT=raceStartT;showRaceMsg('GO!',700);},3000);
+}
+window.startPractice=startPractice;
+
+function fmtMs(ms){
+  const s=ms/1000;
+  const m=Math.floor(s/60);
+  return (m?m+':':'')+(s-m*60).toFixed(2).padStart(m?5:1,'0')+'s';
+}
+
+/* ── Rendering ── */
+function worldToScreen(wx,wy,cam){return [ (wx-cam.x)*cam.z+VW/2, (wy-cam.y)*cam.z+VH/2 ];}
+const cam={x:WORLD.cx,y:WORLD.cy+WORLD.ory,z:.9};
+
+function drawTrack(){
+  const {cx,cy,orx,ory,irx,iry}=WORLD;
+  ctx.save();
+  ctx.translate(VW/2-cam.x*cam.z,VH/2-cam.y*cam.z);
+  ctx.scale(cam.z,cam.z);
+  // asphalt ring
+  ctx.beginPath();
+  ctx.ellipse(cx,cy,orx,ory,0,0,TAU);
+  ctx.ellipse(cx,cy,irx,iry,0,0,TAU,true);
+  ctx.fillStyle='#1a1a2e';
+  ctx.fill();
+  // outer & inner neon edges
+  for(const [rx,ry,col] of [[orx,ory,'#22d3ee'],[irx,iry,'#a78bfa']]){
+    ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,0,0,TAU);
+    ctx.strokeStyle=col;ctx.lineWidth=6;
+    ctx.shadowColor=col;ctx.shadowBlur=24;
+    ctx.stroke();ctx.shadowBlur=0;
+  }
+  // centre dashed line
+  ctx.beginPath();ctx.ellipse(cx,cy,(orx+irx)/2,(ory+iry)/2,0,0,TAU);
+  ctx.setLineDash([26,22]);ctx.strokeStyle='rgba(255,255,255,.22)';ctx.lineWidth=4;ctx.stroke();ctx.setLineDash([]);
+  // start/finish checkered strip at bottom (θ=π/2)
+  const sx1=cx, sy1=cy+iry, sy2=cy+ory;
+  const cells=8, ch=(sy2-sy1)/cells;
+  for(let i=0;i<cells;i++)for(let j=0;j<2;j++){
+    ctx.fillStyle=(i+j)%2?'#e2e8f0':'#0f172a';
+    ctx.fillRect(sx1-14+j*14, sy1+i*ch, 14, ch);
+  }
+  ctx.restore();
+}
+
+function drawCar(x,y,a,col,name,isMe){
+  const [sx,sy]=worldToScreen(x,y,cam);
+  ctx.save();
+  ctx.translate(sx,sy);
+  ctx.rotate(a);
+  const s=cam.z;
+  ctx.scale(s,s);
+  ctx.shadowColor=col;ctx.shadowBlur=isMe?22:12;
+  // body
+  ctx.fillStyle=col;
+  r_rect(-20,-11,40,22,6);ctx.fill();
+  ctx.shadowBlur=0;
+  // cockpit
+  ctx.fillStyle='rgba(10,10,25,.8)';
+  r_rect(-4,-7,16,14,4);ctx.fill();
+  // nose stripe
+  ctx.fillStyle='rgba(255,255,255,.7)';
+  ctx.fillRect(12,-2,8,4);
+  ctx.restore();
+  // name label
+  if(!isMe&&name){
+    ctx.font='700 12px Inter,sans-serif';
+    ctx.textAlign='center';
+    ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillText(name,sx+1,sy-20+1);
+    ctx.fillStyle='#fff';ctx.fillText(name,sx,sy-20);
+  }
+}
+function r_rect(x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();
+}
+
+function drawMinimap(){
+  const mw=120,mh=76,pad=10;
+  const mx=VW-mw-12,my=12;
+  ctx.save();
+  ctx.globalAlpha=.85;
+  ctx.fillStyle='rgba(8,8,24,.7)';
+  r_rect(mx,my,mw,mh,10);ctx.fill();
+  const sx=(mw-pad*2)/(WORLD.orx*2), sy=(mh-pad*2)/(WORLD.ory*2);
+  const map=(wx,wy)=>[mx+pad+(wx-(WORLD.cx-WORLD.orx))*sx, my+pad+(wy-(WORLD.cy-WORLD.ory))*sy];
+  ctx.strokeStyle='rgba(34,211,238,.6)';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.ellipse(mx+mw/2,my+mh/2,(mw-pad*2)/2,(mh-pad*2)/2,0,0,TAU);ctx.stroke();
+  ctx.strokeStyle='rgba(167,139,250,.5)';
+  ctx.beginPath();ctx.ellipse(mx+mw/2,my+mh/2,(mw-pad*2)/2*(WORLD.irx/WORLD.orx),(mh-pad*2)/2*(WORLD.iry/WORLD.ory),0,0,TAU);ctx.stroke();
+  for(const g of Object.values(ghosts)){
+    const last=g.buf[g.buf.length-1];
+    if(!last)continue;
+    const [px,py]=map(last.x,last.y);
+    ctx.fillStyle=g.color;ctx.beginPath();ctx.arc(px,py,3,0,TAU);ctx.fill();
+  }
+  if(car){
+    const [px,py]=map(car.x,car.y);
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(px,py,3.6,0,TAU);ctx.fill();
+  }
+  ctx.restore();
+}
+
+function ghostPose(g){
+  const renderT=performance.now()-140;
+  const b=g.buf;
+  if(!b.length)return null;
+  if(b.length===1||b[0].t>renderT)return b[0];
+  for(let i=b.length-1;i>0;i--){
+    if(b[i-1].t<=renderT){
+      const p0=b[i-1],p1=b[i];
+      const k=Math.min(1,Math.max(0,(renderT-p0.t)/Math.max(1,p1.t-p0.t)));
+      let da=p1.a-p0.a;
+      while(da>Math.PI)da-=TAU;while(da<-Math.PI)da+=TAU;
+      return {x:p0.x+(p1.x-p0.x)*k, y:p0.y+(p1.y-p0.y)*k, a:p0.a+da*k};
+    }
+  }
+  return b[b.length-1];
+}
+
+function myRacePos(){
+  if(!car)return 1;
+  const myScore=car.lap*8+car.progress;
+  let ahead=0;
+  for(const g of Object.values(ghosts)){
+    if((g.lap*8+(g.cp||0))>myScore)ahead++;
+  }
+  return ahead+1;
+}
+const ORD=['st','nd','rd'];
+function ordinal(n){return n+(ORD[n-1]||'th');}
+
+let lastFrame=0;
+function frame(ts){
+  requestAnimationFrame(frame);
+  const dt=Math.min((ts-lastFrame)/1000,.05);
+  lastFrame=ts;
+  if(!$('race-wrap').classList.contains('active'))return;
+  stepCar(dt);
+  // camera follows with lead
+  if(car){
+    const lead=110;
+    cam.x+=((car.x+Math.cos(car.a)*lead)-cam.x)*Math.min(1,dt*5);
+    cam.y+=((car.y+Math.sin(car.a)*lead)-cam.y)*Math.min(1,dt*5);
+    cam.z=Math.min(VW/1400,VH/900)+.25;
+  }
+  // draw
+  ctx.fillStyle='#05050f';
+  ctx.fillRect(0,0,VW,VH);
+  drawTrack();
+  for(const g of Object.values(ghosts)){
+    const p=ghostPose(g);
+    if(p)drawCar(p.x,p.y,p.a,g.color,g.name,false);
+  }
+  if(car)drawCar(car.x,car.y,car.a,myColor,null,true);
+  drawMinimap();
+  // HUD
+  if(car){
+    $('hud-lap').textContent='LAP '+Math.min(car.lap+1,raceLaps)+'/'+raceLaps;
+    $('hud-pos').textContent=practice?'':ordinal(myRacePos());
+    $('hud-time').textContent=racing?fmtMs(performance.now()-raceStartT):'';
+  }
+  if(performance.now()>raceMsgT)$('race-msg').textContent='';
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
