@@ -321,7 +321,7 @@ async function enterChannel(){
     renderMembers(mem); updateLCD(); updateKnob();
   });
 
-  signalRef.on('child_added',async snap=>{ await handleSignal(snap.key,snap.val()); snap.ref.remove(); });
+  signalRef.on('child_added',async snap=>{ await handleSignal(snap.val()); snap.ref.remove(); });
 
   // broadcast events (soundboard / clips / loops / kick)
   eventsRef.on('child_added',snap=>{ handleEvent(snap.val()); snap.ref.remove().catch(()=>{}); });
@@ -335,7 +335,7 @@ function createPeer(oid,name,isOfferer){
   const pc=new RTCPeerConnection(ICE);
   const audioEl=document.createElement('audio'); audioEl.autoplay=true; audioEl.playsInline=true;
   document.body.appendChild(audioEl);
-  const peer={pc,audioEl,name,talking:false,state:'connecting',sender:null,analyser:null};
+  const peer={pc,audioEl,name,talking:false,state:'connecting',sender:null,analyser:null,pendingCands:[],remoteSet:false};
   peers[oid]=peer;
   if(micTrack) peer.sender=pc.addTrack(micTrack,localStream);
   pc.ontrack=e=>{
@@ -347,14 +347,23 @@ function createPeer(oid,name,isOfferer){
   if(isOfferer){ (async()=>{ try{ const o=await pc.createOffer(); await pc.setLocalDescription(o); sendSignal(oid,{sdp:pc.localDescription}); }catch(e){} })(); }
 }
 function removePeer(oid){ const p=peers[oid]; if(!p)return; try{p.pc.close();}catch(e){} if(p.audioEl){p.audioEl.srcObject=null;p.audioEl.remove();} delete peers[oid]; }
-function sendSignal(toId,payload){ db.ref('rooms/WT-'+code+'/signals/'+toId+'/'+myId).push(payload); }
-async function handleSignal(from,data){
+/* flat signaling: each message is a direct child of signals/<recipient>, carrying `from` */
+function sendSignal(toId,payload){ db.ref('rooms/WT-'+code+'/signals/'+toId).push(Object.assign({from:myId},payload)); }
+async function handleSignal(msg){
+  const from=msg&&msg.from; if(!from||from===myId)return;
   let peer=peers[from]; if(!peer){ createPeer(from,'',myId<from); peer=peers[from]; }
   const pc=peer.pc;
   try{
-    if(data.sdp){ await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
-      if(data.sdp.type==='offer'){ const a=await pc.createAnswer(); await pc.setLocalDescription(a); sendSignal(from,{sdp:pc.localDescription}); } }
-    else if(data.cand){ try{ await pc.addIceCandidate(new RTCIceCandidate(data.cand)); }catch(e){} }
+    if(msg.sdp){
+      await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+      peer.remoteSet=true;
+      // flush any ICE candidates that arrived before the remote description
+      while(peer.pendingCands.length){ try{ await pc.addIceCandidate(new RTCIceCandidate(peer.pendingCands.shift())); }catch(_){} }
+      if(msg.sdp.type==='offer'){ const a=await pc.createAnswer(); await pc.setLocalDescription(a); sendSignal(from,{sdp:pc.localDescription}); }
+    }else if(msg.cand){
+      if(peer.remoteSet && pc.remoteDescription){ try{ await pc.addIceCandidate(new RTCIceCandidate(msg.cand)); }catch(_){} }
+      else peer.pendingCands.push(msg.cand);      // queue until remote description is set
+    }
   }catch(e){}
 }
 
