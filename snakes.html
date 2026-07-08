@@ -83,6 +83,9 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
 .np-picker{display:flex;gap:6px;margin-top:8px;}
 .np-btn{flex:1;padding:10px 4px;font-family:'Baloo Thambi 2';font-size:16px;font-weight:800;border:2px solid rgba(58,42,24,.3);border-radius:8px;background:#fffdf6;color:var(--ink);cursor:pointer;}
 .np-btn.active{background:var(--ink);color:var(--kraft);border-color:var(--ink);}
+.mode-tabs{display:flex;gap:6px;margin-bottom:16px;}
+.mode-tab{flex:1;padding:10px 4px;font-family:inherit;font-size:13px;font-weight:800;border:2px solid rgba(58,42,24,.25);border-radius:10px;background:transparent;color:var(--ink);cursor:pointer;opacity:.5;transition:opacity .15s,background .15s;}
+.mode-tab.on{opacity:1;background:var(--ink);color:var(--kraft);border-color:var(--ink);}
 </style>
 </head>
 <body>
@@ -95,10 +98,41 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
   <div class="panel">
     <label>Your Name</label>
     <input type="text" id="home-name" maxlength="18" placeholder="Enter name…" autocomplete="off">
-    <button class="btn green" onclick="createRoom()">Create Room</button>
-    <label style="margin-top:18px;">Join with Code</label>
-    <input type="text" id="home-code" class="code" maxlength="4" placeholder="ABCD" autocomplete="off">
-    <button class="btn blue" onclick="joinRoom()">Join Room</button>
+    <div class="mode-tabs" style="margin-top:16px;">
+      <button class="mode-tab on" id="tab-online" onclick="setMode('online')">🌐 Online</button>
+      <button class="mode-tab" id="tab-local" onclick="setMode('local')">📱 Pass &amp; Play</button>
+      <button class="mode-tab" id="tab-bot" onclick="setMode('bot')">🤖 vs Bot</button>
+    </div>
+
+    <div id="mode-online">
+      <button class="btn green" onclick="createRoom()">Create Room</button>
+      <label style="margin-top:18px;">Join with Code</label>
+      <input type="text" id="home-code" class="code" maxlength="4" placeholder="ABCD" autocomplete="off">
+      <button class="btn blue" onclick="joinRoom()">Join Room</button>
+    </div>
+
+    <div id="mode-local" style="display:none;">
+      <label>How many players?</label>
+      <div class="np-picker" id="local-np">
+        <button class="np-btn active" onclick="setLocalPlayers(2)">2</button>
+        <button class="np-btn" onclick="setLocalPlayers(3)">3</button>
+        <button class="np-btn" onclick="setLocalPlayers(4)">4</button>
+      </div>
+      <p style="font-family:'Catamaran';font-size:12px;opacity:.6;margin:8px 0 0;">Everyone plays on this one device, taking turns.</p>
+      <button class="btn green" style="margin-top:14px;" onclick="startLocal()">Start Game</button>
+    </div>
+
+    <div id="mode-bot" style="display:none;">
+      <label>How many bots?</label>
+      <div class="np-picker" id="bot-np">
+        <button class="np-btn active" onclick="setBotCount(1)">1</button>
+        <button class="np-btn" onclick="setBotCount(2)">2</button>
+        <button class="np-btn" onclick="setBotCount(3)">3</button>
+      </div>
+      <p style="font-family:'Catamaran';font-size:12px;opacity:.6;margin:8px 0 0;">You vs the computer. Bots roll automatically.</p>
+      <button class="btn green" style="margin-top:14px;" onclick="startBot()">Start Game</button>
+    </div>
+
     <div class="err" id="home-err"></div>
   </div>
   <a class="back-link" href="index.html">← All Games</a>
@@ -183,6 +217,8 @@ function randomName(){ return RNAMES[Math.floor(Math.random()*RNAMES.length)]; }
 let myId=localStorage.getItem('sl-pid')||uid();
 let myName=localStorage.getItem('sl-name')||'';
 let roomCode='',state=null;
+let LOCAL=false;                 // true for pass-and-play / vs-bot (no Firebase)
+let localPlayers=2, botCount=1;
 let busy=false,animating=false;
 let chatCollapsed=true,unreadCount=0;
 const seenMsgs=new Set();
@@ -207,6 +243,7 @@ function initFB(){
 
 function writeRoom(s){
   s.ts=Date.now();
+  if(LOCAL){ state=s; render(); return; }
   db.ref('rooms/SL-'+roomCode+'/state').set(s);
   state=s; render();
 }
@@ -263,8 +300,56 @@ function submitChat(){
 })();
 
 function showScreen(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); $(id).classList.add('active'); }
-function isHost(){ return state&&state.players&&state.players[0]&&state.players[0].id===myId; }
-function isMyTurn(){ return state&&state.players&&state.players[state.currentTurnIdx]&&state.players[state.currentTurnIdx].id===myId; }
+function isHost(){ if(LOCAL) return true; return state&&state.players&&state.players[0]&&state.players[0].id===myId; }
+function isMyTurn(){
+  if(!state||!state.players) return false;
+  const cp=state.players[state.currentTurnIdx];
+  if(!cp) return false;
+  if(LOCAL) return !cp.isBot;      // this device rolls for any human player
+  return cp.id===myId;
+}
+
+// ── Offline modes (Pass & Play / vs Bot) ────────────────────────────────────────
+function setMode(m){
+  ['online','local','bot'].forEach(k=>{
+    $('tab-'+k).classList.toggle('on',k===m);
+    $('mode-'+k).style.display=(k===m)?'block':'none';
+  });
+  $('home-err').textContent='';
+}
+function setLocalPlayers(n){ localPlayers=n; document.querySelectorAll('#local-np .np-btn').forEach((b,i)=>b.classList.toggle('active',[2,3,4][i]===n)); }
+function setBotCount(n){ botCount=n; document.querySelectorAll('#bot-np .np-btn').forEach((b,i)=>b.classList.toggle('active',[1,2,3][i]===n)); }
+
+function startLocalGame(players){
+  LOCAL=true; roomCode='';
+  if(roomRef){roomRef.off();roomRef=null;}
+  state={code:'LOCAL',phase:'play',players,hostId:players[0].id,
+    numPlayers:players.length,currentTurnIdx:0,diceValue:null,lastMove:null,winner:null,ts:Date.now()};
+  showScreen('scr-game'); render(); maybeBotTurn();
+}
+function startLocal(){
+  myName=$('home-name').value.trim()||myName; localStorage.setItem('sl-name',myName);
+  const players=[];
+  for(let i=0;i<localPlayers;i++) players.push({id:'L'+i,name:'Player '+(i+1),pos:0,colorIdx:i});
+  startLocalGame(players);
+}
+function startBot(){
+  myName=$('home-name').value.trim()||myName||'You'; localStorage.setItem('sl-name',myName);
+  const players=[{id:myId,name:myName,pos:0,colorIdx:0}];
+  const BOTNAMES=['Robo','Chip','Byte'];
+  for(let i=0;i<botCount;i++) players.push({id:'B'+i,name:'🤖 '+BOTNAMES[i],pos:0,colorIdx:i+1,isBot:true});
+  startLocalGame(players);
+}
+function maybeBotTurn(){
+  if(!LOCAL||!state||state.phase!=='play') return;
+  const cp=state.players[state.currentTurnIdx];
+  if(cp&&cp.isBot&&!busy&&!animating){
+    setTimeout(()=>{
+      const c=state&&state.players&&state.players[state.currentTurnIdx];
+      if(LOCAL&&state&&state.phase==='play'&&c&&c.isBot&&!busy&&!animating) performRoll();
+    },850);
+  }
+}
 
 function setNumPlayers(n){
   if(!isHost()||!state) return;
@@ -325,7 +410,7 @@ function copyCode(){
 function leaveRoom(){
   if(roomRef){roomRef.off();roomRef=null;}
   if(chatRef){chatRef.off();chatRef=null;}
-  state=null; roomCode='';
+  state=null; roomCode=''; LOCAL=false;
   sessionStorage.removeItem(SS_KEY);
   const cp=$('chat-panel'); if(cp){cp.style.display='none';chatCollapsed=true;cp.classList.add('collapsed');}
   showScreen('scr-home');
@@ -357,6 +442,10 @@ function applyMove(s,pi,rawPos){
 
 function rollDice(){
   if(!isMyTurn()||!state||state.phase!=='play'||busy||animating) return;
+  performRoll();
+}
+function performRoll(){
+  if(!state||state.phase!=='play'||busy||animating) return;
   busy=true;
   const roll=Math.ceil(Math.random()*6);
   const dEl=$('dice-face');
@@ -383,14 +472,17 @@ function doRoll(roll){
   if(newPos<1) newPos=1;
   applyMove(s,pi,newPos);
   writeRoom(s); busy=false;
+  if(LOCAL) maybeBotTurn();
 }
 
 function playAgain(){
   if(!isHost()) return;
   const s=deepCopy(state);
-  s.phase='lobby'; s.players.forEach(p=>{p.pos=0;});
+  s.players.forEach(p=>{p.pos=0;});
   s.currentTurnIdx=0; s.diceValue=null; s.lastMove=null; s.winner=null;
+  s.phase=LOCAL?'play':'lobby';       // local restarts straight into the game
   writeRoom(s);
+  if(LOCAL) maybeBotTurn();
 }
 
 // ── Board ─────────────────────────────────────────────────────────────────────
@@ -520,7 +612,10 @@ function renderGame(s){
   if(!animating){ const d=$('dice-face'); if(d) d.textContent=s.diceValue?FACES[s.diceValue]:'⚀'; }
   const cp=s.players&&s.players[s.currentTurnIdx];
   const tm=$('turn-msg');
-  if(cp) tm.textContent=isMyTurn()?'Your turn — roll!':esc(cp.name)+"'s turn";
+  if(cp){
+    if(LOCAL) tm.textContent=cp.isBot?esc(cp.name)+' is thinking…':esc(cp.name)+' — roll!';
+    else tm.textContent=isMyTurn()?'Your turn — roll!':esc(cp.name)+"'s turn";
+  }
   $('btn-roll').style.display=(isMyTurn()&&!animating)?'block':'none';
   const lm=s.lastMove,me2=$('move-msg');
   if(lm){
@@ -543,7 +638,7 @@ function renderGame(s){
     pos.textContent=p.pos===0?'At start':(p.pos===100?'Finished 🏆':'Square '+p.pos); row.appendChild(pos);
     pl.appendChild(row);
   });
-  const cp2=$('chat-panel'); if(cp2) cp2.style.display='block';
+  const cp2=$('chat-panel'); if(cp2) cp2.style.display=LOCAL?'none':'block';
 }
 
 function renderOver(s){
