@@ -1,0 +1,8 @@
+{
+  "run": {
+    "type": "file",
+    "file": "android/app/src/main/assets/index.html",
+    "ignoreCurrent": true,
+    "task": "npm/test"
+  }
+}
