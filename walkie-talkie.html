@@ -269,8 +269,8 @@ async function enterChannel(){
 
   // incoming signals addressed to me
   signalRef.on('child_added',async snap=>{
-    const from=snap.key, data=snap.val();
-    await handleSignal(from,data);
+    const data=snap.val()||{};
+    if(data.from) await handleSignal(data.from,data);
     snap.ref.remove();       // consume
   });
 }
@@ -316,7 +316,7 @@ function removePeer(oid){
   delete peers[oid];
 }
 function sendSignal(toId,payload){
-  db.ref('rooms/WT-'+code+'/signals/'+toId+'/'+myId).push(payload);
+  db.ref('rooms/WT-'+code+'/signals/'+toId).push(Object.assign({from:myId},payload));
 }
 async function handleSignal(from,data){
   let peer=peers[from];
