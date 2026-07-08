@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>📻 Walkie-Talkie</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0b1020;
+  --s1:rgba(255,255,255,.07);
+  --s2:rgba(255,255,255,.10);
+  --b:rgba(255,255,255,.11);
+  --b2:rgba(255,255,255,.22);
+  --text:rgba(255,255,255,.93);
+  --dim:rgba(255,255,255,.55);
+  --muted:rgba(255,255,255,.32);
+  --green:#4ade80;
+  --red:#ff5b5b;
+  --amber:#fbbf24;
+  --cyan:#38e1c4;
+  --r:16px;--r-sm:12px;
+  --shadow:0 8px 32px rgba(0,0,0,.5),0 2px 8px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.08);
+  --spring:.2s cubic-bezier(.34,1.56,.64,1);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{min-height:100%}
+body{
+  font-family:'Inter',system-ui,sans-serif;background:var(--bg);
+  background-image:radial-gradient(ellipse at 22% 0%,rgba(56,225,196,.14) 0%,transparent 55%),radial-gradient(ellipse at 80% 100%,rgba(99,50,220,.28) 0%,transparent 55%);
+  color:var(--text);display:flex;flex-direction:column;align-items:center;
+  padding:16px 14px 40px;user-select:none;-webkit-user-select:none;min-height:100vh;
+}
+#back{position:fixed;top:12px;left:12px;z-index:20;font-size:13px;font-weight:700;color:var(--dim);text-decoration:none;background:var(--s2);border:1px solid var(--b);padding:7px 13px;border-radius:20px;backdrop-filter:blur(10px)}
+.screen{display:none;width:100%;max-width:430px;animation:fade .3s ease-out}
+.screen.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.logo{font-size:52px;text-align:center;margin-top:26px;line-height:1;filter:drop-shadow(0 0 18px rgba(56,225,196,.5))}
+h1{text-align:center;font-weight:800;font-size:32px;margin-top:6px;
+  background:linear-gradient(120deg,#38e1c4,#c8fff4 40%,#38e1c4 70%,#22b8a0);
+  background-size:200% auto;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:sh 4s linear infinite}
+@keyframes sh{to{background-position:200% center}}
+.sub{text-align:center;font-size:11px;font-weight:600;color:var(--muted);letter-spacing:3px;text-transform:uppercase;margin-top:2px}
+.panel{background:linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,.05));backdrop-filter:blur(20px);border-radius:var(--r);border:1px solid var(--b);box-shadow:var(--shadow);padding:18px 16px;margin-top:16px}
+label{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);display:block;margin:12px 0 6px}
+input[type=text]{width:100%;padding:12px 14px;font-family:'Inter',sans-serif;font-size:16px;font-weight:600;border:1px solid var(--b);border-radius:var(--r-sm);background:var(--s2);color:var(--text);outline:none}
+input.code{text-transform:uppercase;letter-spacing:8px;text-align:center;font-size:24px;font-weight:800}
+.btn{display:block;width:100%;margin-top:14px;padding:14px 0;font-family:'Inter',sans-serif;font-size:16px;font-weight:700;background:linear-gradient(180deg,rgba(56,225,196,.92),rgba(34,184,160,.95));color:#04201b;border:1px solid rgba(120,255,235,.4);border-radius:var(--r-sm);cursor:pointer;box-shadow:0 4px 18px rgba(56,225,196,.3),inset 0 1px 0 rgba(255,255,255,.35);transition:transform var(--spring),filter .15s}
+.btn:active{transform:scale(.97)}.btn:hover{filter:brightness(1.07)}
+.btn.ghost{background:var(--s2);color:var(--text);border:1px solid var(--b);box-shadow:none;font-size:14px;padding:11px 0}
+.btn.red{background:linear-gradient(180deg,rgba(255,91,91,.9),rgba(210,50,50,.95));color:#fff;border-color:rgba(255,140,140,.35);box-shadow:0 4px 18px rgba(255,91,91,.28),inset 0 1px 0 rgba(255,255,255,.3)}
+.err{text-align:center;color:var(--red);font-weight:700;margin-top:8px;min-height:18px;font-size:13px}
+.safety{margin-top:14px;font-size:12px;line-height:1.6;color:var(--dim);background:rgba(56,225,196,.06);border:1px solid rgba(56,225,196,.18);border-radius:var(--r-sm);padding:12px 14px}
+.safety b{color:var(--cyan)}
+.safety ul{margin:6px 0 0 16px}
+/* channel */
+.roomcode{font-size:38px;font-weight:800;letter-spacing:10px;text-align:center;color:var(--cyan);text-shadow:0 0 22px rgba(56,225,196,.4);background:var(--s2);border:1px solid rgba(56,225,196,.3);border-radius:var(--r-sm);padding:12px 0;margin-top:8px}
+.mem-list{margin-top:12px;display:flex;flex-direction:column;gap:8px}
+.mem{display:flex;align-items:center;gap:11px;background:var(--s1);border:1px solid var(--b);border-radius:var(--r-sm);padding:11px 13px;font-weight:600;font-size:15px;transition:border-color .15s,background .15s}
+.mem.talking{border-color:var(--green);background:rgba(74,222,128,.12);box-shadow:0 0 16px rgba(74,222,128,.18)}
+.mem .avatar{width:34px;height:34px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;color:#04201b;background:var(--cyan)}
+.mem .mname{flex:1}
+.mem .mstat{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.mem.talking .mstat{color:var(--green)}
+.wave{display:inline-flex;gap:2px;align-items:flex-end;height:14px}
+.wave span{width:3px;background:var(--green);border-radius:2px;height:4px;animation:wv .6s ease-in-out infinite}
+.wave span:nth-child(2){animation-delay:.15s}.wave span:nth-child(3){animation-delay:.3s}.wave span:nth-child(4){animation-delay:.45s}
+@keyframes wv{0%,100%{height:4px}50%{height:14px}}
+/* PTT button */
+.ptt-wrap{margin:26px auto 0;display:flex;flex-direction:column;align-items:center}
+#ptt{
+  width:190px;height:190px;border-radius:50%;border:none;cursor:pointer;position:relative;
+  background:radial-gradient(circle at 50% 38%,#2b3350,#141a30);
+  box-shadow:0 12px 40px rgba(0,0,0,.5),inset 0 2px 0 rgba(255,255,255,.12),inset 0 -14px 30px rgba(0,0,0,.5),0 0 0 6px rgba(56,225,196,.12);
+  color:var(--text);font-family:'Inter',sans-serif;font-weight:800;font-size:17px;letter-spacing:1px;
+  transition:transform .1s,box-shadow .15s;touch-action:none;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+}
+#ptt .mic{font-size:46px;line-height:1}
+#ptt.live{
+  background:radial-gradient(circle at 50% 38%,#2fe0a0,#12a877);
+  color:#04201b;
+  box-shadow:0 12px 44px rgba(56,225,196,.6),inset 0 2px 0 rgba(255,255,255,.4),0 0 0 10px rgba(56,225,196,.25);
+  transform:scale(1.04);
+  animation:pulse 1.1s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{box-shadow:0 12px 44px rgba(56,225,196,.6),inset 0 2px 0 rgba(255,255,255,.4),0 0 0 10px rgba(56,225,196,.25)}50%{box-shadow:0 12px 52px rgba(56,225,196,.85),inset 0 2px 0 rgba(255,255,255,.4),0 0 0 18px rgba(56,225,196,.10)}}
+.ptt-hint{margin-top:16px;font-size:13px;font-weight:600;color:var(--dim);text-align:center;min-height:20px}
+.ptt-hint.live{color:var(--green)}
+.chan-actions{display:flex;gap:8px;margin-top:22px}
+.chan-actions .btn{margin-top:0}
+.status-pill{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--dim);background:var(--s2);border:1px solid var(--b);padding:4px 11px;border-radius:20px;margin-top:6px}
+.status-pill .d{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.status-pill.ok .d{background:var(--green);box-shadow:0 0 8px rgba(74,222,128,.6)}
+.status-pill.wait .d{background:var(--amber);animation:bl 1s infinite}
+@keyframes bl{50%{opacity:.35}}
+.center{text-align:center}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<a id="back" href="index.html">‹ Games</a>
+
+<!-- HOME -->
+<div class="screen active" id="scr-home">
+  <div class="logo">📻</div>
+  <h1>Walkie-Talkie</h1>
+  <div class="sub">Push to talk · Live voice</div>
+  <div class="panel">
+    <label>Your name</label>
+    <input type="text" id="wt-name" maxlength="14" placeholder="Name" autocomplete="off">
+    <button class="btn" onclick="createChannel()">➕ Create channel</button>
+    <label style="margin-top:16px;">Or join with code</label>
+    <input type="text" class="code" id="wt-code" maxlength="4" placeholder="ABCD" autocomplete="off"
+      autocapitalize="characters" autocorrect="off" spellcheck="false"
+      oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,'')">
+    <button class="btn ghost" onclick="joinChannel()">🚪 Join channel</button>
+    <div class="err" id="home-err"></div>
+    <div class="safety">
+      <b>🔒 Safe &amp; private</b>
+      <ul>
+        <li>Your mic only sends while you <b>hold the button</b> — never live otherwise.</li>
+        <li>Only people with your 4-letter code can join.</li>
+        <li>Nothing is recorded or saved — voice is live only.</li>
+        <li>It's free. Your browser will ask permission to use the mic.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- CHANNEL -->
+<div class="screen" id="scr-chan">
+  <div class="logo" style="font-size:38px;margin-top:18px;">📻</div>
+  <div class="center"><span class="status-pill wait" id="conn-pill"><span class="d"></span><span id="conn-txt">Connecting…</span></span></div>
+  <div class="panel">
+    <div class="center" style="font-size:13px;font-weight:600;color:var(--dim)">Channel code — share to invite:</div>
+    <div class="roomcode" id="chan-code">----</div>
+    <button class="btn ghost" onclick="shareChannel()" style="margin-top:8px;">📤 Share / Copy</button>
+    <div class="mem-list" id="mem-list"></div>
+  </div>
+
+  <div class="ptt-wrap">
+    <button id="ptt">
+      <span class="mic">🎙️</span>
+      <span id="ptt-label">HOLD TO TALK</span>
+    </button>
+    <div class="ptt-hint" id="ptt-hint">Press &amp; hold to speak</div>
+  </div>
+
+  <div class="chan-actions">
+    <button class="btn ghost" onclick="toggleSpeaker()" id="spk-btn">🔊 Speaker on</button>
+    <button class="btn red" onclick="leaveChannel()">Leave</button>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script>
+'use strict';
+/* ═══════════════════════════════════════════════════════════════════
+   WALKIE-TALKIE — live push-to-talk voice over WebRTC mesh (2-6).
+   Signaling via Firebase RTDB (rooms/WT-<code>). Free, no media server.
+   Privacy: mic transmits only while the button is held; nothing stored.
+   ═══════════════════════════════════════════════════════════════════ */
+const FB={apiKey:"AIzaSyAQ0l788yLKmfWIJ6Ok88k2TcwdD6XA1n4",databaseURL:"https://raja-rani-game-ffecd-default-rtdb.asia-southeast1.firebasedatabase.app"};
+const ICE={iceServers:[
+  {urls:'stun:stun.l.google.com:19302'},
+  {urls:'stun:stun1.l.google.com:19302'},
+  // best-effort free TURN (Open Relay) for stricter NATs
+  {urls:'turn:openrelay.metered.ca:80',username:'openrelayproject',credential:'openrelayproject'},
+  {urls:'turn:openrelay.metered.ca:443',username:'openrelayproject',credential:'openrelayproject'}
+]};
+
+const $=id=>document.getElementById(id);
+let db=null;
+let myId='u'+Math.random().toString(36).slice(2,9);
+let myName=localStorage.getItem('wt-name')||'';
+let code='', joined=false;
+let localStream=null, micTrack=null, transmitting=false;
+let speakerOn=true;
+const peers={};   // otherId -> {pc, audioEl, name, talking, state}
+let membersRef=null, myMemRef=null, signalRef=null;
+
+function initFB(){
+  if(db)return true;
+  try{ if(!firebase.apps.length) firebase.initializeApp(FB); db=firebase.database(); return true; }
+  catch(e){ $('home-err').textContent='Connection error: '+e.message; return false; }
+}
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));$(id).classList.add('active');}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function randCode(){return Array.from({length:4},()=>'ABCDEFGHJKLMNPQRSTUVWXYZ'[Math.floor(Math.random()*23)]).join('');}
+
+(function(){
+  const inp=$('wt-name');
+  if(myName)inp.value=myName;
+  inp.addEventListener('input',()=>{myName=inp.value.trim();localStorage.setItem('wt-name',myName);});
+})();
+
+// ── Mic ───────────────────────────────────────────────────────────────────────
+async function getMic(){
+  if(localStream)return true;
+  try{
+    localStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true},video:false});
+    micTrack=localStream.getAudioTracks()[0];
+    micTrack.enabled=false;              // muted until button held (safety)
+    return true;
+  }catch(e){
+    $('home-err').textContent='Microphone permission is needed to talk.';
+    return false;
+  }
+}
+
+// ── Join / create ─────────────────────────────────────────────────────────────
+async function createChannel(){
+  myName=$('wt-name').value.trim()||('User'+Math.floor(Math.random()*90+10));
+  localStorage.setItem('wt-name',myName);
+  if(!initFB())return;
+  if(!await getMic())return;
+  code=randCode();
+  await enterChannel();
+}
+async function joinChannel(){
+  myName=$('wt-name').value.trim()||('User'+Math.floor(Math.random()*90+10));
+  localStorage.setItem('wt-name',myName);
+  const c=($('wt-code').value||'').trim().toUpperCase();
+  if(c.length!==4){$('home-err').textContent='Enter the 4-letter code.';return;}
+  if(!initFB())return;
+  // check exists + capacity
+  const snap=await db.ref('rooms/WT-'+c+'/members').get();
+  const mem=snap.val()||{};
+  if(Object.keys(mem).length===0){$('home-err').textContent='Channel not found.';return;}
+  if(Object.keys(mem).length>=6){$('home-err').textContent='Channel is full (6 max).';return;}
+  if(!await getMic())return;
+  code=c;
+  await enterChannel();
+}
+window.createChannel=createChannel;window.joinChannel=joinChannel;
+
+async function enterChannel(){
+  joined=true;
+  $('chan-code').textContent=code;
+  $('mem-list').innerHTML='';
+  show('scr-chan');
+  setConn('wait','Connecting…');
+
+  const base='rooms/WT-'+code;
+  membersRef=db.ref(base+'/members');
+  myMemRef=membersRef.child(myId);
+  signalRef=db.ref(base+'/signals/'+myId);
+
+  await myMemRef.set({name:myName,ts:Date.now(),talking:false});
+  myMemRef.onDisconnect().remove();
+  db.ref(base+'/signals/'+myId).onDisconnect().remove();
+
+  // presence: build/refresh member list + open peer connections
+  membersRef.on('value',snap=>{
+    const mem=snap.val()||{};
+    // connect to any member we don't have yet (deterministic offerer = smaller id)
+    Object.keys(mem).forEach(oid=>{
+      if(oid===myId)return;
+      if(!peers[oid]) createPeer(oid,mem[oid].name, myId<oid);   // I offer if my id is smaller
+      else peers[oid].name=mem[oid].name;
+    });
+    // drop peers who left
+    Object.keys(peers).forEach(oid=>{ if(!mem[oid]) removePeer(oid); });
+    renderMembers(mem);
+    setConn(Object.keys(peers).length? 'ok':'wait', Object.keys(mem).length<=1?'Waiting for others…':'Connected');
+  });
+
+  // incoming signals addressed to me
+  signalRef.on('child_added',async snap=>{
+    const from=snap.key, data=snap.val();
+    await handleSignal(from,data);
+    snap.ref.remove();       // consume
+  });
+}
+
+// ── WebRTC peer ───────────────────────────────────────────────────────────────
+function createPeer(oid,name,isOfferer){
+  if(peers[oid])return;
+  const pc=new RTCPeerConnection(ICE);
+  const audioEl=document.createElement('audio');
+  audioEl.autoplay=true; audioEl.playsInline=true; audioEl.muted=!speakerOn;
+  document.body.appendChild(audioEl);
+  const peer={pc,audioEl,name,talking:false,state:'connecting'};
+  peers[oid]=peer;
+
+  // add my mic track
+  if(micTrack) pc.addTrack(micTrack,localStream);
+
+  pc.ontrack=e=>{ audioEl.srcObject=e.streams[0]; audioEl.play&&audioEl.play().catch(()=>{}); };
+  pc.onicecandidate=e=>{ if(e.candidate) sendSignal(oid,{cand:e.candidate.toJSON()}); };
+  pc.onconnectionstatechange=()=>{
+    peer.state=pc.connectionState;
+    if(pc.connectionState==='connected') setConn('ok','Connected');
+    if(pc.connectionState==='failed'){ try{pc.restartIce&&pc.restartIce();}catch(_){} }
+    updateConnPill();
+  };
+
+  if(isOfferer){
+    pc.onnegotiationneeded=async()=>{
+      try{
+        const offer=await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        sendSignal(oid,{sdp:pc.localDescription});
+      }catch(e){}
+    };
+    // kick negotiation (some browsers need explicit)
+    (async()=>{ try{ const o=await pc.createOffer(); await pc.setLocalDescription(o); sendSignal(oid,{sdp:pc.localDescription}); }catch(e){} })();
+  }
+}
+function removePeer(oid){
+  const p=peers[oid]; if(!p)return;
+  try{p.pc.close();}catch(e){}
+  if(p.audioEl){p.audioEl.srcObject=null;p.audioEl.remove();}
+  delete peers[oid];
+}
+function sendSignal(toId,payload){
+  db.ref('rooms/WT-'+code+'/signals/'+toId+'/'+myId).push(payload);
+}
+async function handleSignal(from,data){
+  let peer=peers[from];
+  if(!peer){ createPeer(from,'',myId<from); peer=peers[from]; }
+  const pc=peer.pc;
+  try{
+    if(data.sdp){
+      await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+      if(data.sdp.type==='offer'){
+        const ans=await pc.createAnswer();
+        await pc.setLocalDescription(ans);
+        sendSignal(from,{sdp:pc.localDescription});
+      }
+    }else if(data.cand){
+      try{ await pc.addIceCandidate(new RTCIceCandidate(data.cand)); }catch(e){}
+    }
+  }catch(e){}
+}
+
+// ── Push-to-talk ──────────────────────────────────────────────────────────────
+let beepCtx=null;
+function beep(freq,dur){
+  try{
+    beepCtx=beepCtx||new (window.AudioContext||window.webkitAudioContext)();
+    const o=beepCtx.createOscillator(),g=beepCtx.createGain();
+    o.frequency.value=freq;o.type='sine';
+    g.gain.setValueAtTime(.06,beepCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(.0001,beepCtx.currentTime+dur);
+    o.connect(g);g.connect(beepCtx.destination);o.start();o.stop(beepCtx.currentTime+dur);
+  }catch(e){}
+}
+function startTalk(e){
+  if(e)e.preventDefault();
+  if(!joined||transmitting)return;
+  transmitting=true;
+  if(micTrack)micTrack.enabled=true;
+  if(myMemRef)myMemRef.update({talking:true});
+  const b=$('ptt');b.classList.add('live');
+  $('ptt-label').textContent='TALKING…';
+  const h=$('ptt-hint');h.textContent='● You are transmitting — release to stop';h.classList.add('live');
+  beep(880,.12);
+}
+function stopTalk(e){
+  if(e)e.preventDefault();
+  if(!transmitting)return;
+  transmitting=false;
+  if(micTrack)micTrack.enabled=false;
+  if(myMemRef)myMemRef.update({talking:false});
+  const b=$('ptt');b.classList.remove('live');
+  $('ptt-label').textContent='HOLD TO TALK';
+  const h=$('ptt-hint');h.textContent='Press & hold to speak';h.classList.remove('live');
+  beep(440,.10);
+}
+(function(){
+  const b=$('ptt');
+  b.addEventListener('mousedown',startTalk);
+  window.addEventListener('mouseup',stopTalk);
+  b.addEventListener('touchstart',startTalk,{passive:false});
+  b.addEventListener('touchend',stopTalk);
+  b.addEventListener('touchcancel',stopTalk);
+  // spacebar as PTT on desktop
+  window.addEventListener('keydown',e=>{ if(e.code==='Space'&&$('scr-chan').classList.contains('active')&&!e.repeat){e.preventDefault();startTalk();} });
+  window.addEventListener('keyup',e=>{ if(e.code==='Space'){e.preventDefault();stopTalk();} });
+})();
+
+// ── Members / UI ──────────────────────────────────────────────────────────────
+function renderMembers(mem){
+  const list=$('mem-list'); list.innerHTML='';
+  Object.keys(mem).forEach(oid=>{
+    const m=mem[oid];
+    const row=document.createElement('div');
+    row.className='mem'+(m.talking?' talking':'');
+    const initial=(m.name||'?')[0].toUpperCase();
+    const you=oid===myId;
+    let stat;
+    if(m.talking) stat='<span class="wave"><span></span><span></span><span></span><span></span></span>';
+    else if(you) stat='<span class="mstat">You</span>';
+    else{ const p=peers[oid]; stat='<span class="mstat">'+(p&&p.state==='connected'?'Connected':'Connecting…')+'</span>'; }
+    row.innerHTML='<div class="avatar">'+esc(initial)+'</div><div class="mname">'+esc(m.name||'?')+(you?' (you)':'')+'</div>'+stat;
+    list.appendChild(row);
+  });
+}
+function updateConnPill(){
+  const anyConnected=Object.values(peers).some(p=>p.state==='connected');
+  const count=Object.keys(peers).length;
+  if(count===0) setConn('wait','Waiting for others…');
+  else setConn(anyConnected?'ok':'wait', anyConnected?'Connected':'Connecting…');
+}
+function setConn(kind,txt){
+  const pill=$('conn-pill'); pill.className='status-pill '+kind; $('conn-txt').textContent=txt;
+}
+
+function toggleSpeaker(){
+  speakerOn=!speakerOn;
+  Object.values(peers).forEach(p=>{ if(p.audioEl)p.audioEl.muted=!speakerOn; });
+  $('spk-btn').textContent=speakerOn?'🔊 Speaker on':'🔇 Speaker off';
+}
+window.toggleSpeaker=toggleSpeaker;
+
+function shareChannel(){
+  const url=location.origin+location.pathname+'?ch='+code;
+  const text='📻 Join my walkie-talkie channel ('+code+'): ';
+  if(navigator.share){ navigator.share({title:'Walkie-Talkie',text,url}).catch(()=>{}); }
+  else if(navigator.clipboard){ navigator.clipboard.writeText(url).then(()=>{ const b=event&&event.target; if(b){const o=b.textContent;b.textContent='✅ Copied!';setTimeout(()=>b.textContent=o,1500);} }).catch(()=>{}); }
+}
+window.shareChannel=shareChannel;
+
+function leaveChannel(){
+  if(transmitting)stopTalk();
+  Object.keys(peers).forEach(removePeer);
+  if(membersRef)membersRef.off();
+  if(signalRef)signalRef.off();
+  if(myMemRef)myMemRef.remove().catch(()=>{});
+  if(code)db.ref('rooms/WT-'+code+'/signals/'+myId).remove().catch(()=>{});
+  joined=false; code='';
+  if(localStream){ localStream.getTracks().forEach(t=>t.stop()); localStream=null; micTrack=null; }
+  show('scr-home');
+}
+window.leaveChannel=leaveChannel;
+window.addEventListener('beforeunload',()=>{ if(joined)leaveChannel(); });
+
+// auto-join from ?ch=CODE
+(function(){
+  const ch=new URLSearchParams(location.search).get('ch');
+  if(ch&&/^[A-Za-z]{4}$/.test(ch)){ $('wt-code').value=ch.toUpperCase(); }
+})();
+</script>
+</body>
+</html>
