@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@pmndrs/racing-game</title>
+    <script type="module" crossorigin src="/raja-rani-game/racing/assets/index.36d7bd89.js"></script>
+    <link rel="modulepreload" href="/raja-rani-game/racing/assets/vendor.5721227d.js">
+    <link rel="stylesheet" href="/raja-rani-game/racing/assets/index.3319d807.css">
+  </head>
+  <body>
+    <div id="root"></div>
+    
+  <!-- ── Mobile touch controls (added for Game Zone portal; drives the game via synthetic key events) ── -->
+<style>
+#tc-back{position:fixed;top:10px;left:10px;z-index:100000;font:700 13px system-ui,sans-serif;color:#fff;text-decoration:none;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.25);padding:7px 13px;border-radius:20px;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+#tc{display:none}
+@media (pointer:coarse){#tc{display:block}}
+.tc-btn{position:fixed;z-index:100000;display:flex;align-items:center;justify-content:center;
+  border-radius:50%;border:2px solid rgba(255,255,255,.35);background:rgba(255,255,255,.13);
+  color:#fff;font:800 20px system-ui,sans-serif;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+  user-select:none;-webkit-user-select:none;touch-action:none;-webkit-tap-highlight-color:transparent}
+.tc-btn.big{width:74px;height:74px;font-size:26px;bottom:calc(20px + env(safe-area-inset-bottom))}
+.tc-btn.sm{width:52px;height:52px;font-size:13px;font-weight:800}
+.tc-btn:active,.tc-btn.on{background:rgba(120,200,255,.5);border-color:rgba(150,220,255,.85)}
+#tc-left{left:calc(16px + env(safe-area-inset-left))}
+#tc-right{left:calc(102px + env(safe-area-inset-left))}
+#tc-gas{right:calc(16px + env(safe-area-inset-right))}
+#tc-brake{right:calc(102px + env(safe-area-inset-right));background:rgba(255,120,120,.18);border-color:rgba(255,140,140,.5)}
+#tc-brake:active{background:rgba(255,90,90,.5)}
+#tc-boost{right:calc(16px + env(safe-area-inset-right));bottom:calc(104px + env(safe-area-inset-bottom));background:rgba(255,210,90,.18);border-color:rgba(255,220,120,.55)}
+#tc-reset{left:calc(16px + env(safe-area-inset-left));bottom:calc(104px + env(safe-area-inset-bottom))}
+#tc-cam{left:calc(80px + env(safe-area-inset-left));bottom:calc(104px + env(safe-area-inset-bottom))}
+</style>
+<a id="tc-back" href="../index.html">‹ Games</a>
+<div id="tc">
+  <div class="tc-btn big" id="tc-left" data-key="arrowleft">◀</div>
+  <div class="tc-btn big" id="tc-right" data-key="arrowright">▶</div>
+  <div class="tc-btn big" id="tc-gas" data-key="arrowup">▲</div>
+  <div class="tc-btn big" id="tc-brake" data-key="arrowdown">⏹</div>
+  <div class="tc-btn sm" id="tc-boost" data-key="shift">BOOST</div>
+  <div class="tc-btn sm" id="tc-reset" data-key="r" data-tap="1">RESET</div>
+  <div class="tc-btn sm" id="tc-cam" data-key="c" data-tap="1">CAM</div>
+</div>
+<script>
+(function(){
+  function fire(type,key){ window.dispatchEvent(new KeyboardEvent(type,{key:key,bubbles:true})); }
+  document.querySelectorAll('#tc .tc-btn').forEach(function(el){
+    var key=el.dataset.key, tap=el.dataset.tap;
+    var press=function(e){ e.preventDefault(); el.classList.add('on'); fire('keydown',key);
+      if(tap){ setTimeout(function(){ fire('keyup',key); el.classList.remove('on'); },120); } };
+    var release=function(e){ if(e)e.preventDefault(); if(tap)return; el.classList.remove('on'); fire('keyup',key); };
+    el.addEventListener('touchstart',press,{passive:false});
+    el.addEventListener('touchend',release);el.addEventListener('touchcancel',release);
+    el.addEventListener('mousedown',press);
+    window.addEventListener('mouseup',release);
+  });
+})();
+</script>
+
+  </body>
+</html>
