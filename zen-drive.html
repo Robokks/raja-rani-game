@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>🛣 Zen Drive</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;background:#0a0a1e;font-family:'Segoe UI',system-ui,sans-serif;user-select:none;-webkit-user-select:none;touch-action:none}
+#c{position:absolute;inset:0;width:100%;height:100%}
+#back{position:fixed;top:12px;left:12px;z-index:20;font-size:13px;font-weight:700;color:rgba(255,255,255,.85);text-decoration:none;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.2);padding:8px 14px;border-radius:20px;backdrop-filter:blur(8px)}
+#hud{position:fixed;top:12px;right:14px;z-index:20;text-align:right;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.6);pointer-events:none}
+#hud .spd{font-size:34px;font-weight:800;line-height:1}
+#hud .spd small{font-size:13px;font-weight:600;opacity:.7}
+#hud .odo{font-size:12px;font-weight:600;opacity:.75;margin-top:3px;font-variant-numeric:tabular-nums}
+#title{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(5,5,20,.45);backdrop-filter:blur(3px);transition:opacity .6s;color:#fff;text-align:center;padding:20px}
+#title.hide{opacity:0;pointer-events:none}
+#title h1{font-size:52px;font-weight:800;letter-spacing:2px;text-shadow:0 4px 30px rgba(120,180,255,.6)}
+#title .ta{font-size:16px;opacity:.8;margin-top:4px}
+#title p{font-size:14px;opacity:.75;margin-top:16px;line-height:1.7;max-width:320px}
+#title .go{margin-top:26px;font-size:17px;font-weight:700;color:#06121f;background:linear-gradient(180deg,#8fd8ff,#3fa9e8);border:none;border-radius:14px;padding:15px 44px;cursor:pointer;box-shadow:0 6px 28px rgba(80,170,255,.45)}
+.ctl{position:fixed;bottom:20px;z-index:20;width:72px;height:72px;border-radius:50%;border:2px solid rgba(255,255,255,.3);background:rgba(255,255,255,.12);backdrop-filter:blur(6px);color:#fff;font-size:26px;display:flex;align-items:center;justify-content:center;touch-action:none}
+.ctl.pressed{background:rgba(140,200,255,.4)}
+#s-left{left:16px}#s-right{left:104px}
+#s-slow{right:16px;font-size:15px;font-weight:800}
+#s-fast{right:104px;font-size:15px;font-weight:800}
+@media(min-width:900px){.ctl{display:none}}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<a id="back" href="index.html">‹ Games</a>
+<div id="hud"><div class="spd"><span id="spd">0</span> <small>km/h</small></div><div class="odo" id="odo">0.0 km</div></div>
+<div class="ctl" id="s-left">◀</div>
+<div class="ctl" id="s-right">▶</div>
+<div class="ctl" id="s-fast">+</div>
+<div class="ctl" id="s-slow">−</div>
+<div id="title">
+  <h1>ZEN DRIVE</h1>
+  <div class="ta">நிதான ஓட்டம் · endless road</div>
+  <p>No traffic. No timer. Just you, the hills and an endless procedurally-generated road.<br><br>◀ ▶ steer · + − speed<br>(or arrow keys)</p>
+  <button class="go" onclick="startDrive()">Start driving</button>
+</div>
+<script src="lib/three.min.js"></script>
+<script>
+'use strict';
+/* ═══════════════════════════════════════════════════════════════════
+   ZEN DRIVE — procedural endless driving, three.js low-poly
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Deterministic value noise ── */
+function makeNoise(seed){
+  const perm=new Uint8Array(512);
+  let s=seed>>>0;
+  const rnd=()=>((s=(s*1664525+1013904223)>>>0)/4294967296);
+  const p=[...Array(256).keys()];
+  for(let i=255;i>0;i--){const j=(rnd()*(i+1))|0;[p[i],p[j]]=[p[j],p[i]];}
+  for(let i=0;i<512;i++)perm[i]=p[i&255];
+  const fade=t=>t*t*(3-2*t);
+  return function(x){
+    const xi=Math.floor(x)&255, xf=x-Math.floor(x);
+    const a=perm[xi]/255, b=perm[xi+1]/255;
+    return a+(b-a)*fade(xf); // 0..1
+  };
+}
+const n1=makeNoise(1337), n2=makeNoise(9001), n3=makeNoise(4242), n4=makeNoise(777);
+
+/* ── Road model: heading + elevation from noise, sampled every STEP m ── */
+const STEP=4;                 // metres between road samples
+const ROAD_W=9;               // road width
+const pts=[];                 // cached centreline samples {x,z,y,dirx,dirz}
+function samplePoint(i){
+  while(pts.length<=i){
+    const k=pts.length;
+    if(k===0){pts.push({x:0,z:0,y:0,dx:0,dz:-1,heading:-Math.PI/2});continue;}
+    const prev=pts[k-1];
+    const s=k*STEP;
+    // curvature: gentle winding
+    const curv=(n1(s*0.0035)-0.5)*0.055 + (n2(s*0.012)-0.5)*0.02;
+    const heading=prev.heading+curv;
+    const x=prev.x+Math.cos(heading)*STEP;
+    const z=prev.z+Math.sin(heading)*STEP;
+    // elevation: rolling hills
+    const y=(n3(s*0.0016)-0.5)*90 + (n4(s*0.006)-0.5)*14;
+    pts.push({x,z,y,dx:Math.cos(heading),dz:Math.sin(heading),heading});
+  }
+  return pts[i];
+}
+function roadPose(sMet){
+  const f=sMet/STEP;
+  const i=Math.floor(f), t=f-i;
+  const a=samplePoint(i), b=samplePoint(i+1);
+  return {
+    x:a.x+(b.x-a.x)*t, y:a.y+(b.y-a.y)*t, z:a.z+(b.z-a.z)*t,
+    dx:a.dx+(b.dx-a.dx)*t, dz:a.dz+(b.dz-a.dz)*t,
+  };
+}
+function terrainH(x,z,roadY,distFromRoad){
+  // beyond the shoulder, land rises/falls with 2D-ish noise faked from two 1D
+  const h=(n1(x*0.008)+n2(z*0.008)-1)*46+(n3((x+z)*0.02)-0.5)*10;
+  const blend=Math.min(1,Math.max(0,(distFromRoad-ROAD_W*0.7)/26));
+  return roadY*(1-blend)+ (roadY+h)*blend;
+}
+
+/* ── three.js scene ── */
+const renderer=new THREE.WebGLRenderer({canvas:document.getElementById('c'),antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+const scene=new THREE.Scene();
+const SKY=new THREE.Color(0xffb98a);
+scene.background=SKY;
+scene.fog=new THREE.Fog(SKY,180,760);
+const camera=new THREE.PerspectiveCamera(66,1,0.1,1200);
+function onResize(){
+  renderer.setSize(innerWidth,innerHeight);
+  camera.aspect=innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+}
+addEventListener('resize',onResize);onResize();
+
+// lights: warm sunset
+scene.add(new THREE.HemisphereLight(0xffd9b0,0x2a3a55,0.9));
+const sun=new THREE.DirectionalLight(0xffc07a,1.15);
+sun.position.set(-0.4,0.5,-1);
+scene.add(sun);
+// sun disc + gradient sky dome
+const skyGeo=new THREE.SphereGeometry(1000,16,12);
+const skyMat=new THREE.ShaderMaterial({
+  side:THREE.BackSide,depthWrite:false,fog:false,
+  uniforms:{},
+  vertexShader:'varying vec3 vP;void main(){vP=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
+  fragmentShader:`varying vec3 vP;
+    void main(){
+      float h=normalize(vP).y;
+      vec3 top=vec3(0.30,0.42,0.68);
+      vec3 mid=vec3(1.00,0.73,0.54);
+      vec3 low=vec3(1.00,0.55,0.38);
+      vec3 col=h>0.25?mix(mid,top,smoothstep(0.25,0.9,h)):mix(low,mid,smoothstep(-0.1,0.25,h));
+      // sun glow toward -z horizon
+      vec3 sd=normalize(vec3(-0.35,0.12,-1.0));
+      float g=pow(max(dot(normalize(vP),sd),0.0),18.0);
+      col+=vec3(1.0,0.85,0.6)*g*0.9;
+      gl_FragColor=vec4(col,1.0);
+    }`
+});
+const skyDome=new THREE.Mesh(skyGeo,skyMat);
+scene.add(skyDome);
+
+/* ── chunked world geometry ── */
+const CHUNK=32;               // samples per chunk (32*4 = 128 m)
+const AHEAD=6, BEHIND=2;      // chunks kept around the car
+const chunks=new Map();       // chunkIndex -> {group}
+const roadMat=new THREE.MeshLambertMaterial({color:0x3d4757});
+const grassMat=new THREE.MeshLambertMaterial({color:0x6faa5e,vertexColors:true});
+const lineMat=new THREE.MeshBasicMaterial({color:0xf5efdc});
+const treeTrunk=new THREE.MeshLambertMaterial({color:0x6b4a33});
+const treeTop=new THREE.MeshLambertMaterial({color:0x3f7f4f});
+const rockMat=new THREE.MeshLambertMaterial({color:0x8a8f98});
+
+function buildChunk(ci){
+  const group=new THREE.Group();
+  const i0=ci*CHUNK;
+  // road strip + terrain wings
+  const rv=[],gv=[],gc=[],lv=[];
+  const WING=7;               // terrain quads each side
+  const WINGW=26;             // width per terrain quad
+  const tmp=new THREE.Color();
+  for(let k=0;k<CHUNK;k++){
+    const a=samplePoint(i0+k), b=samplePoint(i0+k+1);
+    for(const [p,q] of [[a,b]]){
+      const nx1=-p.dz,nz1=p.dx, nx2=-q.dz,nz2=q.dx;
+      // road quad
+      rv.push(
+        p.x+nx1*ROAD_W/2,p.y,p.z+nz1*ROAD_W/2,  q.x+nx2*ROAD_W/2,q.y,q.z+nz2*ROAD_W/2,  p.x-nx1*ROAD_W/2,p.y,p.z-nz1*ROAD_W/2,
+        q.x+nx2*ROAD_W/2,q.y,q.z+nz2*ROAD_W/2,  q.x-nx2*ROAD_W/2,q.y,q.z-nz2*ROAD_W/2,  p.x-nx1*ROAD_W/2,p.y,p.z-nz1*ROAD_W/2
+      );
+      // centre dashes
+      if((i0+k)%4<2){
+        const w=0.28;
+        lv.push(
+          p.x+nx1*w,p.y+0.02,p.z+nz1*w,  q.x+nx2*w,q.y+0.02,q.z+nz2*w,  p.x-nx1*w,p.y+0.02,p.z-nz1*w,
+          q.x+nx2*w,q.y+0.02,q.z+nz2*w,  q.x-nx2*w,q.y+0.02,q.z-nz2*w,  p.x-nx1*w,p.y+0.02,p.z-nz1*w
+        );
+      }
+      // terrain wings both sides
+      for(const side of [1,-1]){
+        for(let w=0;w<WING;w++){
+          const d1=ROAD_W/2+w*WINGW, d2=ROAD_W/2+(w+1)*WINGW;
+          const p1x=p.x+nx1*d1*side,p1z=p.z+nz1*d1*side;
+          const p2x=p.x+nx1*d2*side,p2z=p.z+nz1*d2*side;
+          const q1x=q.x+nx2*d1*side,q1z=q.z+nz2*d1*side;
+          const q2x=q.x+nx2*d2*side,q2z=q.z+nz2*d2*side;
+          const p1y=terrainH(p1x,p1z,p.y,d1),p2y=terrainH(p2x,p2z,p.y,d2);
+          const q1y=terrainH(q1x,q1z,q.y,d1),q2y=terrainH(q2x,q2z,q.y,d2);
+          gv.push(p1x,p1y,p1z, q1x,q1y,q1z, p2x,p2y,p2z,  q1x,q1y,q1z, q2x,q2y,q2z, p2x,p2y,p2z);
+          // colour by height above road (grass → straw → rock)
+          for(const hy of [p1y,q1y,p2y, q1y,q2y,p2y]){
+            const rel=(hy-p.y);
+            if(rel>18)tmp.setHex(0x9aa08c);
+            else if(rel>7)tmp.setHex(0x9db86a);
+            else tmp.setHex(0x6faa5e);
+            // subtle variation
+            const v=0.94+((hy*7.13)%1)*0.12;
+            gc.push(tmp.r*v,tmp.g*v,tmp.b*v);
+          }
+        }
+      }
+    }
+  }
+  const mk=(arr,mat,cols)=>{
+    const g=new THREE.BufferGeometry();
+    g.setAttribute('position',new THREE.Float32BufferAttribute(arr,3));
+    if(cols)g.setAttribute('color',new THREE.Float32BufferAttribute(cols,3));
+    g.computeVertexNormals();
+    const m=new THREE.Mesh(g,mat);
+    group.add(m);
+    return m;
+  };
+  mk(rv,roadMat);
+  mk(gv,grassMat,gc);
+  mk(lv,lineMat);
+  // scenery: trees + rocks
+  const srnd=makeNoise(ci*57+11);
+  for(let t=0;t<10;t++){
+    const k=(srnd(t*3.1)*CHUNK)|0;
+    const p=samplePoint(i0+k);
+    const side=srnd(t*7.7)>0.5?1:-1;
+    const dist=ROAD_W/2+8+srnd(t*1.3)*120;
+    const x=p.x-p.dz*dist*side, z=p.z+p.dx*dist*side;
+    const y=terrainH(x,z,p.y,dist);
+    if(srnd(t*9.2)>0.35){
+      const h=3+srnd(t*4.4)*5;
+      const trunk=new THREE.Mesh(new THREE.CylinderGeometry(0.25,0.35,h*0.4,5),treeTrunk);
+      trunk.position.set(x,y+h*0.2,z);
+      const top=new THREE.Mesh(new THREE.ConeGeometry(h*0.4,h*0.85,6),treeTop);
+      top.position.set(x,y+h*0.4+h*0.42,z);
+      group.add(trunk,top);
+    }else{
+      const r=0.8+srnd(t*5.5)*2.2;
+      const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(r,0),rockMat);
+      rock.position.set(x,y+r*0.4,z);
+      rock.rotation.set(srnd(t)*3,srnd(t*2)*3,0);
+      group.add(rock);
+    }
+  }
+  scene.add(group);
+  return {group};
+}
+function disposeChunk(c){
+  c.group.traverse(o=>{if(o.geometry)o.geometry.dispose();});
+  scene.remove(c.group);
+}
+function ensureChunks(sMet){
+  const ci=Math.floor(sMet/(CHUNK*STEP));
+  for(let i=ci-BEHIND;i<=ci+AHEAD;i++){
+    if(i>=0&&!chunks.has(i))chunks.set(i,buildChunk(i));
+  }
+  for(const [i,c] of chunks){
+    if(i<ci-BEHIND||i>ci+AHEAD){disposeChunk(c);chunks.delete(i);}
+  }
+}
+
+/* ── the car ── */
+const car=new THREE.Group();
+(function(){
+  const body=new THREE.Mesh(new THREE.BoxGeometry(1.9,0.55,4.0),new THREE.MeshLambertMaterial({color:0xff6b6b}));
+  body.position.y=0.62;
+  const cabin=new THREE.Mesh(new THREE.BoxGeometry(1.6,0.5,1.9),new THREE.MeshLambertMaterial({color:0x27364e}));
+  cabin.position.set(0,1.08,0.1);
+  car.add(body,cabin);
+  const wg=new THREE.CylinderGeometry(0.38,0.38,0.3,10);
+  const wm=new THREE.MeshLambertMaterial({color:0x181c26});
+  [[-0.95,1.35],[0.95,1.35],[-0.95,-1.35],[0.95,-1.35]].forEach(([wx,wz])=>{
+    const w=new THREE.Mesh(wg,wm);
+    w.rotation.z=Math.PI/2;
+    w.position.set(wx,0.38,wz);
+    car.add(w);
+  });
+})();
+scene.add(car);
+
+/* ── driving state ── */
+let S=0;                  // distance along road (m)
+let lat=0;                // lateral offset (m)
+let speed=0;              // m/s
+let targetSpeed=22;       // ~80 km/h cruise
+let driving=false;
+const keys={l:false,r:false,f:false,s:false};
+
+addEventListener('keydown',e=>{
+  if(e.key==='ArrowLeft'||e.key==='a')keys.l=true;
+  if(e.key==='ArrowRight'||e.key==='d')keys.r=true;
+  if(e.key==='ArrowUp'||e.key==='w')keys.f=true;
+  if(e.key==='ArrowDown'||e.key==='s')keys.s=true;
+});
+addEventListener('keyup',e=>{
+  if(e.key==='ArrowLeft'||e.key==='a')keys.l=false;
+  if(e.key==='ArrowRight'||e.key==='d')keys.r=false;
+  if(e.key==='ArrowUp'||e.key==='w')keys.f=false;
+  if(e.key==='ArrowDown'||e.key==='s')keys.s=false;
+});
+[['s-left','l'],['s-right','r'],['s-fast','f'],['s-slow','s']].forEach(([id,k])=>{
+  const el=document.getElementById(id);
+  const on=e=>{e.preventDefault();keys[k]=true;el.classList.add('pressed');};
+  const off=e=>{e.preventDefault();keys[k]=false;el.classList.remove('pressed');};
+  el.addEventListener('touchstart',on,{passive:false});
+  el.addEventListener('touchend',off);el.addEventListener('touchcancel',off);
+  el.addEventListener('mousedown',on);
+  addEventListener('mouseup',off);
+});
+
+function startDrive(){
+  driving=true;
+  document.getElementById('title').classList.add('hide');
+}
+window.startDrive=startDrive;
+
+/* ── main loop ── */
+const camPos=new THREE.Vector3(0,4,8);
+let last=0;
+function frame(ts){
+  requestAnimationFrame(frame);
+  const dt=Math.min((ts-last)/1000,0.05);last=ts;
+
+  if(driving){
+    if(keys.f)targetSpeed=Math.min(targetSpeed+18*dt,58);   // up to ~210 km/h
+    if(keys.s)targetSpeed=Math.max(targetSpeed-30*dt,0);
+    speed+=(targetSpeed-speed)*Math.min(1,dt*1.4);
+    // off-road drag
+    const off=Math.max(0,Math.abs(lat)-(ROAD_W/2-1));
+    if(off>0)speed*=Math.max(0.3,1-off*0.09*dt*60);
+    S+=speed*dt;
+    const steer=(keys.l?-1:0)+(keys.r?1:0);
+    lat+=steer*(6+speed*0.24)*dt;
+    lat=Math.max(-ROAD_W*1.6,Math.min(ROAD_W*1.6,lat));
+    // gentle auto-centre when not steering
+    if(!steer)lat*=Math.pow(0.6,dt);
+  }
+
+  ensureChunks(S+200);
+
+  // place car
+  const p=roadPose(S);
+  const nx=-p.dz,nz=p.dx;
+  const cx=p.x+nx*lat, cz=p.z+nz*lat;
+  const ahead=roadPose(S+3);
+  car.position.set(cx,p.y,cz);
+  car.rotation.y=Math.atan2(-(ahead.z+((-ahead.dz)*lat)-cz),(ahead.x+(-ahead.dz)*0-cx)||1e-6)-Math.PI/2;
+  // slope pitch
+  const back=roadPose(Math.max(0,S-3));
+  car.rotation.x=Math.atan2(ahead.y-back.y,6)*-1;
+  const steerLean=((keys.l?-1:0)+(keys.r?1:0))*0.06;
+  car.rotation.z=steerLean;
+
+  // chase camera
+  const camBack=roadPose(Math.max(0,S-9));
+  const desired=new THREE.Vector3(camBack.x+nx*lat*0.6,Math.max(camBack.y,p.y)+3.4,camBack.z+nz*lat*0.6);
+  camPos.lerp(desired,Math.min(1,dt*3.2));
+  camera.position.copy(camPos);
+  const lookAhead=roadPose(S+14);
+  camera.lookAt(lookAhead.x+nx*lat*0.4,p.y+1.6,lookAhead.z+nz*lat*0.4);
+  skyDome.position.copy(camera.position);
+
+  // HUD
+  document.getElementById('spd').textContent=Math.round(speed*3.6);
+  document.getElementById('odo').textContent=(S/1000).toFixed(1)+' km';
+
+  renderer.render(scene,camera);
+}
+ensureChunks(0);
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

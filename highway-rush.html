@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>🏁 Highway Rush</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;background:#0a0a1e;font-family:'Segoe UI',system-ui,sans-serif;user-select:none;-webkit-user-select:none;touch-action:none}
+#c{position:absolute;inset:0;width:100%;height:100%}
+#back{position:fixed;top:12px;left:12px;z-index:20;font-size:13px;font-weight:700;color:rgba(255,255,255,.85);text-decoration:none;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.2);padding:8px 14px;border-radius:20px;backdrop-filter:blur(8px)}
+#hud{position:fixed;top:12px;right:14px;z-index:20;text-align:right;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.6);pointer-events:none}
+#hud .spd{font-size:36px;font-weight:800;line-height:1}
+#hud .spd small{font-size:13px;font-weight:600;opacity:.7}
+#hud .score{font-size:16px;font-weight:800;color:#ffd76a;margin-top:4px;font-variant-numeric:tabular-nums}
+#hud .best{font-size:11px;font-weight:600;opacity:.65;margin-top:1px}
+#combo{position:fixed;top:32%;left:0;right:0;z-index:20;text-align:center;pointer-events:none;font-weight:800;color:#ffd76a;text-shadow:0 0 20px rgba(255,200,60,.8),0 2px 6px rgba(0,0,0,.6);font-size:26px;opacity:0;transition:opacity .2s,transform .2s}
+#combo.pop{opacity:1;transform:scale(1.15)}
+.ctl{position:fixed;bottom:20px;z-index:20;width:74px;height:74px;border-radius:50%;border:2px solid rgba(255,255,255,.3);background:rgba(255,255,255,.12);backdrop-filter:blur(6px);color:#fff;font-size:26px;display:flex;align-items:center;justify-content:center;touch-action:none}
+.ctl.pressed{background:rgba(255,180,80,.45)}
+#s-left{left:16px}#s-right{left:106px}
+#s-gas{right:16px;font-size:15px;font-weight:800;background:rgba(74,222,128,.15);border-color:rgba(74,222,128,.5)}
+#s-brake{right:106px;font-size:13px;font-weight:800;background:rgba(255,107,107,.15);border-color:rgba(255,107,107,.5)}
+@media(min-width:900px){.ctl{display:none}}
+.overlay{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(5,5,20,.5);backdrop-filter:blur(4px);transition:opacity .4s;color:#fff;text-align:center;padding:20px}
+.overlay.hide{opacity:0;pointer-events:none}
+.overlay h1{font-size:46px;font-weight:800;letter-spacing:1px;text-shadow:0 4px 30px rgba(255,150,60,.6)}
+.overlay .ta{font-size:15px;opacity:.8;margin-top:4px}
+.overlay p{font-size:14px;opacity:.75;margin-top:14px;line-height:1.7;max-width:330px}
+.mode-row{display:flex;gap:10px;margin-top:22px}
+.mode-btn{font-size:15px;font-weight:700;color:#fff;background:rgba(255,255,255,.1);border:2px solid rgba(255,255,255,.3);border-radius:14px;padding:13px 22px;cursor:pointer}
+.mode-btn.on{background:rgba(255,170,60,.28);border-color:#ffb84d;color:#ffd76a}
+.go{margin-top:22px;font-size:17px;font-weight:800;color:#241303;background:linear-gradient(180deg,#ffd76a,#f59e0b);border:none;border-radius:14px;padding:15px 48px;cursor:pointer;box-shadow:0 6px 28px rgba(245,158,11,.5)}
+#over{display:none}
+#over.show{display:flex}
+#over .stat{font-size:15px;margin-top:6px;color:rgba(255,255,255,.85)}
+#over .stat b{color:#ffd76a}
+#over .newbest{color:#4ade80;font-weight:800;font-size:16px;margin-top:10px}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<a id="back" href="index.html">‹ Games</a>
+<div id="hud">
+  <div class="spd"><span id="spd">0</span> <small>km/h</small></div>
+  <div class="score" id="score">0</div>
+  <div class="best" id="best"></div>
+</div>
+<div id="combo"></div>
+<div class="ctl" id="s-left">◀</div>
+<div class="ctl" id="s-right">▶</div>
+<div class="ctl" id="s-gas">GAS</div>
+<div class="ctl" id="s-brake">BRAKE</div>
+
+<div class="overlay" id="title">
+  <h1>HIGHWAY RUSH</h1>
+  <div class="ta">நெடுஞ்சாலை வேகம் · traffic racer</div>
+  <p>Weave through traffic at 240 km/h.<br>Skim past cars for <b style="color:#ffd76a">NEAR MISS</b> combo bonuses.<br>Don't crash!</p>
+  <div class="mode-row">
+    <button class="mode-btn on" id="m-one" onclick="setMode('one')">➡ One-way</button>
+    <button class="mode-btn" id="m-two" onclick="setMode('two')">⇄ Two-way (2×)</button>
+  </div>
+  <button class="go" onclick="startRun()">▶ Drive</button>
+</div>
+
+<div class="overlay" id="over">
+  <h1 style="color:#ff6b6b;text-shadow:0 4px 30px rgba(255,60,60,.5)">CRASHED!</h1>
+  <div class="stat">Score: <b id="o-score">0</b></div>
+  <div class="stat">Distance: <b id="o-dist">0 km</b></div>
+  <div class="stat">Top combo: <b id="o-combo">×0</b></div>
+  <div class="newbest" id="o-newbest" style="display:none">🏆 NEW BEST!</div>
+  <button class="go" onclick="startRun()">↻ Drive again</button>
+</div>
+
+<script src="lib/three.min.js"></script>
+<script>
+'use strict';
+/* ═══════════════════════════════════════════════════════════════════
+   HIGHWAY RUSH — traffic racer. Straight highway on -z, recycled
+   segments and traffic pool. Near-miss combo scoring.
+   ═══════════════════════════════════════════════════════════════════ */
+const LANE_W=3.5, LANES=4;
+const ROAD_W=LANE_W*LANES;                  // 14
+const ROAD_LEFT=-ROAD_W/2;
+const laneX=i=>ROAD_LEFT+LANE_W*(i+0.5);    // lane centre x
+
+/* ── renderer / scene ── */
+const renderer=new THREE.WebGLRenderer({canvas:document.getElementById('c'),antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+const scene=new THREE.Scene();
+const SKY=new THREE.Color(0x87b8e8);
+scene.background=SKY;
+scene.fog=new THREE.Fog(SKY,140,620);
+const camera=new THREE.PerspectiveCamera(66,1,0.1,1200);
+function onResize(){renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();}
+addEventListener('resize',onResize);onResize();
+
+scene.add(new THREE.HemisphereLight(0xdfefff,0x39536b,1.0));
+const sun=new THREE.DirectionalLight(0xfff2d8,1.1);
+sun.position.set(0.4,0.8,-0.5);
+scene.add(sun);
+
+const skyMat=new THREE.ShaderMaterial({
+  side:THREE.BackSide,depthWrite:false,fog:false,
+  vertexShader:'varying vec3 vP;void main(){vP=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
+  fragmentShader:`varying vec3 vP;
+    void main(){
+      float h=normalize(vP).y;
+      vec3 top=vec3(0.25,0.48,0.85);
+      vec3 mid=vec3(0.62,0.78,0.95);
+      vec3 low=vec3(0.85,0.90,0.97);
+      vec3 col=h>0.2?mix(mid,top,smoothstep(0.2,0.85,h)):mix(low,mid,smoothstep(-0.05,0.2,h));
+      gl_FragColor=vec4(col,1.0);
+    }`
+});
+const skyDome=new THREE.Mesh(new THREE.SphereGeometry(1000,16,12),skyMat);
+scene.add(skyDome);
+
+/* ── highway segments (recycled) ── */
+const SEG_LEN=100, SEGS=9;
+const segments=[];
+function buildSegment(){
+  const g=new THREE.Group();
+  // asphalt
+  const road=new THREE.Mesh(new THREE.PlaneGeometry(ROAD_W+1,SEG_LEN),new THREE.MeshLambertMaterial({color:0x3c4250}));
+  road.rotation.x=-Math.PI/2;road.position.y=0;
+  g.add(road);
+  // grass
+  for(const side of [-1,1]){
+    const grass=new THREE.Mesh(new THREE.PlaneGeometry(220,SEG_LEN),new THREE.MeshLambertMaterial({color:0x6faa5e}));
+    grass.rotation.x=-Math.PI/2;
+    grass.position.set(side*(ROAD_W/2+110.6),-0.05,0);
+    g.add(grass);
+  }
+  // lane dashes
+  const dashMat=new THREE.MeshBasicMaterial({color:0xe8e8e8});
+  for(let l=1;l<LANES;l++){
+    for(let d=0;d<SEG_LEN;d+=10){
+      const dash=new THREE.Mesh(new THREE.PlaneGeometry(0.25,4),dashMat);
+      dash.rotation.x=-Math.PI/2;
+      dash.position.set(ROAD_LEFT+LANE_W*l,0.01,-SEG_LEN/2+d+2);
+      g.add(dash);
+    }
+  }
+  // edge lines
+  const edgeMat=new THREE.MeshBasicMaterial({color:0xf2c94c});
+  for(const side of [-1,1]){
+    const e=new THREE.Mesh(new THREE.PlaneGeometry(0.3,SEG_LEN),edgeMat);
+    e.rotation.x=-Math.PI/2;
+    e.position.set(side*(ROAD_W/2-0.2),0.01,0);
+    g.add(e);
+  }
+  // guard rails
+  const railMat=new THREE.MeshLambertMaterial({color:0xb8c0cc});
+  for(const side of [-1,1]){
+    const rail=new THREE.Mesh(new THREE.BoxGeometry(0.25,0.6,SEG_LEN),railMat);
+    rail.position.set(side*(ROAD_W/2+1.4),0.55,0);
+    g.add(rail);
+  }
+  // lamp posts + trees
+  const poleMat=new THREE.MeshLambertMaterial({color:0x8a94a4});
+  const topMat=new THREE.MeshLambertMaterial({color:0x3f7f4f});
+  const trunkMat=new THREE.MeshLambertMaterial({color:0x6b4a33});
+  for(let d=0;d<SEG_LEN;d+=25){
+    for(const side of [-1,1]){
+      const pole=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.12,6,6),poleMat);
+      pole.position.set(side*(ROAD_W/2+2.2),3,-SEG_LEN/2+d);
+      const arm=new THREE.Mesh(new THREE.BoxGeometry(2.2,0.12,0.12),poleMat);
+      arm.position.set(side*(ROAD_W/2+1.1),5.9,-SEG_LEN/2+d);
+      g.add(pole,arm);
+    }
+  }
+  for(let t=0;t<6;t++){
+    const side=t%2?1:-1;
+    const dist=ROAD_W/2+8+((t*37)%60);
+    const z=-SEG_LEN/2+((t*53)%SEG_LEN);
+    const h=4+(t*29%40)/10;
+    const trunk=new THREE.Mesh(new THREE.CylinderGeometry(0.2,0.3,h*0.4,5),trunkMat);
+    trunk.position.set(side*dist,h*0.2,z);
+    const top=new THREE.Mesh(new THREE.ConeGeometry(h*0.38,h*0.8,6),topMat);
+    top.position.set(side*dist,h*0.4+h*0.4,z);
+    g.add(trunk,top);
+  }
+  scene.add(g);
+  return g;
+}
+for(let i=0;i<SEGS;i++){
+  const s=buildSegment();
+  s.position.z=-i*SEG_LEN;
+  segments.push(s);
+}
+function recycleSegments(playerZ){
+  for(const s of segments){
+    if(s.position.z-playerZ>SEG_LEN){s.position.z-=SEGS*SEG_LEN;}
+  }
+}
+
+/* ── car factory ── */
+function makeCar(color){
+  const g=new THREE.Group();
+  const body=new THREE.Mesh(new THREE.BoxGeometry(1.9,0.55,4.2),new THREE.MeshLambertMaterial({color}));
+  body.position.y=0.62;
+  const cabin=new THREE.Mesh(new THREE.BoxGeometry(1.6,0.5,2.0),new THREE.MeshLambertMaterial({color:0x27364e}));
+  cabin.position.set(0,1.08,0.15);
+  g.add(body,cabin);
+  const wg=new THREE.CylinderGeometry(0.38,0.38,0.32,10);
+  const wm=new THREE.MeshLambertMaterial({color:0x181c26});
+  [[-0.95,1.4],[0.95,1.4],[-0.95,-1.4],[0.95,-1.4]].forEach(([wx,wz])=>{
+    const w=new THREE.Mesh(wg,wm);
+    w.rotation.z=Math.PI/2;
+    w.position.set(wx,0.38,wz);
+    g.add(w);
+  });
+  return g;
+}
+const player=makeCar(0xff6b6b);
+scene.add(player);
+
+/* ── traffic pool ── */
+const TCOLS=[0x60a5fa,0xf2c94c,0x4ade80,0xe2e8f0,0xa78bfa,0xf97316,0x94a3b8,0xf472b6];
+const MAXT=14;
+const traffic=[];
+for(let i=0;i<MAXT;i++){
+  const c=makeCar(TCOLS[i%TCOLS.length]);
+  c.visible=false;
+  scene.add(c);
+  traffic.push({mesh:c,active:false,lane:0,z:0,speed:0,oncoming:false,passed:false});
+}
+
+/* ── game state ── */
+let mode='one';
+let running=false;
+let px=laneX(2), pz=0, speed=0, targetSpeed=0;
+let score=0, dist=0, combo=0, topCombo=0, comboT=0;
+let best=+(localStorage.getItem('hr-best-one')||0);
+let shake=0;
+const keys={l:false,r:false,gas:false,brake:false};
+
+function setMode(m){
+  mode=m;
+  document.getElementById('m-one').classList.toggle('on',m==='one');
+  document.getElementById('m-two').classList.toggle('on',m==='two');
+  best=+(localStorage.getItem('hr-best-'+m)||0);
+  updBest();
+}
+window.setMode=setMode;
+function updBest(){document.getElementById('best').textContent=best?('BEST '+best):'';}
+updBest();
+
+addEventListener('keydown',e=>{
+  if(e.key==='ArrowLeft'||e.key==='a')keys.l=true;
+  if(e.key==='ArrowRight'||e.key==='d')keys.r=true;
+  if(e.key==='ArrowUp'||e.key==='w')keys.gas=true;
+  if(e.key==='ArrowDown'||e.key==='s')keys.brake=true;
+});
+addEventListener('keyup',e=>{
+  if(e.key==='ArrowLeft'||e.key==='a')keys.l=false;
+  if(e.key==='ArrowRight'||e.key==='d')keys.r=false;
+  if(e.key==='ArrowUp'||e.key==='w')keys.gas=false;
+  if(e.key==='ArrowDown'||e.key==='s')keys.brake=false;
+});
+[['s-left','l'],['s-right','r'],['s-gas','gas'],['s-brake','brake']].forEach(([id,k])=>{
+  const el=document.getElementById(id);
+  const on=e=>{e.preventDefault();keys[k]=true;el.classList.add('pressed');};
+  const off=e=>{e.preventDefault();keys[k]=false;el.classList.remove('pressed');};
+  el.addEventListener('touchstart',on,{passive:false});
+  el.addEventListener('touchend',off);el.addEventListener('touchcancel',off);
+  el.addEventListener('mousedown',on);
+  addEventListener('mouseup',off);
+});
+
+function startRun(){
+  running=true;
+  px=laneX(2);pz=0;speed=14;targetSpeed=28;
+  score=0;dist=0;combo=0;topCombo=0;comboT=0;shake=0;
+  traffic.forEach(t=>{t.active=false;t.mesh.visible=false;});
+  document.getElementById('title').classList.add('hide');
+  document.getElementById('over').classList.remove('show');
+  best=+(localStorage.getItem('hr-best-'+mode)||0);
+  updBest();
+}
+window.startRun=startRun;
+
+/* ── traffic spawning ── */
+function spawnTraffic(){
+  const activeCount=traffic.filter(t=>t.active).length;
+  const wanted=Math.min(MAXT,5+Math.floor(dist/400));
+  if(activeCount>=wanted)return;
+  const slot=traffic.find(t=>!t.active);
+  if(!slot)return;
+  const lane=(Math.random()*LANES)|0;
+  const oncoming=mode==='two'&&lane<2;
+  // don't spawn on top of another traffic car in same lane
+  const z=pz-250-Math.random()*220;
+  for(const t of traffic){
+    if(t.active&&t.lane===lane&&Math.abs(t.z-z)<28)return;
+  }
+  slot.active=true;
+  slot.lane=lane;
+  slot.oncoming=oncoming;
+  slot.z=z;
+  slot.speed=oncoming?(16+Math.random()*8):(15+Math.random()*13+Math.min(dist/1000,8));
+  slot.passed=false;
+  slot.mesh.visible=true;
+  slot.mesh.rotation.y=oncoming?Math.PI:0;
+  slot.mesh.position.set(laneX(lane),0,z);
+}
+
+/* ── near miss / combo UI ── */
+function nearMiss(mult){
+  combo++;
+  topCombo=Math.max(topCombo,combo);
+  comboT=3;
+  const pts=100*combo*mult;
+  score+=pts;
+  const el=document.getElementById('combo');
+  el.textContent='NEAR MISS +'+pts+(combo>1?'  ×'+combo:'');
+  el.classList.remove('pop');
+  void el.offsetWidth;
+  el.classList.add('pop');
+  setTimeout(()=>el.classList.remove('pop'),900);
+}
+
+function crash(){
+  running=false;
+  shake=1;
+  const finalScore=Math.round(score+dist);
+  document.getElementById('o-score').textContent=finalScore;
+  document.getElementById('o-dist').textContent=(dist/1000).toFixed(2)+' km';
+  document.getElementById('o-combo').textContent='×'+topCombo;
+  const isBest=finalScore>best;
+  if(isBest){best=finalScore;localStorage.setItem('hr-best-'+mode,best);}
+  document.getElementById('o-newbest').style.display=isBest?'':'none';
+  updBest();
+  setTimeout(()=>document.getElementById('over').classList.add('show'),650);
+}
+
+/* ── main loop ── */
+let last=0;
+function frame(ts){
+  requestAnimationFrame(frame);
+  const dt=Math.min((ts-last)/1000,0.05);last=ts;
+
+  if(running){
+    // speed control: cruise 100, gas to 240, brake down
+    const cruise=28, top=67;
+    if(keys.gas)targetSpeed=Math.min(targetSpeed+26*dt,top);
+    else if(keys.brake)targetSpeed=Math.max(targetSpeed-55*dt,6);
+    else targetSpeed+= (cruise-targetSpeed)*Math.min(1,dt*0.4);
+    speed+=(targetSpeed-speed)*Math.min(1,dt*1.6);
+    pz-=speed*dt;
+    dist+=speed*dt;
+    // steering
+    const steer=(keys.l?-1:0)+(keys.r?1:0);
+    px+=steer*(7+speed*0.13)*dt;
+    px=Math.max(ROAD_LEFT+1.1,Math.min(-ROAD_LEFT-1.1,px));
+    // score trickle: speed bonus
+    if(speed>28)score+=(speed-28)*dt*2;
+    // combo window
+    if(comboT>0){comboT-=dt;if(comboT<=0)combo=0;}
+    // traffic
+    spawnTraffic();
+    for(const t of traffic){
+      if(!t.active)continue;
+      t.z+=(t.oncoming?t.speed:-t.speed)*dt;
+      t.mesh.position.z=t.z;
+      const rel=t.z-pz;               // negative = ahead of player
+      // recycle when far behind or (oncoming) far past
+      if(rel>60||rel<-560){t.active=false;t.mesh.visible=false;continue;}
+      const dx=Math.abs(t.mesh.position.x-px);
+      const dz=Math.abs(rel);
+      // collision AABB
+      if(dz<4.0&&dx<1.85){crash();}
+      // near miss: just passed, close laterally, fast enough
+      if(!t.passed&&rel>2&&rel<10){
+        t.passed=true;
+        const relSpeed=t.oncoming?speed+t.speed:speed-t.speed;
+        if(dx<2.3&&relSpeed>8)nearMiss(t.oncoming?2:1);
+      }
+    }
+    recycleSegments(pz);
+  }
+
+  // place player + camera
+  player.position.set(px,0,pz);
+  const steerLean=((keys.l?-1:0)+(keys.r?1:0))*0.07;
+  player.rotation.z=steerLean;
+  player.rotation.y=((keys.l?1:0)+(keys.r?-1:0))*0.06;
+
+  if(shake>0)shake=Math.max(0,shake-dt*2);
+  const shx=(Math.random()-.5)*shake*1.6, shy=(Math.random()-.5)*shake*1.2;
+  const fov=66+(speed/67)*13;
+  if(Math.abs(camera.fov-fov)>0.1){camera.fov=fov;camera.updateProjectionMatrix();}
+  camera.position.set(px*0.85+shx,3.6+shy,pz+9.5);
+  camera.lookAt(px*0.9,1.3,pz-18);
+  skyDome.position.copy(camera.position);
+
+  // HUD
+  document.getElementById('spd').textContent=Math.round(speed*3.6);
+  document.getElementById('score').textContent=Math.round(score+dist);
+
+  renderer.render(scene,camera);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
