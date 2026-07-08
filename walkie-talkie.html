@@ -339,8 +339,14 @@ function createPeer(oid,name,isOfferer){
   peers[oid]=peer;
   if(micTrack) peer.sender=pc.addTrack(micTrack,localStream);
   pc.ontrack=e=>{
-    audioEl.srcObject=e.streams[0]; audioEl.play&&audioEl.play().catch(()=>{});
-    try{ const s=audioCtx.createMediaStreamSource(e.streams[0]); const an=audioCtx.createAnalyser(); an.fftSize=64; s.connect(an); peer.analyser=an; }catch(_){}
+    // Play remote voice through the <audio> element ONLY. Do NOT route the
+    // remote stream into WebAudio — doing so silences <audio> playback on
+    // Chrome/iOS (that was the "sounds work but voice doesn't" bug).
+    peer.stream=e.streams[0];
+    audioEl.srcObject=e.streams[0];
+    audioEl.muted=false; audioEl.volume=1;
+    const go=()=>audioEl.play&&audioEl.play().catch(()=>{});
+    go(); setTimeout(go,300);
   };
   pc.onicecandidate=e=>{ if(e.candidate) sendSignal(oid,{cand:e.candidate.toJSON()}); };
   pc.onconnectionstatechange=()=>{ peer.state=pc.connectionState; if(pc.connectionState==='failed'){try{pc.restartIce&&pc.restartIce();}catch(_){}} renderMembers(membersCache); };
@@ -421,6 +427,12 @@ function stopTalk(e){
   window.addEventListener('keydown',e=>{ if(e.code==='Space'&&$('scr-chan').classList.contains('active')&&!e.repeat){e.preventDefault();startTalk();} });
   window.addEventListener('keyup',e=>{ if(e.code==='Space'){e.preventDefault();stopTalk();} });
 })();
+// Mobile autoplay unlock: on any user interaction, resume audio + (re)play remote voices.
+function unlockAudio(){
+  try{ if(audioCtx&&audioCtx.state==='suspended')audioCtx.resume(); }catch(_){}
+  Object.values(peers).forEach(p=>{ if(p.audioEl){ p.audioEl.muted=false; p.audioEl.play&&p.audioEl.play().catch(()=>{}); } });
+}
+['touchstart','mousedown','keydown'].forEach(ev=>document.addEventListener(ev,unlockAudio,true));
 
 // ── LCD / VU / members ─────────────────────────────────────────────────────────────
 function updateLCD(tx){
@@ -439,17 +451,18 @@ function startVU(){
   const buf=new Uint8Array(32);
   const loop=()=>{
     vuRAF=requestAnimationFrame(loop);
-    let an=null;
-    if(transmitting&&micAnalyser)an=micAnalyser;
-    else{ for(const id in peers){ if(membersCache[id]&&membersCache[id].talking&&peers[id].analyser){an=peers[id].analyser;break;} } }
-    let lvl=0;
-    if(an){ an.getByteFrequencyData(buf); for(let i=0;i<16;i++)lvl+=buf[i]; lvl=lvl/16/255; }
+    // TX: real levels from the local mic analyser. RX: lively animated bars
+    // driven by the talking flag (we no longer tap the remote stream in
+    // WebAudio, since that muted playback).
+    const an=(transmitting&&micAnalyser)?micAnalyser:null;
     const rx=anyoneTalking();
+    if(an)an.getByteFrequencyData(buf);
     $('grille').classList.toggle('rx',rx&&!transmitting);
     $('led-amber').classList.toggle('on',rx&&!transmitting);
     bars.forEach((b,i)=>{
-      const t=an?Math.max(0,(buf[i*2]/255)*14):(2+Math.random()* (an?0:1));
-      const h=an?Math.max(2,(buf[i]/255)*14):2;
+      let h=2;
+      if(an) h=Math.max(2,(buf[i]/255)*14);
+      else if(rx) h=4+Math.random()*10;      // simulated RX activity
       b.style.height=h+'px'; b.classList.toggle('a',h>4);
     });
   };
