@@ -189,10 +189,11 @@ input.code{width:100%;text-transform:uppercase;letter-spacing:8px;text-align:cen
       </div>
     </div>
     <div class="grille" id="grille"></div>
-    <div class="lcd">
+    <div class="lcd" onclick="toggleDiag()" title="Tap for connection info">
       <div class="lcd-row"><span class="lcd-big" id="lcd-code">----</span><span class="lcd-stat" id="lcd-stat">STANDBY</span></div>
       <div class="lcd-row"><span class="lcd-tgt" id="lcd-tgt">▶ ALL</span><span class="lcd-stat" id="lcd-count">0/6</span></div>
       <div class="vu" id="vu"></div>
+      <pre id="diag" style="display:none;font-family:'Share Tech Mono',monospace;font-size:10px;line-height:1.4;color:#9ff0c8;margin-top:6px;white-space:pre-wrap;border-top:1px solid rgba(120,255,190,.25);padding-top:5px"></pre>
     </div>
     <div class="ctl-row">
       <div class="knob-wrap">
@@ -228,10 +229,27 @@ input.code{width:100%;text-transform:uppercase;letter-spacing:8px;text-align:cen
    record+send, loop, presence, host-kick. WebRTC voice + Firebase.
    ═══════════════════════════════════════════════════════════════════ */
 const FB={apiKey:"AIzaSyAQ0l788yLKmfWIJ6Ok88k2TcwdD6XA1n4",databaseURL:"https://raja-rani-game-ffecd-default-rtdb.asia-southeast1.firebasedatabase.app"};
+
+/* ═══════════════ TURN relay — REQUIRED for two phones on DIFFERENT networks ═══════════════
+   Same Wi-Fi works with STUN alone. Across mobile/different networks a TURN
+   relay is mandatory. Get a FREE one (20GB/mo) at https://metered.ca/tools/openrelay
+   → sign up → copy your credentials here. Fill username/credential + your subdomain. */
+const TURN = {
+  // e.g. 'yourname' from turn:yourname.relay.metered.ca — leave '' to disable TURN
+  host: '',                 // <-- your metered subdomain (before .relay.metered.ca)
+  username: '',             // <-- your metered TURN username
+  credential: ''            // <-- your metered TURN credential
+};
 const ICE={iceServers:[
-  {urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'},
-  {urls:'turn:openrelay.metered.ca:80',username:'openrelayproject',credential:'openrelayproject'},
-  {urls:'turn:openrelay.metered.ca:443',username:'openrelayproject',credential:'openrelayproject'}
+  {urls:'stun:stun.l.google.com:19302'},
+  {urls:'stun:stun1.l.google.com:19302'},
+  {urls:'stun:stun.cloudflare.com:3478'},
+  ...(TURN.host&&TURN.username ? [
+    {urls:'turn:'+TURN.host+'.relay.metered.ca:80',username:TURN.username,credential:TURN.credential},
+    {urls:'turn:'+TURN.host+'.relay.metered.ca:80?transport=tcp',username:TURN.username,credential:TURN.credential},
+    {urls:'turn:'+TURN.host+'.relay.metered.ca:443',username:TURN.username,credential:TURN.credential},
+    {urls:'turns:'+TURN.host+'.relay.metered.ca:443?transport=tcp',username:TURN.username,credential:TURN.credential},
+  ] : [])
 ]};
 const CALL_ADJ=['Falcon','Bravo','Cobra','Eagle','Tango','Viper','Ghost','Ranger','Delta','Hawk','Wolf','Nova','Echo','Rhino','Zulu','Comet'];
 const $=id=>document.getElementById(id);
@@ -268,7 +286,7 @@ async function getMic(){
   try{
     localStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true},video:false});
     micTrack=localStream.getAudioTracks()[0];
-    micTrack.enabled=false;
+    micTrack.enabled=false;  // muted until PTT held (standard push-to-talk gate)
     audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();
     const src=audioCtx.createMediaStreamSource(localStream);
     micAnalyser=audioCtx.createAnalyser(); micAnalyser.fftSize=64;
@@ -327,7 +345,36 @@ async function enterChannel(){
   eventsRef.on('child_added',snap=>{ handleEvent(snap.val()); snap.ref.remove().catch(()=>{}); });
 
   startVU();
+  startDiag();
 }
+
+// ── Diagnostics (tap the LCD to toggle) ──────────────────────────────────────────
+let diagOn=false, diagTimer=0;
+function toggleDiag(){ diagOn=!diagOn; $('diag').style.display=diagOn?'block':'none'; }
+async function pollDiag(){
+  const rows=[];
+  for(const oid of Object.keys(peers)){
+    const p=peers[oid]; const pc=p.pc;
+    let candType='?', kbpsOut=0, kbpsIn=0;
+    try{
+      const stats=await pc.getStats();
+      let sel=null, pairs={}, local={};
+      stats.forEach(r=>{
+        if(r.type==='transport'&&r.selectedCandidatePairId)sel=r.selectedCandidatePairId;
+        if(r.type==='candidate-pair')pairs[r.id]=r;
+        if(r.type==='local-candidate')local[r.id]=r;
+        if(r.type==='outbound-rtp'&&r.kind==='audio'){ p._po=p._po||{}; const dt=(r.timestamp-(p._po.t||r.timestamp))/1000; kbpsOut=dt>0?Math.round((r.bytesSent-(p._po.b||r.bytesSent))*8/dt/1000):0; p._po={t:r.timestamp,b:r.bytesSent}; }
+        if(r.type==='inbound-rtp'&&r.kind==='audio'){ p._pi=p._pi||{}; const dt=(r.timestamp-(p._pi.t||r.timestamp))/1000; kbpsIn=dt>0?Math.round((r.bytesReceived-(p._pi.b||r.bytesReceived))*8/dt/1000):0; p._pi={t:r.timestamp,b:r.bytesReceived}; }
+      });
+      if(!sel){ let best=null; for(const id in pairs)if(pairs[id].state==='succeeded'){best=pairs[id];break;} sel=best&&best.id; }
+      if(sel&&pairs[sel]&&local[pairs[sel].localCandidateId]) candType=local[pairs[sel].localCandidateId].candidateType; // host/srflx/relay
+    }catch(_){}
+    const nm=(membersCache[oid]||{}).name||oid.slice(0,4);
+    rows.push(esc(nm)+': '+pc.connectionState+'/'+pc.iceConnectionState+' ['+candType+'] ↑'+kbpsOut+' ↓'+kbpsIn+'kbps');
+  }
+  $('diag').textContent = rows.length? rows.join('\n') : 'no peers yet';
+}
+function startDiag(){ clearInterval(diagTimer); diagTimer=setInterval(()=>{ if(diagOn)pollDiag(); },1000); }
 
 // ── WebRTC ───────────────────────────────────────────────────────────────────────
 function createPeer(oid,name,isOfferer){
@@ -337,7 +384,7 @@ function createPeer(oid,name,isOfferer){
   document.body.appendChild(audioEl);
   const peer={pc,audioEl,name,talking:false,state:'connecting',sender:null,analyser:null,pendingCands:[],remoteSet:false};
   peers[oid]=peer;
-  if(micTrack) peer.sender=pc.addTrack(micTrack,localStream);
+  if(micTrack) peer.sender=pc.addTrack(micTrack,localStream);  // negotiate sendrecv; muted via enabled until PTT
   pc.ontrack=e=>{
     // Play remote voice through the <audio> element ONLY. Do NOT route the
     // remote stream into WebAudio — doing so silences <audio> playback on
@@ -380,7 +427,7 @@ function cycleTarget(){
   updateKnob(); updateLCD(); renderMembers(membersCache);
   beep(660,.05);
 }
-window.cycleTarget=cycleTarget;
+window.cycleTarget=cycleTarget;window.toggleDiag=toggleDiag;
 function updateKnob(){
   const opts=['all',...memberOrder.filter(id=>id!==myId)];
   const i=Math.max(0,opts.indexOf(target));
@@ -390,20 +437,22 @@ function updateKnob(){
 function targetName(){ return target==='all'?'ALL':((membersCache[target]||{}).name||'—'); }
 
 // ── Push-to-talk ──────────────────────────────────────────────────────────────────
-function applyDirected(on){
-  Object.keys(peers).forEach(oid=>{
-    const p=peers[oid]; if(!p||!p.sender)return;
-    const allow = on && (target==='all'||oid===target);
-    try{ p.sender.replaceTrack(allow?micTrack:null); }catch(_){}
-  });
+// "Talk to all" (default) is gated purely by micTrack.enabled — bulletproof, no
+// renegotiation. Directed ("talk to one") additionally mutes non-target senders
+// via replaceTrack, which is safe because it happens AFTER negotiation.
+function ensureAllSenders(){          // make every sender hold the mic track again
+  Object.keys(peers).forEach(oid=>{ const p=peers[oid]; if(p&&p.sender&&p.sender.track!==micTrack){ try{ p.sender.replaceTrack(micTrack); }catch(_){} } });
+}
+function directTo(id){                 // mute everyone except `id`
+  Object.keys(peers).forEach(oid=>{ const p=peers[oid]; if(!p||!p.sender)return; try{ p.sender.replaceTrack(oid===id?micTrack:null); }catch(_){} });
 }
 function startTalk(e){
   if(e)e.preventDefault();
   if(!joined||transmitting)return;
   transmitting=true;
   if(audioCtx&&audioCtx.state==='suspended')audioCtx.resume();
-  if(micTrack)micTrack.enabled=true;
-  applyDirected(true);
+  if(target==='all') ensureAllSenders(); else directTo(target);
+  if(micTrack)micTrack.enabled=true;          // un-mute -> audio flows
   if(myMemRef)myMemRef.update({talking:true});
   $('ptt').classList.add('live'); $('ptt-label').textContent='TALKING…';
   $('sig').classList.add('on'); $('led-red').classList.add('on');
@@ -413,8 +462,8 @@ function stopTalk(e){
   if(e)e.preventDefault();
   if(!transmitting)return;
   transmitting=false;
-  if(micTrack)micTrack.enabled=false;
-  applyDirected(false);
+  if(micTrack)micTrack.enabled=false;         // mute
+  ensureAllSenders();                          // restore senders for the next transmission
   if(myMemRef)myMemRef.update({talking:false});
   $('ptt').classList.remove('live'); $('ptt-label').textContent='HOLD TO TALK';
   $('sig').classList.remove('on'); $('led-red').classList.remove('on');
@@ -479,7 +528,7 @@ function renderMembers(mem){
     let stat;
     if(m.talking) stat='<span class="wave"><span></span><span></span><span></span></span>';
     else if(you) stat='<span class="mstat">You'+(isHost?' · host':'')+'</span>';
-    else{ const p=peers[oid]; stat='<span class="mstat">'+(p&&p.state==='connected'?'Online':'Connecting…')+'</span>'; }
+    else{ const p=peers[oid]; const st=p?p.state:'…'; stat='<span class="mstat">'+(st==='connected'?'🔊 Online':st==='failed'?'⚠ No route':'Connecting…')+'</span>'; }
     const kick=(isHost&&!you)?'<button class="kick" title="Remove" onclick="kick(\''+oid+'\')">✕</button>':'';
     row.innerHTML='<div class="avatar">'+esc(initial)+'<span class="odot"></span></div>'+
       '<div class="mname">'+esc(m.name||'?')+(you?' (you)':'')+(m.host&&!you?' 👑':'')+'</div>'+stat+kick;
