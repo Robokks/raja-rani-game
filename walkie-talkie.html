@@ -450,7 +450,11 @@ function createPeer(oid,name,isOfferer){
     peer._wd=0; (function watch(){ setTimeout(()=>{ const p=peers[oid]; if(!p||p!==peer)return;
       const st=pc.connectionState;
       if(st==='connected'||st==='closed')return;                       // done → stop watching
-      if(st!=='connecting'&&peer._wd<3){ peer._wd++; sendOffer(st==='failed'||st==='disconnected'); }
+      // Re-offer when the answer never came back (no remoteDescription) or the
+      // link broke — NOT while a healthy handshake is just finishing ICE
+      // (remoteDescription set + still connecting). Covers dropped offer OR answer.
+      const noAnswer=!pc.remoteDescription;
+      if((noAnswer||st==='failed'||st==='disconnected')&&peer._wd<4){ peer._wd++; sendOffer(st==='failed'||st==='disconnected'); }
       watch();                                                          // keep watching until connected
     },4500); })();
   }
