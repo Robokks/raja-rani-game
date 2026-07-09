@@ -233,27 +233,50 @@ input.code{width:100%;text-transform:uppercase;letter-spacing:8px;text-align:cen
    ═══════════════════════════════════════════════════════════════════ */
 const FB={apiKey:"AIzaSyAQ0l788yLKmfWIJ6Ok88k2TcwdD6XA1n4",databaseURL:"https://raja-rani-game-ffecd-default-rtdb.asia-southeast1.firebasedatabase.app"};
 
-/* ═══════════════ TURN relay — REQUIRED for two phones on DIFFERENT networks ═══════════════
-   Same Wi-Fi works with STUN alone. Across mobile/different networks a TURN
-   relay is mandatory. Get a FREE one (20GB/mo) at https://metered.ca/tools/openrelay
-   → sign up → copy your credentials here. Fill username/credential + your subdomain. */
+/* ═══════════════ ICE servers (STUN + optional TURN) ═══════════════
+   STUN lets two phones find a DIRECT path — works on same Wi-Fi and most
+   different-network pairs. The STUN list below is auto-refreshed at join time
+   from the community-maintained, hourly-updated always-online-stun project
+   (https://github.com/pradt2/always-online-stun) — free, no login. The
+   hardcoded STUN_FALLBACK is always used if that fetch fails or is offline.
+
+   TURN is still REQUIRED for strict/symmetric NATs (some mobile carriers,
+   corporate/campus Wi-Fi) where no direct path exists and audio must be
+   relayed. Get a FREE relay (20GB/mo) at https://metered.ca/tools/openrelay
+   → sign up → fill host/username/credential below. Leave '' to disable TURN. */
 const TURN = {
-  // e.g. 'yourname' from turn:yourname.relay.metered.ca — leave '' to disable TURN
   host: '',                 // <-- your metered subdomain (before .relay.metered.ca)
   username: '',             // <-- your metered TURN username
   credential: ''            // <-- your metered TURN credential
 };
-const ICE={iceServers:[
-  {urls:'stun:stun.l.google.com:19302'},
-  {urls:'stun:stun1.l.google.com:19302'},
-  {urls:'stun:stun.cloudflare.com:3478'},
-  ...(TURN.host&&TURN.username ? [
+const STUN_FALLBACK=[
+  'stun:stun.l.google.com:19302',
+  'stun:stun1.l.google.com:19302',
+  'stun:stun.cloudflare.com:3478'
+];
+function turnServers(){
+  return (TURN.host&&TURN.username) ? [
     {urls:'turn:'+TURN.host+'.relay.metered.ca:80',username:TURN.username,credential:TURN.credential},
     {urls:'turn:'+TURN.host+'.relay.metered.ca:80?transport=tcp',username:TURN.username,credential:TURN.credential},
     {urls:'turn:'+TURN.host+'.relay.metered.ca:443',username:TURN.username,credential:TURN.credential},
     {urls:'turns:'+TURN.host+'.relay.metered.ca:443?transport=tcp',username:TURN.username,credential:TURN.credential},
-  ] : [])
-]};
+  ] : [];
+}
+let ICE={iceServers:[...STUN_FALLBACK.map(u=>({urls:u})), ...turnServers()]};
+
+/* Best-effort refresh of the STUN list from always-online-stun. Never throws,
+   never hangs a join: capped at ~1.5s, silently keeps the fallback on failure. */
+async function refreshStun(){
+  try{
+    const ctrl=new AbortController();
+    const to=setTimeout(()=>ctrl.abort(),1500);
+    const r=await fetch('https://raw.githubusercontent.com/pradt2/always-online-stun/master/valid_hosts.txt',{cache:'no-store',signal:ctrl.signal});
+    clearTimeout(to);
+    if(!r.ok)return;
+    const hosts=(await r.text()).split('\n').map(s=>s.trim()).filter(Boolean).slice(0,3);
+    if(hosts.length){ ICE={iceServers:[...hosts.map(h=>({urls:'stun:'+h})), ...turnServers()]}; }
+  }catch(_){ /* offline / blocked / timeout → keep STUN_FALLBACK */ }
+}
 const CALL_ADJ=['Falcon','Bravo','Cobra','Eagle','Tango','Viper','Ghost','Ranger','Delta','Hawk','Wolf','Nova','Echo','Rhino','Zulu','Comet'];
 const $=id=>document.getElementById(id);
 const MAX=6;
@@ -299,7 +322,7 @@ async function getMic(){
 }
 
 // ── Create / join ───────────────────────────────────────────────────────────────
-async function createChannel(){ if(!initFB())return; if(!await getMic())return; code=randCode(); isHost=true; await enterChannel(); }
+async function createChannel(){ if(!initFB())return; if(!await getMic())return; await refreshStun(); code=randCode(); isHost=true; await enterChannel(); }
 async function joinChannel(){
   const c=($('wt-code').value||'').trim().toUpperCase();
   if(c.length!==4){$('home-err').textContent='Enter the 4-letter code.';return;}
@@ -309,6 +332,7 @@ async function joinChannel(){
   if(Object.keys(mem).length===0){$('home-err').textContent='Channel not found.';return;}
   if(Object.keys(mem).length>=MAX){$('home-err').textContent='Channel is full (6 max).';return;}
   if(!await getMic())return;
+  await refreshStun();
   code=c; isHost=false; await enterChannel();
 }
 window.createChannel=createChannel;window.joinChannel=joinChannel;
