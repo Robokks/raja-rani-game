@@ -89,9 +89,49 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
 .mode-tabs{display:flex;gap:6px;margin-bottom:16px;}
 .mode-tab{flex:1;padding:10px 4px;font-family:inherit;font-size:13px;font-weight:800;border:2px solid rgba(58,42,24,.25);border-radius:10px;background:transparent;color:var(--ink);cursor:pointer;opacity:.5;transition:opacity .15s,background .15s;}
 .mode-tab.on{opacity:1;background:var(--ink);color:var(--kraft);border-color:var(--ink);}
+
+/* ═══════════ PREMIUM WARM POLISH (elevated classic board-game feel) ═══════════ */
+#dust-bg{position:fixed;inset:0;z-index:0;pointer-events:none;}
+.screen{position:relative;z-index:1;}
+.game-panel,.sl-players{position:relative;z-index:1;}
+
+/* Panels: warmer paper with soft inner glow + deeper drop */
+.panel,.game-panel{
+  background:linear-gradient(180deg,#fffdf6,#fbf2dd);
+  box-shadow:0 8px 0 rgba(58,42,24,.18),0 16px 34px rgba(58,42,24,.28),inset 0 1px 0 rgba(255,255,255,.7);
+}
+
+/* Buttons: glossy top sheen + warm glow, keep the tactile cardboard press */
+.btn{position:relative;overflow:hidden;background:linear-gradient(180deg,#ef6255,#d0362c);box-shadow:0 6px 0 #a02b22,0 10px 18px rgba(208,54,44,.35),inset 0 1px 0 rgba(255,255,255,.35);}
+.btn::after{content:"";position:absolute;top:0;left:0;right:0;height:45%;background:linear-gradient(180deg,rgba(255,255,255,.28),transparent);pointer-events:none;}
+.btn:active{box-shadow:0 1px 0 #a02b22,inset 0 1px 0 rgba(255,255,255,.25);}
+.btn.green{background:linear-gradient(180deg,#3fd07d,#1f9e54);box-shadow:0 6px 0 #167a3f,0 10px 18px rgba(31,158,84,.35),inset 0 1px 0 rgba(255,255,255,.4);}
+.btn.green:active{box-shadow:0 1px 0 #167a3f;}
+.btn.blue{background:linear-gradient(180deg,#3fa2e0,#1f79b8);box-shadow:0 6px 0 #185d8c,0 10px 18px rgba(31,121,184,.35),inset 0 1px 0 rgba(255,255,255,.4);}
+.btn.blue:active{box-shadow:0 1px 0 #185d8c;}
+
+/* Board: rich wooden double-frame + felt depth + strong drop shadow */
+#sl-board{
+  border:3px solid #6b4a2a;
+  box-shadow:0 0 0 3px #8a5e34,0 14px 34px rgba(58,42,24,.45),inset 0 0 0 1px rgba(255,255,255,.4);
+  border-radius:8px;
+}
+
+/* Dice: seated on a soft shadow, springy */
+.dice-face{filter:drop-shadow(0 4px 5px rgba(58,42,24,.35));}
+
+/* Active player row: warm gold glow */
+.sl-prow.active-p{box-shadow:0 2px 0 var(--shadow),0 0 16px rgba(212,154,42,.3);background:linear-gradient(180deg,#fffdf6,#fdf4df);}
+
+/* Mode tabs: active gets a warm glow */
+.mode-tab.on{box-shadow:0 4px 12px rgba(58,42,24,.3),inset 0 1px 0 rgba(255,255,255,.15);}
+
+/* Roomcode: embossed */
+.roomcode{box-shadow:inset 0 2px 6px rgba(58,42,24,.2),0 1px 0 rgba(255,255,255,.6);}
 </style>
 </head>
 <body>
+<canvas id="dust-bg"></canvas>
 <div id="conn-banner">Connection lost — reconnecting…</div>
 
 <!-- HOME -->
@@ -207,6 +247,29 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script>
+/* warm floating dust motes — cozy premium ambience */
+(function(){
+  const cv=document.getElementById('dust-bg'); if(!cv)return;
+  if(window.matchMedia&&matchMedia('(prefers-reduced-motion:reduce)').matches)return;
+  const cx=cv.getContext('2d'); let W,H;
+  function rs(){W=cv.width=innerWidth;H=cv.height=innerHeight;}
+  rs(); addEventListener('resize',rs);
+  const P=Array.from({length:38},()=>mk({},true));
+  function mk(p,init){p.x=Math.random()*innerWidth;p.y=init?Math.random()*innerHeight:innerHeight+8;p.r=1+Math.random()*2.4;p.vy=-(.12+Math.random()*.4);p.vx=(Math.random()-.5)*.25;p.a=.15+Math.random()*.4;p.t=Math.random()*6.28;return p;}
+  (function loop(){
+    cx.clearRect(0,0,W,H);
+    for(const p of P){
+      p.y+=p.vy; p.x+=p.vx+Math.sin(p.t)*.2; p.t+=.015;
+      if(p.y<-8)mk(p);
+      cx.beginPath(); cx.arc(p.x,p.y,p.r,0,6.28);
+      cx.fillStyle='rgba(212,154,42,'+p.a+')';
+      cx.shadowColor='rgba(255,220,150,.7)'; cx.shadowBlur=6; cx.fill();
+    }
+    cx.shadowBlur=0; requestAnimationFrame(loop);
+  })();
+})();
+</script>
 <script>
 const SS_KEY='sl-room';
 const _FBCFG={apiKey:"AIzaSyAQ0l788yLKmfWIJ6Ok88k2TcwdD6XA1n4",databaseURL:"https://raja-rani-game-ffecd-default-rtdb.asia-southeast1.firebasedatabase.app"};
