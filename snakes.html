@@ -550,21 +550,80 @@ function buildBoard(){
 }
 buildBoard();
 
+// ── Animated tokens: persistent per-player pieces that hop the path,
+//    slide down snakes / up ladders, and bounce on landing ──
+const _tok={};                 // pid -> {g, circle, txt, pos}
+let _boardAnim=false;
+const _reduceMotion = window.matchMedia && matchMedia('(prefers-reduced-motion:reduce)').matches;
+function _placeG(g,x,y){ g.setAttribute('transform','translate('+x+' '+y+')'); }
+function _tokenOffset(s,p){
+  const same=(s.players||[]).filter(pp=>pp.pos===p.pos);
+  const idx=same.findIndex(pp=>pp.id===p.id);
+  return (idx-(same.length-1)/2)*3.0;
+}
+function _ensureToken(svg,p,i){
+  let t=_tok[p.id];
+  const color=PCOLORS[p.colorIdx]||PCOLORS[i%4];
+  if(!t){
+    const g=svgEl('g',{class:'sl-token'});
+    const halo=svgEl('circle',{r:4.6,cx:0,cy:0,fill:color,opacity:0.28});
+    const c=svgEl('circle',{r:3.8,cx:0,cy:0,fill:color,stroke:'#fff','stroke-width':0.9});
+    c.style.filter='drop-shadow(0 1px 1px rgba(0,0,0,.35))';
+    const txt=svgEl('text',{x:0,y:1.4,'text-anchor':'middle','font-size':'4','font-weight':'800',fill:'#fff'});
+    txt.textContent=(p.name||'?')[0].toUpperCase();
+    g.appendChild(halo); g.appendChild(c); g.appendChild(txt);
+    svg.appendChild(g);
+    t=_tok[p.id]={g,c,halo,txt};
+  }
+  t.c.setAttribute('fill',color); t.halo.setAttribute('fill',color);
+  t.txt.textContent=(p.name||'?')[0].toUpperCase();
+  return t;
+}
+function _tween(dur,onU,onDone){
+  const t0=performance.now();
+  (function f(now){ let u=Math.min(1,(now-t0)/dur); onU(u); if(u<1)requestAnimationFrame(f); else onDone&&onDone(); })(performance.now());
+}
+function _hopSeq(from,dice){
+  const seq=[]; let pos=from||0,dir=1;
+  for(let k=0;k<(dice||0);k++){ if(pos+dir>100)dir=-1; if(pos+dir<1)dir=1; pos+=dir; seq.push(pos); }
+  return seq;
+}
+function _landPulse(t){
+  try{ t.c.animate([{transform:'scale(1)'},{transform:'scale(1.55)'},{transform:'scale(1)'}],{duration:320,easing:'cubic-bezier(.34,1.56,.64,1)'});
+       t.halo.animate([{opacity:.5,transform:'scale(1)'},{opacity:0,transform:'scale(2.4)'}],{duration:420,easing:'ease-out'}); }catch(_){}
+}
+function _animateHop(t,lm,ox){
+  _boardAnim=true;
+  const seq=_hopSeq(lm.from,lm.dice);
+  const stepDur=Math.max(55,Math.min(150,320/Math.max(seq.length,1)));
+  let k=0;
+  (function step(){
+    if(k>=seq.length){
+      if(lm.final!==lm.landed){ // snake or ladder slide
+        const a=getCellPos(lm.landed),b=getCellPos(lm.final);
+        playSound&&0;
+        _tween(520,(u)=>{ const e=u<.5?2*u*u:1-Math.pow(-2*u+2,2)/2; _placeG(t.g,a.x+(b.x-a.x)*e+ox,a.y+(b.y-a.y)*e); },finish);
+      } else finish();
+      return;
+    }
+    const from=getCellPos(k===0?lm.from:seq[k-1]), to=getCellPos(seq[k]);
+    _tween(stepDur,(u)=>{ _placeG(t.g, from.x+(to.x-from.x)*u+ox, from.y+(to.y-from.y)*u - Math.sin(u*Math.PI)*4.5); },()=>{ k++; step(); });
+  })();
+  function finish(){ const f=getCellPos(lm.final); _placeG(t.g,f.x+ox,f.y); _landPulse(t); _boardAnim=false; }
+}
 function renderBoard(s){
   const svg=$('sl-board').querySelector('svg.sl-overlay'); if(!svg) return;
-  svg.querySelectorAll('.sl-token').forEach(e=>e.remove());
+  Object.keys(_tok).forEach(pid=>{ if(!(s.players||[]).some(p=>p.id===pid)){ _tok[pid].g.remove(); delete _tok[pid]; } });
+  const lm=s.lastMove;
   (s.players||[]).forEach((p,i)=>{
-    if(p.pos<1||p.pos>100) return;
-    const{x,y}=getCellPos(p.pos);
-    const color=PCOLORS[p.colorIdx]||PCOLORS[i%4];
-    const samePos=(s.players||[]).filter(pp=>pp.pos===p.pos);
-    const idx=samePos.findIndex(pp=>pp.id===p.id);
-    const ox=(idx-(samePos.length-1)/2)*3.0;
-    const g=svgEl('g',{class:'sl-token'});
-    svgCircle(g,x+ox,y,3.8,color,'white',0.9);
-    const txt=svgEl('text',{x:x+ox,y:y+1.4,'text-anchor':'middle','font-size':'4','font-weight':'800',fill:'white'});
-    txt.textContent=(p.name||'?')[0].toUpperCase();
-    g.appendChild(txt); svg.appendChild(g);
+    const t=_ensureToken(svg,p,i);
+    const ox=_tokenOffset(s,p);
+    t.g.style.opacity=(p.pos<1||p.pos>100)?'0':'1';
+    const target=getCellPos(Math.min(100,Math.max(1,p.pos||1)));
+    const isMover = lm && lm.playerId===p.id && t.pos!==undefined && t.pos!==p.pos;
+    if(isMover && !_boardAnim && !_reduceMotion){ _animateHop(t,lm,ox); }
+    else if(!_boardAnim){ _placeG(t.g,target.x+ox,target.y); }
+    t.pos=p.pos;
   });
 }
 
@@ -641,6 +700,7 @@ function renderGame(s){
   const cp2=$('chat-panel'); if(cp2) cp2.style.display=LOCAL?'none':'block';
 }
 
+let _confettiShown=false;
 function renderOver(s){
   sessionStorage.removeItem(SS_KEY);
   const w=s.players&&s.players.find(p=>p.id===s.winner);
@@ -650,6 +710,22 @@ function renderOver(s){
   $('btn-playagain').style.display=isHost()?'block':'none';
   $('over-wait').style.display=isHost()?'none':'flex';
   const cp=$('chat-panel'); if(cp) cp.style.display='none';
+  if(w&&!_confettiShown&&!_reduceMotion){ _confettiShown=true; launchConfetti(); }
+  if(!w) _confettiShown=false;
+}
+function launchConfetti(){
+  let cv=document.getElementById('confetti-cv');
+  if(!cv){ cv=document.createElement('canvas'); cv.id='confetti-cv'; cv.style.cssText='position:fixed;inset:0;pointer-events:none;z-index:9999'; document.body.appendChild(cv); }
+  cv.width=innerWidth; cv.height=innerHeight;
+  const cx=cv.getContext('2d');
+  const COLS=['#e74c3c','#3498db','#2ecc71','#f0b429','#9b59b6','#e67e22','#fff'];
+  const ps=Array.from({length:160},()=>({x:innerWidth/2+(Math.random()-.5)*80,y:innerHeight*0.32,vx:(Math.random()-.5)*11,vy:-6-Math.random()*11,r:4+Math.random()*5,c:COLS[~~(Math.random()*COLS.length)],a:Math.random()*6.28,va:(Math.random()-.5)*.4}));
+  let f=0;
+  (function loop(){ f++; cx.clearRect(0,0,cv.width,cv.height);
+    for(const p of ps){ p.x+=p.vx; p.y+=p.vy; p.vy+=0.32; p.vx*=0.99; p.a+=p.va;
+      cx.save(); cx.translate(p.x,p.y); cx.rotate(p.a); cx.fillStyle=p.c; cx.fillRect(-p.r,-p.r*.6,p.r*2,p.r*1.2); cx.restore(); }
+    if(f<240)requestAnimationFrame(loop); else cx.clearRect(0,0,cv.width,cv.height);
+  })();
 }
 
 function render(){
