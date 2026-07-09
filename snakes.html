@@ -589,29 +589,76 @@ function svgEl(tag,attrs){ const el=document.createElementNS('http://www.w3.org/
 function svgLine(svg,x1,y1,x2,y2,color,w){ svg.appendChild(svgEl('line',{x1,y1,x2,y2,stroke:color,'stroke-width':w,'stroke-linecap':'round'})); }
 function svgCircle(parent,cx,cy,r,fill,stroke,sw){ const attrs={cx,cy,r,fill}; if(stroke){attrs.stroke=stroke;attrs['stroke-width']=sw||0.5;} parent.appendChild(svgEl('circle',attrs)); }
 
+// ── Illustrated jungle snakes & ladders ─────────────────────────────────────
+function _shade(hex,p){                 // p>0 lighten toward white, p<0 darken toward black
+  const n=parseInt(hex.slice(1),16); let r=(n>>16)&255,g=(n>>8)&255,b=n&255;
+  const to=p<0?0:255,a=Math.abs(p);
+  r=Math.round((to-r)*a)+r; g=Math.round((to-g)*a)+g; b=Math.round((to-b)*a)+b;
+  return '#'+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1);
+}
+function _path(svg,d,attrs){ svg.appendChild(svgEl('path',Object.assign({d,fill:'none','stroke-linecap':'round','stroke-linejoin':'round'},attrs))); }
+
+function _slDefs(svg){
+  const defs=svgEl('defs',{});
+  defs.innerHTML='<filter id="slSh" x="-30%" y="-30%" width="160%" height="160%">'+
+    '<feDropShadow dx="0" dy="0.5" stdDeviation="0.6" flood-color="#000" flood-opacity="0.35"/></filter>';
+  svg.appendChild(defs);
+}
+
 function drawLadder(svg,from,to){
   const b=getCellPos(from),t=getCellPos(to);
-  const dx=t.x-b.x,dy=t.y-b.y,len=Math.sqrt(dx*dx+dy*dy);
-  const nx=-dy/len*1.5,ny=dx/len*1.5;
-  svgLine(svg,b.x-nx,b.y-ny,t.x-nx,t.y-ny,'#8B4513',1.1);
-  svgLine(svg,b.x+nx,b.y+ny,t.x+nx,t.y+ny,'#8B4513',1.1);
-  for(let frac=0.12;frac<0.92;frac+=0.14){ const rx=b.x+dx*frac,ry=b.y+dy*frac; svgLine(svg,rx-nx,ry-ny,rx+nx,ry+ny,'#D2691E',1.0); }
+  const dx=t.x-b.x,dy=t.y-b.y,len=Math.sqrt(dx*dx+dy*dy)||1;
+  const nx=-dy/len*1.8,ny=dx/len*1.8;                 // rail half-spacing
+  const g=svgEl('g',{filter:'url(#slSh)'}); svg.appendChild(g);
+  [-1,1].forEach(s=>{                                  // two bevelled wooden rails
+    const x1=b.x+nx*s,y1=b.y+ny*s,x2=t.x+nx*s,y2=t.y+ny*s;
+    svgLine(g,x1,y1,x2,y2,'#4a2a0c',2.4);
+    svgLine(g,x1,y1,x2,y2,'#b9762f',1.5);
+    svgLine(g,x1,y1,x2,y2,'#f0c27b',0.5);
+  });
+  for(let frac=0.10;frac<0.93;frac+=0.135){            // carved rungs
+    const rx=b.x+dx*frac,ry=b.y+dy*frac;
+    svgLine(g,rx-nx,ry-ny,rx+nx,ry+ny,'#4a2a0c',2.0);
+    svgLine(g,rx-nx,ry-ny,rx+nx,ry+ny,'#cf8b3c',1.2);
+    svgLine(g,rx-nx,ry-ny,rx+nx,ry+ny,'#f4cd8a',0.42);
+  }
 }
 
 function drawSnake(svg,head,tail,color){
   const h=getCellPos(head),t=getCellPos(tail);
-  const dx=t.x-h.x,dy=t.y-h.y,len=Math.sqrt(dx*dx+dy*dy);
-  const nx=-dy/len,ny=dx/len;
-  const off=Math.min(len*0.45,20);
+  const dx=t.x-h.x,dy=t.y-h.y,len=Math.sqrt(dx*dx+dy*dy)||1;
+  const ux=dx/len,uy=dy/len,nx=-uy,ny=ux;              // unit tangent / normal
+  const off=Math.min(len*0.42,18);
   const c1={x:h.x+dx*0.3+nx*off,y:h.y+dy*0.3+ny*off};
   const c2={x:h.x+dx*0.7-nx*off,y:h.y+dy*0.7-ny*off};
-  svg.appendChild(svgEl('path',{d:`M${h.x},${h.y} C${c1.x},${c1.y} ${c2.x},${c2.y} ${t.x},${t.y}`,stroke:'rgba(0,0,0,.25)','stroke-width':'5','fill':'none','stroke-linecap':'round'}));
-  svg.appendChild(svgEl('path',{d:`M${h.x},${h.y} C${c1.x},${c1.y} ${c2.x},${c2.y} ${t.x},${t.y}`,stroke:color,'stroke-width':'3.8','fill':'none','stroke-linecap':'round'}));
-  svgCircle(svg,h.x,h.y,3.2,color,'rgba(0,0,0,.3)',0.5);
-  const ex=-dx/len*0.8,ey=-dy/len*0.8;
-  svgCircle(svg,h.x+nx*1.3+ex,h.y+ny*1.3+ey,0.75,'white');
-  svgCircle(svg,h.x-nx*1.3+ex,h.y-ny*1.3+ey,0.75,'white');
-  svgCircle(svg,t.x,t.y,1.3,color,'white',0.4);
+  const d=`M${h.x},${h.y} C${c1.x},${c1.y} ${c2.x},${c2.y} ${t.x},${t.y}`;
+  const gid='sg'+head+'_'+tail;
+  const grad=svgEl('linearGradient',{id:gid,gradientUnits:'userSpaceOnUse',x1:0,y1:Math.min(h.y,t.y)-4,x2:0,y2:Math.max(h.y,t.y)+4});
+  [['0',_shade(color,.4)],['0.5',color],['1',_shade(color,-.3)]].forEach(([o,c])=>grad.appendChild(svgEl('stop',{offset:o,'stop-color':c})));
+  svg.appendChild(grad);
+
+  const g=svgEl('g',{filter:'url(#slSh)'}); svg.appendChild(g);
+  _path(g,d,{stroke:_shade(color,-.45),'stroke-width':5.6});                     // cartoon outline
+  _path(g,d,{stroke:'url(#'+gid+')','stroke-width':4.4});                        // glossy body
+  _path(g,d,{stroke:'rgba(255,255,255,.55)','stroke-width':1.1,transform:'translate('+(nx*0.9).toFixed(2)+' '+(ny*0.9-0.4).toFixed(2)+')'}); // top sheen
+  _path(g,d,{stroke:'rgba(255,255,255,.28)','stroke-width':2.2,'stroke-dasharray':'0.5 2.4'});  // scale texture
+
+  // ── head with big cartoon eyes + flicking forked tongue ──
+  const rh=3.4, ex=-ux,ey=-uy, mx=h.x+ex*rh,my=h.y+ey*rh;
+  const hd=svgEl('g',{});
+  svgCircle(hd,h.x,h.y,rh,'url(#'+gid+')',_shade(color,-.45),0.6);
+  const tipx=mx+ex*2.4,tipy=my+ey*2.4;
+  _path(hd,`M${mx},${my} L${tipx},${tipy}`,{stroke:'#e23b4e','stroke-width':0.7});
+  _path(hd,`M${tipx},${tipy} L${(tipx+ex*0.9+nx*0.8).toFixed(2)},${(tipy+ey*0.9+ny*0.8).toFixed(2)}`,{stroke:'#e23b4e','stroke-width':0.6});
+  _path(hd,`M${tipx},${tipy} L${(tipx+ex*0.9-nx*0.8).toFixed(2)},${(tipy+ey*0.9-ny*0.8).toFixed(2)}`,{stroke:'#e23b4e','stroke-width':0.6});
+  [1,-1].forEach(s=>{
+    const cx=h.x+nx*1.35*s+ex*0.4, cy=h.y+ny*1.35*s+ey*0.4;
+    svgCircle(hd,cx,cy,1.15,'#fff','#2a1a12',0.35);
+    svgCircle(hd,cx+ex*0.25,cy+ey*0.25,0.55,'#1a1a1a');
+    svgCircle(hd,cx+ex*0.25-0.25,cy+ey*0.25-0.3,0.2,'#fff');
+  });
+  g.appendChild(hd);
+  svgCircle(g,t.x,t.y,1.0,_shade(color,-.2));           // tapered tail tip
 }
 
 function drawSnakesLadders(){
@@ -619,6 +666,7 @@ function drawSnakesLadders(){
   const old=board.querySelector('svg.sl-overlay'); if(old) old.remove();
   const svg=svgEl('svg',{class:'sl-overlay',viewBox:'0 0 100 100',preserveAspectRatio:'none'});
   svg.style.cssText='position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;';
+  _slDefs(svg);
   Object.entries(LADDERS).forEach(([from,to])=>drawLadder(svg,+from,+to));
   Object.entries(SNAKES).forEach(([head,tail],i)=>drawSnake(svg,+head,+tail,SNAKE_COLORS[i%SNAKE_COLORS.length]));
   board.appendChild(svg);
