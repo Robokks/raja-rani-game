@@ -52,12 +52,24 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
 .cell-tokens{display:flex;flex-wrap:wrap;gap:1px;justify-content:center;margin-top:auto;}
 .game-panel{background:var(--paper);border-radius:6px;box-shadow:0 4px 0 var(--shadow);padding:12px 16px;margin-top:8px;width:100%;max-width:480px;}
 .dice-row{display:flex;align-items:center;justify-content:center;gap:14px;}
-.dice-face{font-size:50px;line-height:1;cursor:pointer;transition:transform .12s;display:block;}
-.dice-face:active{transform:scale(.88);}
-@keyframes diceShake{0%{transform:rotate(-20deg)scale(1.3);}25%{transform:rotate(14deg)scale(.92);}50%{transform:rotate(-10deg)scale(1.15);}75%{transform:rotate(7deg)scale(.97);}100%{transform:rotate(0)scale(1);}}
-@keyframes diceLand{0%{transform:scale(1.5);}60%{transform:scale(.9);}100%{transform:scale(1);}}
-.dice-face.rolling{animation:diceShake .1s ease-in-out infinite;cursor:default;}
-.dice-face.dice-land{animation:diceLand .3s cubic-bezier(.34,1.56,.64,1) forwards;}
+/* ── 3D dice you throw & roll ── */
+.dice3d-scene{width:58px;height:58px;perspective:440px;cursor:pointer;flex-shrink:0;position:relative;}
+.dice3d-tilt{width:58px;height:58px;position:relative;transform-style:preserve-3d;transform:rotateX(-26deg) rotateY(-24deg);}
+.dice3d{width:58px;height:58px;position:relative;transform-style:preserve-3d;transform:rotateX(0deg) rotateY(0deg);transition:transform 1.05s cubic-bezier(.15,.75,.28,1);}
+.dice3d-tilt.throwing{animation:diceThrow 1.05s ease-in-out;}
+@keyframes diceThrow{0%{margin-top:0}22%{margin-top:-34px}45%{margin-top:-10px}62%{margin-top:-20px}80%{margin-top:-2px}100%{margin-top:0}}
+.dice-shadow{position:absolute;left:9px;bottom:-8px;width:40px;height:10px;border-radius:50%;background:radial-gradient(ellipse,rgba(58,42,24,.4),transparent 70%);transition:transform .3s;}
+.df{position:absolute;width:58px;height:58px;border-radius:13px;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);padding:8px;box-sizing:border-box;backface-visibility:hidden;
+  background:linear-gradient(150deg,#fffdf7,#efe2c6);border:1.5px solid rgba(120,90,50,.35);
+  box-shadow:inset 0 0 10px rgba(120,90,50,.18),inset 0 2px 2px rgba(255,255,255,.7);}
+.df .cell{display:flex;align-items:center;justify-content:center;}
+.pip{width:11px;height:11px;border-radius:50%;background:radial-gradient(circle at 35% 32%,#7a5330,#2c1c0d);box-shadow:inset 0 1px 1px rgba(255,255,255,.25),0 1px 1px rgba(0,0,0,.2);}
+.df.f1{transform:translateZ(29px)}
+.df.f6{transform:rotateX(180deg) translateZ(29px)}
+.df.f3{transform:rotateX(90deg) translateZ(29px)}
+.df.f4{transform:rotateX(-90deg) translateZ(29px)}
+.df.f5{transform:rotateY(90deg) translateZ(29px)}
+.df.f2{transform:rotateY(-90deg) translateZ(29px)}
 .turn-msg{font-weight:800;font-size:15px;flex:1;text-align:center;line-height:1.3;}
 .move-msg{text-align:center;font-family:'Catamaran';font-size:13px;font-weight:700;min-height:20px;margin-top:8px;opacity:.8;}
 .roll-btn{margin-top:10px;padding:12px 0;font-size:17px;}
@@ -118,7 +130,7 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
 }
 
 /* Dice: seated on a soft shadow, springy */
-.dice-face{filter:drop-shadow(0 4px 5px rgba(58,42,24,.35));}
+.dice3d-scene{filter:drop-shadow(0 5px 6px rgba(58,42,24,.3));}
 
 /* Active player row: warm gold glow */
 .sl-prow.active-p{box-shadow:0 2px 0 var(--shadow),0 0 16px rgba(212,154,42,.3);background:linear-gradient(180deg,#fffdf6,#fdf4df);}
@@ -215,7 +227,7 @@ input.code{text-transform:uppercase;letter-spacing:6px;text-align:center;font-si
   <div id="sl-board"></div>
   <div class="game-panel">
     <div class="dice-row">
-      <div class="dice-face" id="dice-face" onclick="rollDice()">⚀</div>
+      <div class="dice3d-scene" id="dice-scene" onclick="rollDice()"><div class="dice3d-tilt"><div class="dice3d" id="dice3d"></div></div><div class="dice-shadow"></div></div>
       <div class="turn-msg" id="turn-msg">—</div>
     </div>
     <div class="move-msg" id="move-msg"></div>
@@ -510,22 +522,35 @@ function rollDice(){
   if(!isMyTurn()||!state||state.phase!=='play'||busy||animating) return;
   performRoll();
 }
+// ── 3D dice engine ──
+const PIPS={1:[4],2:[0,8],3:[0,4,8],4:[0,2,6,8],5:[0,2,4,6,8],6:[0,2,3,5,6,8]};
+const DICE_ROT={1:[0,0],2:[0,90],3:[-90,0],4:[90,0],5:[0,-90],6:[180,0]};
+let _diceSpins=0, _diceBuilt=false;
+function buildDice(){
+  const d=$('dice3d'); if(!d||_diceBuilt)return; _diceBuilt=true;
+  for(let f=1;f<=6;f++){
+    const face=document.createElement('div'); face.className='df f'+f;
+    for(let i=0;i<9;i++){ const cell=document.createElement('div'); cell.className='cell'; if(PIPS[f].includes(i)){const p=document.createElement('div');p.className='pip';cell.appendChild(p);} face.appendChild(cell); }
+    d.appendChild(face);
+  }
+  diceOrient(1,false);
+}
+function diceOrient(v,animate){
+  const d=$('dice3d'); if(!d)return;
+  const [rx,ry]=DICE_ROT[v]||[0,0];
+  if(animate){ _diceSpins+=4; d.style.transform='rotateX('+(360*_diceSpins+rx)+'deg) rotateY('+(360*_diceSpins+ry)+'deg)'; }
+  else { d.style.transition='none'; d.style.transform='rotateX('+rx+'deg) rotateY('+ry+'deg)'; void d.offsetWidth; d.style.transition=''; }
+}
 function performRoll(){
   if(!state||state.phase!=='play'||busy||animating) return;
   busy=true;
   const roll=Math.ceil(Math.random()*6);
-  const dEl=$('dice-face');
-  if(dEl){
-    animating=true; dEl.classList.remove('dice-land'); dEl.classList.add('rolling');
-    let elapsed=0;
-    const tick=setInterval(()=>{
-      dEl.textContent=FACES[Math.ceil(Math.random()*6)]; elapsed+=80;
-      if(elapsed>=720){
-        clearInterval(tick); dEl.classList.remove('rolling'); dEl.textContent=FACES[roll];
-        dEl.classList.add('dice-land');
-        setTimeout(()=>{ dEl.classList.remove('dice-land'); animating=false; doRoll(roll); },320);
-      }
-    },80);
+  const d=$('dice3d'), tilt=d&&d.parentElement;
+  if(d){
+    animating=true;
+    if(tilt){ tilt.classList.remove('throwing'); void tilt.offsetWidth; tilt.classList.add('throwing'); }
+    diceOrient(roll,true);
+    setTimeout(()=>{ if(tilt)tilt.classList.remove('throwing'); animating=false; doRoll(roll); },1080);
   } else { doRoll(roll); }
 }
 
@@ -615,6 +640,7 @@ function buildBoard(){
   drawSnakesLadders();
 }
 buildBoard();
+buildDice();
 
 // ── Animated tokens: persistent per-player pieces that hop the path,
 //    slide down snakes / up ladders, and bounce on landing ──
@@ -734,7 +760,7 @@ function renderLobby(s){
 
 function renderGame(s){
   renderBoard(s);
-  if(!animating){ const d=$('dice-face'); if(d) d.textContent=s.diceValue?FACES[s.diceValue]:'⚀'; }
+  if(!animating&&s.diceValue){ diceOrient(s.diceValue,false); }
   const cp=s.players&&s.players[s.currentTurnIdx];
   const tm=$('turn-msg');
   if(cp){
