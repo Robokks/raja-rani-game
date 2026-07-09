@@ -242,31 +242,23 @@ const FB={apiKey:"AIzaSyAQ0l788yLKmfWIJ6Ok88k2TcwdD6XA1n4",databaseURL:"https://
 
    TURN is still REQUIRED for strict/symmetric NATs (some mobile carriers,
    corporate/campus Wi-Fi) where no direct path exists and audio must be
-   relayed. This is wired for a SELF-HOSTED coturn server (no third-party
-   account). Put your server's public IP in `host`, and the username +
-   password you set in turnserver.conf. Leave host:'' to disable TURN.
-   If you later add a domain + TLS cert, set tls:true for TURNS on 5349. */
-const TURN = {
-  host: '',                 // <-- your coturn server public IP (e.g. '203.0.113.45')
-  username: '',             // <-- coturn username (user=NAME:PASSWORD in turnserver.conf)
-  credential: '',           // <-- coturn password
-  tls: false                // <-- true only if you set up a domain + Let's Encrypt cert
-};
+   relayed. Relay creds are SHORT-LIVED tokens minted server-side by the
+   Render app's /turn endpoint (coturn use-auth-secret / TURN REST), so NO
+   static password ships in this public page. The shared secret lives only
+   on the coturn box and as Render's TURN_SECRET env var. */
+const TURN_ENDPOINT='https://gamezone-race-server.onrender.com/turn';
 const STUN_FALLBACK=[
   'stun:stun.l.google.com:19302',
   'stun:stun1.l.google.com:19302',
   'stun:stun.cloudflare.com:3478'
 ];
-function turnServers(){
-  if(!(TURN.host&&TURN.username)) return [];
-  const list=[
-    {urls:'turn:'+TURN.host+':3478',username:TURN.username,credential:TURN.credential},
-    {urls:'turn:'+TURN.host+':3478?transport=tcp',username:TURN.username,credential:TURN.credential},
-  ];
-  if(TURN.tls) list.push({urls:'turns:'+TURN.host+':5349?transport=tcp',username:TURN.username,credential:TURN.credential});
-  return list;
-}
-let ICE={iceServers:[...STUN_FALLBACK.map(u=>({urls:u})), ...turnServers()]};
+let stunIce=STUN_FALLBACK.map(u=>({urls:u}));  // refreshed from always-online-stun
+let turnIce=[];                                 // ephemeral relay creds from /turn
+let ICE={iceServers:[...stunIce, ...turnIce]};
+function rebuildIce(){ ICE={iceServers:[...stunIce, ...turnIce]}; }
+
+// Wake the (free, sleeping) Render dyno early so /turn is fast at join time.
+try{ fetch(TURN_ENDPOINT.replace('/turn','/health'),{cache:'no-store'}).catch(()=>{}); }catch(_){}
 
 /* Best-effort refresh of the STUN list from always-online-stun. Never throws,
    never hangs a join: capped at ~1.5s, silently keeps the fallback on failure. */
@@ -278,8 +270,25 @@ async function refreshStun(){
     clearTimeout(to);
     if(!r.ok)return;
     const hosts=(await r.text()).split('\n').map(s=>s.trim()).filter(Boolean).slice(0,3);
-    if(hosts.length){ ICE={iceServers:[...hosts.map(h=>({urls:'stun:'+h})), ...turnServers()]}; }
+    if(hosts.length){ stunIce=hosts.map(h=>({urls:'stun:'+h})); rebuildIce(); }
   }catch(_){ /* offline / blocked / timeout → keep STUN_FALLBACK */ }
+}
+
+/* Fetch a short-lived TURN token from the server. Never throws, never hangs a
+   join: capped at ~6s (covers a cold Render dyno), STUN-only on any failure. */
+async function refreshTurn(){
+  try{
+    const ctrl=new AbortController();
+    const to=setTimeout(()=>ctrl.abort(),6000);
+    const r=await fetch(TURN_ENDPOINT,{cache:'no-store',signal:ctrl.signal});
+    clearTimeout(to);
+    if(!r.ok)return;
+    const t=await r.json();
+    if(t&&t.urls&&t.username&&t.credential){
+      turnIce=[{urls:t.urls,username:t.username,credential:t.credential}];
+      rebuildIce();
+    }
+  }catch(_){ /* dyno cold / offline / blocked → STUN-only, join still works */ }
 }
 const CALL_ADJ=['Falcon','Bravo','Cobra','Eagle','Tango','Viper','Ghost','Ranger','Delta','Hawk','Wolf','Nova','Echo','Rhino','Zulu','Comet'];
 const $=id=>document.getElementById(id);
@@ -326,7 +335,7 @@ async function getMic(){
 }
 
 // ── Create / join ───────────────────────────────────────────────────────────────
-async function createChannel(){ if(!initFB())return; if(!await getMic())return; await refreshStun(); code=randCode(); isHost=true; await enterChannel(); }
+async function createChannel(){ if(!initFB())return; if(!await getMic())return; await Promise.all([refreshStun(),refreshTurn()]); code=randCode(); isHost=true; await enterChannel(); }
 async function joinChannel(){
   const c=($('wt-code').value||'').trim().toUpperCase();
   if(c.length!==4){$('home-err').textContent='Enter the 4-letter code.';return;}
@@ -336,7 +345,7 @@ async function joinChannel(){
   if(Object.keys(mem).length===0){$('home-err').textContent='Channel not found.';return;}
   if(Object.keys(mem).length>=MAX){$('home-err').textContent='Channel is full (6 max).';return;}
   if(!await getMic())return;
-  await refreshStun();
+  await Promise.all([refreshStun(),refreshTurn()]);
   code=c; isHost=false; await enterChannel();
 }
 window.createChannel=createChannel;window.joinChannel=joinChannel;

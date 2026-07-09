@@ -8,6 +8,14 @@ services:
     buildCommand: npm install
     startCommand: npm start
     healthCheckPath: /
+    envVars:
+      # Shared secret for ephemeral TURN tokens (GET /turn). Must byte-match the
+      # coturn static-auth-secret. Set the real value in the Render dashboard;
+      # sync:false keeps it out of git — never commit the secret itself.
+      - key: TURN_SECRET
+        sync: false
+      - key: TURN_HOST
+        value: 140.245.220.65
 
   # The Game Zone website itself (static hosting, free)
   - type: web
