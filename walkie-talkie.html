@@ -410,7 +410,9 @@ async function pollDiag(){
       if(sel&&pairs[sel]&&local[pairs[sel].localCandidateId]) candType=local[pairs[sel].localCandidateId].candidateType; // host/srflx/relay
     }catch(_){}
     const nm=(membersCache[oid]||{}).name||oid.slice(0,4);
-    rows.push(esc(nm)+': '+pc.connectionState+'/'+pc.iceConnectionState+' ['+candType+'] ↑'+kbpsOut+' ↓'+kbpsIn+'kbps');
+    const d=p.dbg||{};
+    rows.push(esc(nm)+': '+pc.connectionState+'/'+pc.iceConnectionState+' ['+candType+'] ↑'+kbpsOut+' ↓'+kbpsIn+'k'
+      +'\n  '+(d.role||'?')+' off '+(d.oS||0)+'/'+(d.oR||0)+' ans '+(d.aS||0)+'/'+(d.aR||0)+' ice '+(d.cS||0)+'/'+(d.cR||0)+(d.err?' '+esc(d.err):''));
   }
   $('diag').textContent = rows.length? rows.join('\n') : 'no peers yet';
 }
@@ -422,7 +424,8 @@ function createPeer(oid,name,isOfferer){
   const pc=new RTCPeerConnection(ICE);
   const audioEl=document.createElement('audio'); audioEl.autoplay=true; audioEl.playsInline=true;
   document.body.appendChild(audioEl);
-  const peer={pc,audioEl,name,talking:false,state:'connecting',sender:null,analyser:null,pendingCands:[],remoteSet:false};
+  const peer={pc,audioEl,name,talking:false,state:'connecting',sender:null,analyser:null,pendingCands:[],remoteSet:false,
+    dbg:{role:isOfferer?'O':'A',oS:0,oR:0,aS:0,aR:0,cS:0,cR:0,err:''}};
   peers[oid]=peer;
   if(micTrack) peer.sender=pc.addTrack(micTrack,localStream);  // negotiate sendrecv; muted via enabled until PTT
   pc.ontrack=e=>{
@@ -435,9 +438,9 @@ function createPeer(oid,name,isOfferer){
     const go=()=>audioEl.play&&audioEl.play().catch(()=>{});
     go(); setTimeout(go,300);
   };
-  pc.onicecandidate=e=>{ if(e.candidate) sendSignal(oid,{cand:e.candidate.toJSON()}); };
+  pc.onicecandidate=e=>{ if(e.candidate){ peer.dbg.cS++; sendSignal(oid,{cand:e.candidate.toJSON()}); } };
   pc.onconnectionstatechange=()=>{ peer.state=pc.connectionState; if(pc.connectionState==='failed'){try{pc.restartIce&&pc.restartIce();}catch(_){}} renderMembers(membersCache); };
-  if(isOfferer){ (async()=>{ try{ const o=await pc.createOffer(); await pc.setLocalDescription(o); sendSignal(oid,{sdp:pc.localDescription}); }catch(e){} })(); }
+  if(isOfferer){ (async()=>{ try{ const o=await pc.createOffer(); await pc.setLocalDescription(o); peer.dbg.oS++; sendSignal(oid,{sdp:pc.localDescription}); }catch(e){ peer.dbg.err='off:'+(e&&e.name||e); } })(); }
 }
 function removePeer(oid){ const p=peers[oid]; if(!p)return; try{p.pc.close();}catch(e){} if(p.audioEl){p.audioEl.srcObject=null;p.audioEl.remove();} delete peers[oid]; }
 /* flat signaling: each message is a direct child of signals/<recipient>, carrying `from` */
@@ -448,16 +451,18 @@ async function handleSignal(msg){
   const pc=peer.pc;
   try{
     if(msg.sdp){
+      if(msg.sdp.type==='offer')peer.dbg.oR++; else peer.dbg.aR++;
       await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
       peer.remoteSet=true;
       // flush any ICE candidates that arrived before the remote description
       while(peer.pendingCands.length){ try{ await pc.addIceCandidate(new RTCIceCandidate(peer.pendingCands.shift())); }catch(_){} }
-      if(msg.sdp.type==='offer'){ const a=await pc.createAnswer(); await pc.setLocalDescription(a); sendSignal(from,{sdp:pc.localDescription}); }
+      if(msg.sdp.type==='offer'){ const a=await pc.createAnswer(); await pc.setLocalDescription(a); peer.dbg.aS++; sendSignal(from,{sdp:pc.localDescription}); }
     }else if(msg.cand){
+      peer.dbg.cR++;
       if(peer.remoteSet && pc.remoteDescription){ try{ await pc.addIceCandidate(new RTCIceCandidate(msg.cand)); }catch(_){} }
       else peer.pendingCands.push(msg.cand);      // queue until remote description is set
     }
-  }catch(e){}
+  }catch(e){ peer.dbg.err='sig:'+(e&&e.name||e); }
 }
 
 // ── Target knob (directed audio) ──────────────────────────────────────────────────
