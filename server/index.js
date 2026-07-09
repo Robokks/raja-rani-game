@@ -5,6 +5,7 @@
    ═══════════════════════════════════════════════════════════════════ */
 const express = require('express');
 const http = require('http');
+const crypto = require('crypto');
 const { Server } = require('socket.io');
 
 const app = express();
@@ -31,6 +32,30 @@ const io = new Server(server, {
 // Health endpoint — also used by clients to wake a sleeping free dyno
 app.get('/', (_req, res) => res.type('text').send('ok'));
 app.get('/health', (_req, res) => res.json({ ok: true, rooms: rooms.size, uptime: process.uptime() | 0 }));
+
+/* ── Ephemeral TURN credentials (coturn use-auth-secret / TURN REST) ──────
+   Mints a short-lived username+HMAC credential so no static password is ever
+   shipped to the (public) client. The shared secret lives ONLY here, as the
+   TURN_SECRET env var, and must byte-match coturn's static-auth-secret. */
+const TURN_HOST = process.env.TURN_HOST || '140.245.220.65';
+function allowOrigin(origin) {
+  return !!origin && (ALLOWED_ORIGINS.includes(origin)
+    || /^https?:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)
+    || /^https:\/\/[a-z0-9-]+\.onrender\.com$/.test(origin));
+}
+app.get('/turn', (req, res) => {
+  const origin = req.get('origin');
+  if (allowOrigin(origin)) res.set('Access-Control-Allow-Origin', origin);
+  const secret = process.env.TURN_SECRET;
+  if (!secret) return res.status(503).json({ error: 'TURN not configured' });
+  const ttl = 12 * 3600;
+  const username = (Math.floor(Date.now() / 1000) + ttl) + ':walkie';
+  const credential = crypto.createHmac('sha1', secret).update(username).digest('base64');
+  res.json({
+    username, credential, ttl,
+    urls: ['turn:' + TURN_HOST + ':3478', 'turn:' + TURN_HOST + ':3478?transport=tcp'],
+  });
+});
 
 /* ── Rooms ─────────────────────────────────────────────────────────── */
 const rooms = new Map(); // code -> room
