@@ -242,12 +242,15 @@ const FB={apiKey:"AIzaSyAQ0l788yLKmfWIJ6Ok88k2TcwdD6XA1n4",databaseURL:"https://
 
    TURN is still REQUIRED for strict/symmetric NATs (some mobile carriers,
    corporate/campus Wi-Fi) where no direct path exists and audio must be
-   relayed. Get a FREE relay (20GB/mo) at https://metered.ca/tools/openrelay
-   → sign up → fill host/username/credential below. Leave '' to disable TURN. */
+   relayed. This is wired for a SELF-HOSTED coturn server (no third-party
+   account). Put your server's public IP in `host`, and the username +
+   password you set in turnserver.conf. Leave host:'' to disable TURN.
+   If you later add a domain + TLS cert, set tls:true for TURNS on 5349. */
 const TURN = {
-  host: '',                 // <-- your metered subdomain (before .relay.metered.ca)
-  username: '',             // <-- your metered TURN username
-  credential: ''            // <-- your metered TURN credential
+  host: '',                 // <-- your coturn server public IP (e.g. '203.0.113.45')
+  username: '',             // <-- coturn username (user=NAME:PASSWORD in turnserver.conf)
+  credential: '',           // <-- coturn password
+  tls: false                // <-- true only if you set up a domain + Let's Encrypt cert
 };
 const STUN_FALLBACK=[
   'stun:stun.l.google.com:19302',
@@ -255,12 +258,13 @@ const STUN_FALLBACK=[
   'stun:stun.cloudflare.com:3478'
 ];
 function turnServers(){
-  return (TURN.host&&TURN.username) ? [
-    {urls:'turn:'+TURN.host+'.relay.metered.ca:80',username:TURN.username,credential:TURN.credential},
-    {urls:'turn:'+TURN.host+'.relay.metered.ca:80?transport=tcp',username:TURN.username,credential:TURN.credential},
-    {urls:'turn:'+TURN.host+'.relay.metered.ca:443',username:TURN.username,credential:TURN.credential},
-    {urls:'turns:'+TURN.host+'.relay.metered.ca:443?transport=tcp',username:TURN.username,credential:TURN.credential},
-  ] : [];
+  if(!(TURN.host&&TURN.username)) return [];
+  const list=[
+    {urls:'turn:'+TURN.host+':3478',username:TURN.username,credential:TURN.credential},
+    {urls:'turn:'+TURN.host+':3478?transport=tcp',username:TURN.username,credential:TURN.credential},
+  ];
+  if(TURN.tls) list.push({urls:'turns:'+TURN.host+':5349?transport=tcp',username:TURN.username,credential:TURN.credential});
+  return list;
 }
 let ICE={iceServers:[...STUN_FALLBACK.map(u=>({urls:u})), ...turnServers()]};
 
