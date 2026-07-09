@@ -316,10 +316,66 @@ h1{
 /* Round tag: gold trim */
 .roundtag{border-color:rgba(251,191,36,.3);color:rgba(251,191,36,.85);background:rgba(251,191,36,.08);}
 
+/* ═══════════ PREMIUM NEON-GRADE POLISH (match/beat Neon Racer) ═══════════ */
+#ember-bg{position:fixed;inset:0;z-index:0;pointer-events:none;}
+.screen{position:relative;z-index:1;}
+#conn-banner{z-index:500;}
+
+/* Panels: deeper glass, glowing top edge, richer border */
+.panel{
+  background:linear-gradient(180deg,rgba(255,255,255,.11),rgba(255,255,255,.045));
+  border:1px solid rgba(251,191,36,.16);
+  box-shadow:0 10px 40px rgba(0,0,0,.55),0 2px 10px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.10),0 0 40px rgba(124,58,237,.06);
+}
+
+/* Inputs: glassmorphism + gold focus glow */
+input[type=text]{
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.14);
+  box-shadow:inset 0 1px 3px rgba(0,0,0,.25);
+  transition:border-color .18s,box-shadow .18s,background .18s;
+}
+input[type=text]:focus{
+  border-color:rgba(251,191,36,.6);
+  background:rgba(251,191,36,.06);
+  box-shadow:inset 0 1px 3px rgba(0,0,0,.25),0 0 0 3px rgba(251,191,36,.18),0 0 18px rgba(251,191,36,.15);
+}
+
+/* Buttons: vivid neon gradients + real glow + sheen (Racer-grade) */
+.btn{
+  background:linear-gradient(180deg,#ff7a6b 0%,#e23b32 100%);
+  border:1px solid rgba(255,150,140,.45);
+  box-shadow:0 6px 22px rgba(226,59,50,.45),0 0 0 1px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.32),inset 0 -6px 14px rgba(0,0,0,.25);
+  text-shadow:0 1px 2px rgba(120,20,15,.5);
+}
+.btn:hover{filter:brightness(1.08);box-shadow:0 8px 30px rgba(226,59,50,.6),0 0 0 1px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.35);}
+.btn:active{transform:scale(.97);box-shadow:0 3px 12px rgba(226,59,50,.4),inset 0 1px 0 rgba(255,255,255,.2);}
+.btn.green{
+  background:linear-gradient(180deg,#5cf08f 0%,#20b45f 100%);
+  border-color:rgba(140,255,180,.45);
+  box-shadow:0 6px 22px rgba(32,180,95,.45),0 0 0 1px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.35),inset 0 -6px 14px rgba(0,0,0,.22);
+  color:#06210f;text-shadow:0 1px 0 rgba(255,255,255,.25);
+}
+.btn.green:hover{box-shadow:0 8px 30px rgba(32,180,95,.6),inset 0 1px 0 rgba(255,255,255,.4);}
+.btn.green:active{box-shadow:0 3px 12px rgba(32,180,95,.4);}
+.btn.ghost{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);box-shadow:0 4px 14px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.08);text-shadow:none;}
+
+/* Avatar picker: gold selection glow + hover lift */
+.av-opt{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);transition:transform .18s cubic-bezier(.34,1.56,.64,1),box-shadow .18s,border-color .18s;}
+.av-opt:hover{transform:translateY(-2px) scale(1.05);border-color:rgba(251,191,36,.4);}
+.av-opt.selected{border-color:var(--gold);background:rgba(251,191,36,.15);box-shadow:0 0 0 3px var(--gold-glow),0 0 22px rgba(251,191,36,.4),0 6px 16px rgba(0,0,0,.4);transform:scale(1.12);}
+
+/* Number/round pickers: neon active state */
+.np-btn.active{background:linear-gradient(180deg,rgba(251,191,36,.25),rgba(251,191,36,.12));color:#ffe9a8;border-color:rgba(251,191,36,.5);box-shadow:0 0 18px rgba(251,191,36,.2),inset 0 1px 0 rgba(255,255,255,.15);}
+
+/* Room code: brighter gold neon */
+.roomcode{color:#ffd76a;text-shadow:0 0 30px rgba(251,191,36,.6),0 0 10px rgba(251,191,36,.4);border-color:rgba(251,191,36,.45);background:linear-gradient(180deg,rgba(251,191,36,.14),rgba(251,191,36,.04));}
+
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms !important;transition-duration:.01ms !important;}}
 </style>
 </head>
 <body>
+<canvas id="ember-bg"></canvas>
 <div id="conn-banner" style="display:none;position:fixed;top:0;left:0;right:0;background:var(--red);color:#fff;text-align:center;font-size:13px;font-weight:800;padding:7px;z-index:500;letter-spacing:.5px;">&#x26A1; Connection lost &mdash; reconnecting&hellip;</div>
 
 <!-- HOME -->
@@ -485,6 +541,32 @@ h1{
 <!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script>
+/* floating golden embers — premium royal ambience */
+(function(){
+  const cv=document.getElementById('ember-bg'); if(!cv)return;
+  if(window.matchMedia&&matchMedia('(prefers-reduced-motion:reduce)').matches)return;
+  const cx=cv.getContext('2d'); let W,H;
+  function resize(){W=cv.width=innerWidth;H=cv.height=innerHeight;}
+  resize(); addEventListener('resize',resize);
+  const COLS=['251,191,36','255,150,80','196,181,253','255,220,140'];
+  const P=Array.from({length:46},()=>reset({},true));
+  function reset(p,init){p.x=Math.random()*innerWidth;p.y=init?Math.random()*innerHeight:innerHeight+10;p.r=1+Math.random()*2.6;p.vy=-(.15+Math.random()*.5);p.vx=(Math.random()-.5)*.3;p.a=.2+Math.random()*.55;p.c=COLS[~~(Math.random()*COLS.length)];p.t=Math.random()*6.28;return p;}
+  (function loop(){
+    cx.clearRect(0,0,W,H);
+    for(const p of P){
+      p.y+=p.vy; p.x+=p.vx+Math.sin(p.t)*.25; p.t+=.02;
+      if(p.y<-10)reset(p);
+      cx.beginPath(); cx.arc(p.x,p.y,p.r,0,6.28);
+      cx.fillStyle='rgba('+p.c+','+p.a+')';
+      cx.shadowColor='rgba('+p.c+',.8)'; cx.shadowBlur=8;
+      cx.fill();
+    }
+    cx.shadowBlur=0;
+    requestAnimationFrame(loop);
+  })();
+})();
+</script>
 
 <script>
 // ── Firebase config ────────────────────────────────────────────────────
