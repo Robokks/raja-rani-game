@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Happy Birthday, Suji 🎀</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Quicksand:wght@400;500;600;700&family=Caveat:wght@600;700&display=swap');
+
+  :root{
+    --blush:#fff3f7;
+    --pink:#ffc9dd;
+    --hotpink:#ff8fb3;
+    --deep:#7a3b56;
+    --dark:#3a1c2b;
+    --gold:#f6c667;
+    --mint:#bdeed4;
+    --lavender:#d9c9f0;
+    --peach:#ffd3ba;
+  }
+
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+
+  html,body{
+    margin:0; padding:0; height:100%; overflow:hidden;
+    background:radial-gradient(circle at 30% 20%, #fff9fb 0%, var(--blush) 45%, var(--pink) 100%);
+    font-family:'Quicksand', sans-serif;
+    color:var(--deep);
+  }
+
+  #stage{ position:relative; width:100%; height:100vh; perspective:1400px; }
+
+  .scene{
+    position:absolute; inset:0;
+    display:none;
+    flex-direction:column; align-items:center; justify-content:center;
+    text-align:center;
+    padding:24px;
+  }
+  .scene.active{
+    display:flex;
+    animation:flipIn .7s cubic-bezier(.3,.9,.35,1) both;
+  }
+  @keyframes flipIn{
+    from{ opacity:0; transform:rotateY(70deg) scale(.92); }
+    to{ opacity:1; transform:rotateY(0deg) scale(1); }
+  }
+  .scene.dark{ background:radial-gradient(circle at 50% 30%, #4a2438, var(--dark)); color:#f6d9e6; }
+
+  h1,h2{ font-family:'Fredoka', sans-serif; font-weight:600; margin:0 0 10px; }
+  h1{font-size:clamp(28px,7vw,50px);}
+  h2{font-size:clamp(19px,4.8vw,28px);}
+  .script{ font-family:'Caveat', cursive; font-weight:700; }
+  p.sub{ font-size:clamp(14px,3.6vw,17px); color:#a1607e; max-width:400px; margin:0 auto 20px; }
+  .scene.dark p.sub{ color:#e3b7cb; }
+
+  .btn{
+    font-family:'Fredoka', sans-serif; font-size:16px; font-weight:600; color:#fff;
+    background:linear-gradient(135deg,var(--hotpink),#ff6fa0); border:none;
+    padding:13px 30px; border-radius:40px; cursor:pointer;
+    box-shadow:0 8px 20px rgba(255,111,160,0.35);
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .btn:hover{transform:translateY(-2px);}
+  .btn:active{transform:translateY(1px) scale(.98);}
+  .btn:focus-visible{outline:3px solid var(--deep); outline-offset:3px;}
+  .btn.ghost{ background:transparent; color:var(--deep); border:2px solid var(--hotpink); box-shadow:none; }
+  .btn.small{ padding:9px 20px; font-size:14px; }
+  .row{ display:flex; gap:14px; justify-content:center; flex-wrap:wrap; margin-top:6px; }
+
+  /* ---------- Balloons ---------- */
+  #balloonField{ position:relative; width:min(520px,90vw); height:min(360px,44vh); margin-top:4px; }
+  .balloon{
+    position:absolute; width:62px; height:78px;
+    border-radius:50% 50% 50% 50% / 60% 60% 40% 40%;
+    cursor:pointer; animation:bob 3.4s ease-in-out infinite;
+    box-shadow:inset -8px -10px 16px rgba(0,0,0,0.08), inset 6px 8px 14px rgba(255,255,255,0.5);
+    transition:transform .15s ease;
+  }
+  .balloon::after{ content:''; position:absolute; left:50%; bottom:-24px; width:2px; height:24px; background:rgba(122,59,86,.35); transform:translateX(-50%); }
+  .balloon:hover{transform:scale(1.06);}
+  @keyframes bob{ 0%,100%{transform:translateY(0) rotateZ(-3deg);} 50%{transform:translateY(-14px) rotateZ(3deg);} }
+  .balloon.popped{ animation:popBurst .3s ease forwards; pointer-events:none; }
+  @keyframes popBurst{ to{ transform:scale(1.7) rotateZ(20deg); opacity:0; } }
+  #wordReveal{ font-family:'Fredoka',sans-serif; font-weight:600; font-size:clamp(18px,5vw,26px); min-height:34px; margin-top:14px; letter-spacing:.5px; }
+  #wordReveal span{ opacity:0; display:inline-block; transform:translateY(6px); transition:opacity .35s ease, transform .35s ease; margin:0 4px; }
+  #wordReveal span.show{ opacity:1; transform:translateY(0); }
+
+  /* ---------- Candle ---------- */
+  #s-candle{ perspective:700px; }
+  .cakeSmall{ position:relative; width:110px; margin:26px auto 10px; transform-style:preserve-3d; animation:cakeSway 4s ease-in-out infinite; }
+  @keyframes cakeSway{ 0%,100%{transform:rotateY(-16deg) rotateX(4deg);} 50%{transform:rotateY(16deg) rotateX(4deg);} }
+  .cs-tier{ height:44px; border-radius:8px; background:linear-gradient(180deg,#fff2e6,#ffe1c2); box-shadow:inset 0 -6px 0 rgba(255,255,255,.5); }
+  .cs-drip{ position:absolute; top:-6px; left:0; right:0; height:14px; background:radial-gradient(circle,#fff 40%,transparent 41%) 0 0/16px 16px; opacity:.9; }
+  .candleSingle{ position:absolute; top:-46px; left:50%; transform:translateX(-50%); cursor:pointer; }
+  .stick{ width:6px; height:34px; margin:0 auto; border-radius:2px; background:repeating-linear-gradient(180deg,var(--gold) 0 6px,#fff 6px 12px); }
+  .flame{ width:11px; height:18px; margin:0 auto 2px; border-radius:60% 60% 50% 50%; background:radial-gradient(circle at 50% 70%, #fff3c4, #ffb347 70%, #ff7a3d); animation:flicker 1s ease-in-out infinite; transition:opacity .3s ease, transform .3s ease; box-shadow:0 0 18px rgba(255,180,80,.6); }
+  @keyframes flicker{ 0%,100%{transform:scaleY(1) rotate(-2deg);} 50%{transform:scaleY(1.15) rotate(2deg);} }
+  .candleSingle.out .flame{ opacity:0; transform:scale(.2); }
+  .candleSingle.out .smoke{ opacity:1; }
+  .smoke{ position:absolute; top:-14px; left:50%; width:4px; height:16px; background:rgba(255,255,255,.4); border-radius:4px; opacity:0; transform:translateX(-50%); animation:rise 1.4s ease-out; }
+  @keyframes rise{ from{opacity:.6; transform:translate(-50%,0) scaleY(1);} to{opacity:0; transform:translate(-50%,-16px) scaleY(1.8);} }
+  #wishText{ font-family:'Caveat',cursive; font-size:26px; font-weight:700; opacity:0; transition:opacity .6s ease; margin-top:8px; }
+  #wishText.show{opacity:1;}
+
+  /* ---------- Friends / question scene ---------- */
+  .friends{ display:flex; align-items:flex-end; justify-content:center; gap:10px; margin:14px 0; }
+  .blob{ width:70px; height:64px; border-radius:50% 50% 46% 46% / 60% 60% 40% 40%; position:relative; box-shadow:0 6px 10px rgba(122,59,86,.15); }
+  .blob.a{ background:linear-gradient(160deg,#ffd6e5,var(--hotpink)); }
+  .blob.b{ background:linear-gradient(160deg,#e7f9ef,var(--mint)); }
+  .blob .eyes{ position:absolute; top:22px; left:0; right:0; display:flex; justify-content:center; gap:14px; }
+  .blob .eyes i{ width:6px; height:6px; background:var(--dark); border-radius:50%; display:block; }
+  .blob .smile{ position:absolute; top:32px; left:50%; transform:translateX(-50%); width:14px; height:7px; border-bottom:2px solid var(--dark); border-radius:0 0 10px 10px; }
+  .miniCake{ width:38px; height:26px; border-radius:6px; background:linear-gradient(180deg,#fff2e6,#ffcf8f); align-self:center; margin:0 4px; box-shadow:inset 0 -4px 0 rgba(255,255,255,.6); }
+  .noBtn{ transition:transform .25s ease; }
+
+  /* ---------- Envelope ---------- */
+  .envelope{ width:130px; height:92px; position:relative; margin:20px auto 10px; cursor:pointer; perspective:500px; transform-style:preserve-3d; animation:envFloat 3s ease-in-out infinite; }
+  @keyframes envFloat{ 0%,100%{transform:translateY(0) rotateZ(-1.5deg);} 50%{transform:translateY(-8px) rotateZ(1.5deg);} }
+  .env-body{ position:absolute; inset:0; background:linear-gradient(180deg,#fff,#ffe6ef); border-radius:8px; box-shadow:0 10px 22px rgba(122,59,86,.2); transform:translateZ(0); }
+  .env-flap{ position:absolute; top:0; left:0; right:0; height:0; border-left:65px solid transparent; border-right:65px solid transparent; border-top:52px solid var(--hotpink); transform-origin:top; transform-style:preserve-3d; backface-visibility:hidden; transition:transform .6s cubic-bezier(.3,.6,.3,1); }
+  .envelope.open .env-flap{ transform:rotateX(180deg) translateZ(2px); }
+  .env-heart{ position:absolute; top:34px; left:50%; transform:translateX(-50%) translateZ(4px); font-size:18px; }
+
+  /* ---------- Letter ---------- */
+  .letter{ background:#fffaf9; border-radius:18px; padding:24px 22px; max-width:420px; width:90vw; box-shadow:0 14px 32px rgba(122,59,86,.18); border:1px solid #ffe1ee; max-height:64vh; overflow-y:auto; }
+  .letter p{ font-family:'Caveat', cursive; font-size:clamp(18px,4.2vw,22px); line-height:1.5; color:#6b2c4c; text-align:left; margin:0; white-space:pre-wrap; }
+  .cursor{ display:inline-block; width:2px; background:#6b2c4c; animation:blink 1s step-end infinite; }
+  @keyframes blink{ 50%{opacity:0;} }
+
+  /* ---------- Bouquet ---------- */
+  .bouquetWrap{ position:relative; width:min(300px,80vw); height:220px; margin:8px auto; }
+  .rose{ position:absolute; font-size:30px; }
+  .note{
+    position:absolute; background:#fff; color:var(--deep); font-family:'Fredoka',sans-serif; font-size:12px; font-weight:600;
+    padding:7px 12px; border-radius:16px; box-shadow:0 6px 14px rgba(122,59,86,.18);
+    opacity:0; transform:translateY(8px) scale(.9); transition:opacity .45s ease, transform .45s ease;
+    white-space:nowrap;
+  }
+  .note.show{ opacity:1; transform:translateY(0) scale(1); }
+
+  /* ---------- Gift (3D cube) ---------- */
+  .gift3d{ width:100px; height:100px; margin:22px auto 6px; perspective:600px; cursor:pointer; }
+  .giftCube{ position:relative; width:100%; height:100%; transform-style:preserve-3d; transform:rotateX(-16deg) rotateY(24deg); animation:cubeSpin 7s linear infinite; }
+  .giftCube.open{ animation:none; transform:rotateX(-10deg) rotateY(24deg) scale(1.05); transition:transform .5s ease; }
+  @keyframes cubeSpin{ from{ transform:rotateX(-16deg) rotateY(0deg); } to{ transform:rotateX(-16deg) rotateY(360deg); } }
+  .gface{
+    position:absolute; width:86px; height:86px; left:7px; top:7px;
+    background:linear-gradient(160deg,#ff9dbc,var(--hotpink));
+    box-shadow:inset 0 0 20px rgba(255,255,255,.3);
+    border:1px solid rgba(255,255,255,.35);
+    background-image:
+      linear-gradient(160deg,#ff9dbc,var(--hotpink)),
+      linear-gradient(90deg, transparent 40%, var(--gold) 40%, var(--gold) 60%, transparent 60%),
+      linear-gradient(0deg, transparent 40%, var(--gold) 40%, var(--gold) 60%, transparent 60%);
+  }
+  .gface.front{ transform:translateZ(43px); }
+  .gface.back{ transform:translateZ(-43px) rotateY(180deg); }
+  .gface.right{ transform:rotateY(90deg) translateZ(43px); }
+  .gface.left{ transform:rotateY(-90deg) translateZ(43px); }
+  .glid{
+    position:absolute; width:92px; height:92px; left:4px; top:4px;
+    background:#ff7aa5; transform:rotateX(90deg) translateZ(43px);
+    box-shadow:inset 0 0 16px rgba(255,255,255,.3);
+    transition:transform .6s cubic-bezier(.3,.7,.3,1), opacity .5s ease;
+  }
+  .giftCube.open .glid{ transform:rotateX(90deg) translateZ(43px) translateY(-90px) rotateX(-40deg); opacity:0; }
+  #giftMsg{ opacity:0; transition:opacity .6s ease; margin-top:6px; }
+  #giftMsg.show{ opacity:1; }
+
+  /* confetti */
+  .confetti{ position:fixed; top:-20px; width:9px; height:14px; opacity:.9; animation:fall linear forwards; transform-style:preserve-3d; }
+  @keyframes fall{ to{ transform:translateY(110vh) rotateX(900deg) rotateY(540deg) rotateZ(360deg); opacity:.4; } }
+
+  /* ---------- Finale 3D badge ---------- */
+  #s-finale{ perspective:600px; }
+  .badge3d{ width:92px; height:92px; margin:6px auto 14px; }
+  .badgeInner{ position:relative; width:100%; height:100%; transform-style:preserve-3d; animation:coinFlip 2.6s linear infinite; }
+  @keyframes coinFlip{ from{ transform:rotateY(0deg); } to{ transform:rotateY(360deg); } }
+  .badgeFace{
+    position:absolute; inset:0; border-radius:50%;
+    display:flex; align-items:center; justify-content:center; font-size:38px;
+    backface-visibility:hidden;
+    box-shadow:0 10px 22px rgba(122,59,86,.25);
+  }
+  .badgeFace.front{ background:linear-gradient(160deg,#fff,var(--pink)); }
+  .badgeFace.back{ background:linear-gradient(160deg,#fff,var(--mint)); transform:rotateY(180deg); }
+
+  .floatie{ position:absolute; font-size:32px; animation:float 6s ease-in-out infinite; opacity:.85; }
+  @keyframes float{ 0%,100%{transform:translateY(0) rotate(-4deg);} 50%{transform:translateY(-22px) rotate(4deg);} }
+
+  @media (prefers-reduced-motion: reduce){ *{animation-duration:.01ms !important; animation-iteration-count:1 !important;} }
+</style>
+</head>
+<body>
+
+<div id="stage">
+
+  <!-- 1. Intro -->
+  <section class="scene active" id="s-intro">
+    <div class="floatie" style="top:10%; left:12%;">🎈</div>
+    <div class="floatie" style="top:18%; right:10%; animation-delay:1.2s;">🎀</div>
+    <div class="floatie" style="bottom:16%; left:14%; animation-delay:2.1s;">✨</div>
+    <h1>It's Suji's Birthday!</h1>
+    <p class="sub">A little celebration made just for you. Tap to begin.</p>
+    <button class="btn" onclick="goTo('s-balloons')">Start 🎉</button>
+  </section>
+
+  <!-- 2. Balloons -->
+  <section class="scene" id="s-balloons">
+    <h2>Pop all 4 balloons</h2>
+    <div id="balloonField"></div>
+    <div id="wordReveal"><span>You</span><span>are</span><span>so</span><span>special</span></div>
+  </section>
+
+  <!-- 3. Candle -->
+  <section class="scene dark" id="s-candle">
+    <h2 class="script" style="color:#ff9db8;">Blow the candle</h2>
+    <div class="cakeSmall">
+      <div class="candleSingle" id="candle">
+        <div class="flame"></div>
+        <div class="smoke"></div>
+        <div class="stick"></div>
+      </div>
+      <div class="cs-drip"></div>
+      <div class="cs-tier"></div>
+    </div>
+    <div id="wishText">Close your eyes &amp; make a wish</div>
+  </section>
+
+  <!-- 4. Friends / question -->
+  <section class="scene" id="s-question">
+    <h2>Happy Birthday, Suji</h2>
+    <div class="friends">
+      <div class="blob a"><div class="eyes"><i></i><i></i></div><div class="smile"></div></div>
+      <div class="miniCake"></div>
+      <div class="blob b"><div class="eyes"><i></i><i></i></div><div class="smile"></div></div>
+    </div>
+    <p class="sub">Are you excited for what's next?</p>
+    <div class="row" id="qRow">
+      <button class="btn" onclick="goTo('s-envelope')">Yes</button>
+      <button class="btn ghost noBtn" id="noBtn">No</button>
+    </div>
+  </section>
+
+  <!-- 5. Envelope -->
+  <section class="scene" id="s-envelope">
+    <h2>A Message From My Heart</h2>
+    <div class="envelope" id="envelope" onclick="openEnvelope()">
+      <div class="env-body"></div>
+      <div class="env-heart">💌</div>
+      <div class="env-flap"></div>
+    </div>
+    <p class="sub">Tap to open</p>
+  </section>
+
+  <!-- 6. Letter -->
+  <section class="scene" id="s-letter">
+    <h2>💌</h2>
+    <div class="letter"><p id="letterText"></p></div>
+    <button class="btn" style="margin-top:18px;" id="letterNext" onclick="goTo('s-bouquet')" hidden>Keep going</button>
+  </section>
+
+  <!-- 7. Bouquet -->
+  <section class="scene" id="s-bouquet">
+    <h2>Your Bouquet 🌹</h2>
+    <div class="bouquetWrap" id="bouquet"></div>
+    <button class="btn" style="margin-top:6px;" onclick="goTo('s-gift')">Continue</button>
+  </section>
+
+  <!-- 8. Gift -->
+  <section class="scene" id="s-gift">
+    <h2>One Last Thing…</h2>
+    <p class="sub">Tap the gift</p>
+    <div class="gift3d" id="gift" onclick="openGift()">
+      <div class="giftCube" id="giftCube">
+        <div class="gface front"></div>
+        <div class="gface back"></div>
+        <div class="gface right"></div>
+        <div class="gface left"></div>
+        <div class="glid"></div>
+      </div>
+    </div>
+    <div id="giftMsg" class="sub">Lots of love for you today, and always 💗</div>
+    <button class="btn" style="margin-top:10px;" onclick="finale()">See you there 🎉</button>
+  </section>
+
+  <!-- 9. Finale -->
+  <section class="scene" id="s-finale">
+    <div class="badge3d"><div class="badgeInner">
+      <div class="badgeFace front">🎉</div>
+      <div class="badgeFace back">🎂</div>
+    </div></div>
+    <h1>Happy Birthday, Suji! 🎉</h1>
+    <p class="sub">Have the most wonderful day.</p>
+    <button class="btn ghost" onclick="restart()">Play again</button>
+  </section>
+
+</div>
+
+<script>
+  function goTo(id){
+    document.querySelectorAll('.scene').forEach(s=>s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    if(id==='s-balloons') setupBalloons();
+    if(id==='s-candle') setupCandle();
+    if(id==='s-question') setupQuestion();
+    if(id==='s-envelope') resetEnvelope();
+    if(id==='s-letter') typeLetter();
+    if(id==='s-bouquet') setupBouquet();
+    if(id==='s-gift') resetGift();
+  }
+
+  /* ---------- Balloons ---------- */
+  const balloonColors = ['var(--hotpink)','var(--mint)','var(--lavender)','var(--peach)'];
+  let poppedCount = 0;
+  const totalBalloons = 4;
+
+  function setupBalloons(){
+    const field = document.getElementById('balloonField');
+    field.innerHTML = '';
+    poppedCount = 0;
+    document.querySelectorAll('#wordReveal span').forEach(s=>s.classList.remove('show'));
+    const positions = [ [8,10], [58,4], [20,50], [66,46] ];
+    for(let i=0;i<totalBalloons;i++){
+      const b = document.createElement('div');
+      b.className = 'balloon';
+      b.style.background = `linear-gradient(160deg, #fff, ${balloonColors[i]})`;
+      b.style.left = positions[i][0] + '%';
+      b.style.top = positions[i][1] + '%';
+      b.style.animationDelay = (i * 0.3) + 's';
+      b.addEventListener('click', () => popBalloon(b, i));
+      field.appendChild(b);
+    }
+  }
+
+  function popBalloon(el, idx){
+    if(el.classList.contains('popped')) return;
+    el.classList.add('popped');
+    burst(el);
+    document.querySelectorAll('#wordReveal span')[idx].classList.add('show');
+    poppedCount++;
+    if(poppedCount === totalBalloons){
+      setTimeout(()=>goTo('s-candle'), 1000);
+    }
+  }
+
+  function burst(el){
+    const rect = el.getBoundingClientRect();
+    for(let i=0;i<10;i++){
+      const p = document.createElement('div');
+      p.className = 'confetti';
+      p.style.left = (rect.left + rect.width/2) + 'px';
+      p.style.top = (rect.top + rect.height/2) + 'px';
+      p.style.background = ['#ff8fb3','#f6c667','#bdeed4','#d9c9f0'][i%4];
+      p.style.animationDuration = (0.6 + Math.random()*0.5) + 's';
+      p.style.transform = `translate(${(Math.random()-0.5)*120}px, ${(Math.random())*80}px)`;
+      document.body.appendChild(p);
+      setTimeout(()=>p.remove(), 1200);
+    }
+  }
+
+  /* ---------- Candle ---------- */
+  function setupCandle(){
+    const c = document.getElementById('candle');
+    c.classList.remove('out');
+    document.getElementById('wishText').classList.remove('show');
+    c.onclick = () => {
+      if(c.classList.contains('out')) return;
+      c.classList.add('out');
+      document.getElementById('wishText').classList.add('show');
+      setTimeout(()=>goTo('s-question'), 1600);
+    };
+  }
+
+  /* ---------- Question (No dodges) ---------- */
+  function setupQuestion(){
+    const noBtn = document.getElementById('noBtn');
+    const row = document.getElementById('qRow');
+    noBtn.style.position = 'relative';
+    noBtn.style.left = '0px'; noBtn.style.top = '0px';
+    noBtn.onpointerenter = () => {
+      const dx = (Math.random()-0.5) * 160;
+      const dy = (Math.random()-0.5) * 60;
+      noBtn.style.left = dx + 'px';
+      noBtn.style.top = dy + 'px';
+    };
+    noBtn.onclick = (e) => { e.preventDefault(); noBtn.onpointerenter(); };
+  }
+
+  /* ---------- Envelope ---------- */
+  function resetEnvelope(){
+    document.getElementById('envelope').classList.remove('open');
+  }
+  function openEnvelope(){
+    const env = document.getElementById('envelope');
+    env.classList.add('open');
+    setTimeout(()=>goTo('s-letter'), 700);
+  }
+
+  /* ---------- Letter typewriter ---------- */
+  const letterMessage =
+`Dear Suji,
+
+Happy birthday! You're kind, funny, and one of my favorite people to have around.
+
+Thank you for the warmth you bring to every day, even the ordinary ones feel better with you in them.
+
+I hope today gives you something to smile about and something to remember.
+
+Here's to another year of you being exactly who you are.
+
+With love,
+Your brother`;
+
+  function typeLetter(){
+    const el = document.getElementById('letterText');
+    const nextBtn = document.getElementById('letterNext');
+    nextBtn.hidden = true;
+    el.innerHTML = '<span class="cursor">&nbsp;</span>';
+    let i = 0;
+    const speed = 18;
+    function step(){
+      if(i <= letterMessage.length){
+        el.innerHTML = letterMessage.slice(0,i) + '<span class="cursor">&nbsp;</span>';
+        i++;
+        setTimeout(step, speed);
+      } else {
+        el.innerHTML = letterMessage;
+        nextBtn.hidden = false;
+      }
+    }
+    step();
+  }
+
+  /* ---------- Bouquet ---------- */
+  const notes = [
+    'Always in my corner',
+    'My favorite sister',
+    'So proud of you',
+    'Thanks for always showing up',
+    'You make everything brighter',
+    'Never change'
+  ];
+  function setupBouquet(){
+    const wrap = document.getElementById('bouquet');
+    wrap.innerHTML = '';
+    const roses = ['40%,70%','30%,55%','52%,55%','20%,68%','62%,68%'];
+    roses.forEach((pos,i)=>{
+      const [l,t] = pos.split(',');
+      const r = document.createElement('div');
+      r.className = 'rose';
+      r.textContent = '🌹';
+      r.style.left = l; r.style.top = t;
+      r.style.transform = `rotate(${(i-2)*8}deg)`;
+      wrap.appendChild(r);
+    });
+    const notePositions = [ [4,4],[58,10],[0,40],[64,42],[10,78],[56,80] ];
+    notes.forEach((text,i)=>{
+      const n = document.createElement('div');
+      n.className = 'note';
+      n.textContent = text;
+      n.style.left = notePositions[i][0] + '%';
+      n.style.top = notePositions[i][1] + '%';
+      wrap.appendChild(n);
+      setTimeout(()=>n.classList.add('show'), 400 + i*450);
+    });
+  }
+
+  /* ---------- Gift ---------- */
+  function resetGift(){
+    document.getElementById('giftCube').classList.remove('open');
+    document.getElementById('giftMsg').classList.remove('show');
+  }
+  function openGift(){
+    const g = document.getElementById('giftCube');
+    if(g.classList.contains('open')) return;
+    g.classList.add('open');
+    setTimeout(()=>document.getElementById('giftMsg').classList.add('show'), 350);
+  }
+
+  /* ---------- Finale ---------- */
+  function finale(){
+    goTo('s-finale');
+    const colors = ['#ff8fb3','#f6c667','#bdeed4','#d9c9f0','#ffc9dd'];
+    for(let i=0;i<70;i++){
+      setTimeout(()=>{
+        const p = document.createElement('div');
+        p.className = 'confetti';
+        p.style.left = Math.random()*100 + 'vw';
+        p.style.background = colors[i % colors.length];
+        p.style.animationDuration = (2.4 + Math.random()*1.6) + 's';
+        document.body.appendChild(p);
+        setTimeout(()=>p.remove(), 4200);
+      }, i * 60);
+    }
+  }
+
+  function restart(){ goTo('s-intro'); }
+</script>
+
+</body>
+</html>
