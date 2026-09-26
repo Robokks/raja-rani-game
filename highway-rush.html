@@ -168,7 +168,7 @@ function updBest(){document.getElementById('best').textContent=best?('BEST '+bes
 updBest();
 
 addEventListener('keydown',e=>{
-  if(['INPUT','SELECT','BUTTON'].includes(e.target.tagName))return;
+  if(['INPUT','SELECT'].includes(e.target.tagName)||(!running&&e.target.tagName==='BUTTON'))return;
   if(e.code.startsWith('Arrow'))e.preventDefault();
   if(e.key.length===1)e={key:e.key.toLowerCase()};
   if(e.key==='ArrowLeft'||e.key==='a')keys.l=true;
