@@ -49,14 +49,15 @@ test('Fruit Slash restart clears transient state and stale swipe', () => {
 test('Highway Rush replay restores road segments and resets controls', () => {
   const ctx=functions('highway-rush.html',['startRun'],{
     resetControls(){ctx.reset=true;},segments:[{position:{z:-9000}},{position:{z:-9100}}],SEG_LEN:100,
-    document:{getElementById:element},running:false,laneX:i=>i*4,px:4,pz:-9000,speed:60,targetSpeed:67,
+    document:{getElementById:element,body:element(),activeElement:{blur(){}}},running:false,started:false,laneX:i=>i*4,px:4,pz:-9000,speed:60,targetSpeed:67,
     score:999,dist:9000,combo:5,topCombo:5,comboT:2,shake:1,
     traffic:[{active:true,mesh:{visible:true}}],localStorage:{getItem:()=>10},best:0,mode:'one',updBest(){}
   });
   ctx.startRun();
   assert.equal(ctx.reset,true);assert.equal(ctx.pz,0);assert.equal(ctx.dist,0);
   assert.deepEqual(ctx.segments.map(s=>s.position.z),[-0,-100]);
-  assert.equal(ctx.traffic[0].active,false);assert.equal(ctx.running,true);
+  assert.equal(ctx.traffic[0].active,false);assert.equal(ctx.running,true);assert.equal(ctx.started,true);
+  assert.ok(ctx.segments.every(s=>s.visible));
 });
 
 test('Highway Rush crash is idempotent and stores one final score', () => {
