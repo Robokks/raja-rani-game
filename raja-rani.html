@@ -718,7 +718,7 @@ const lastSeenMap={};
 db.ref('.info/connected').on('value',snap=>{
   const online=snap.val();
   const dot=$('conn-dot'),txt=$('conn-txt');
-  if(online){dot.className='conn-dot ok';txt.textContent='Connected ✓';onConnBack();}
+  if(online){dot.className='conn-dot ok';txt.textContent='Connected ✓';onConnBack();if(roomCode)startHeartbeat();}
   else{dot.className='conn-dot err';txt.textContent='Reconnecting…';onConnLost();}
 });
 
@@ -744,12 +744,42 @@ async function readRoom(code){
   }catch{return null;}
 }
 
-function writeRoom(s){
-  s.version=(s.version||0)+1;s.ts=Date.now();
-  const toStore=Object.assign({},s);
+let pendingWrite=false;
+function roomNotice(message){
+  let el=$('room-notice');
+  if(!el){
+    el=document.createElement('div');el.id='room-notice';el.setAttribute('role','status');
+    el.style.cssText='position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:9999;max-width:90vw;padding:12px 18px;border-radius:12px;background:#222;color:#fff;text-align:center';
+    document.body.appendChild(el);
+  }
+  el.textContent=message;el.hidden=false;
+  clearTimeout(roomNotice.timer);roomNotice.timer=setTimeout(()=>el.hidden=true,4500);
+}
+async function writeRoom(s,creating=false){
+  if(pendingWrite)return false;
+  pendingWrite=true;
+  const expected=s.version||0;
+  const toStore=deepCopy(s);
+  toStore.version=expected+1;toStore.ts=Date.now();
   if(toStore.playerRoles)toStore.playerRoles=_enc(JSON.stringify(toStore.playerRoles));
-  db.ref('rooms/'+roomCode+'/state').set(toStore).catch(()=>onConnLost());
-  state=s;lastVer=s.version;render();
+  try{
+    // Compare-and-swap: stale clicks must never overwrite newer joins or turns.
+    const result=await db.ref('rooms/'+roomCode+'/state').transaction(curr=>{
+      if(creating){if(curr)return;}
+      else if(!curr||(curr.version||0)!==expected)return;
+      return toStore;
+    },undefined,false);
+    const latest=result.snapshot.val();
+    if(latest&&(!creating||result.committed)&&(latest.version||0)>=lastVer){
+      state=_decRoles(latest);lastVer=state.version||0;
+      me=state.players.findIndex(p=>p.id===myId);render();
+    }
+    if(!result.committed)roomNotice('Room changed. Please try your action again.');
+    return result.committed;
+  }catch(e){
+    roomNotice('Could not save your move. Check your connection and try again.');
+    return false;
+  }finally{pendingWrite=false;}
 }
 
 function subscribeRoom(code){
@@ -941,8 +971,10 @@ async function createRoom(){
       code=Array.from({length:4},()=>chars[Math.floor(Math.random()*chars.length)]).join('');
       const snap=await db.ref('rooms/'+code+'/state').once('value');
       const ex=snap.val();
-      if(!ex||Date.now()-(ex.ts||0)>4*3600*1000)break;
+      if(!ex)break;
+      code=null;
     }
+    if(!code)throw new Error('No free room code');
     roomCode=code;me=0;$('home-err').textContent='';
     const s={code,version:0,phase:'lobby',round:1,totalRounds:5,numPlayers:4,
       kickedIds:[],
@@ -950,12 +982,13 @@ async function createRoom(){
       playerRoles:null,diceRoller:0,diceValue:null,
       chainStep:0,chainFinder:null,declaredRajaIdx:null,
       foundPlayers:[],roundPoints:{},lastResult:null};
-    writeRoom(s);subscribeAll(code);startHeartbeat();
+    if(!await writeRoom(s,true)){roomCode=null;show('scr-home');return;}
+    subscribeAll(code);startHeartbeat();
     history.replaceState(null,'','raja-rani.html?room='+code);
     sessionStorage.setItem('rr-room',code);
     show('scr-lobby');
   }catch(e){$('home-err').textContent='Error — check internet.';console.error(e);}
-  busy=false;
+  finally{busy=false;}
 }
 
 async function joinRoom(){
@@ -975,9 +1008,9 @@ async function joinRoom(){
 
     // Atomic transaction — cache is warm so curr starts with real data
     let finalState=null,errMsg=null;
-    await db.ref('rooms/'+code+'/state').transaction(curr=>{
+    const joined=await db.ref('rooms/'+code+'/state').transaction(curr=>{
       errMsg=null;finalState=null;
-      if(!curr)return {};
+      if(!curr){errMsg='Room no longer exists.';return;}
       if((curr.kickedIds||[]).includes(myId)){errMsg='You were removed from this room.';return;}
       const alreadyIn=curr.players.some(p=>p.id===myId);
       if(curr.phase!=='lobby'&&!alreadyIn){errMsg='Game already started.';return;}
@@ -991,8 +1024,8 @@ async function joinRoom(){
       finalState=deepCopy(curr);
       return curr;
     });
-    if(errMsg||!finalState){$('home-err').textContent=errMsg||'Could not join room.';busy=false;return;}
-    _decRoles(finalState);
+    if(!joined.committed||errMsg||!finalState){$('home-err').textContent=errMsg||'Could not join room.';busy=false;return;}
+    finalState=_decRoles(joined.snapshot.val());
     roomCode=code;
     me=finalState.players.findIndex(p=>p.id===myId);
     state=finalState;lastVer=finalState.version;
@@ -1027,7 +1060,7 @@ function hostKick(playerId){
   writeRoom(s);
 }
 async function hostStart(){
-  if(!isHost()||!state||state.players.length!==state.numPlayers||busy)return;
+  if(!isHost()||!state||state.phase!=='lobby'||state.players.length!==state.numPlayers||busy||pendingWrite)return;
   busy=true;beginRound(deepCopy(state));busy=false;
 }
 function beginRound(s){
@@ -1041,7 +1074,7 @@ function beginRound(s){
 
 // ── Dice ───────────────────────────────────────────────────────────────
 function tapDice(){
-  if(busy||!state||state.phase!=='dice'||me!==state.diceRoller)return;
+  if(busy||pendingWrite||!state||state.phase!=='dice'||me!==state.diceRoller)return;
   const el=$('dice-el');
   if(el.classList.contains('rolling'))return;
   playSound('dice');
@@ -1051,7 +1084,7 @@ function tapDice(){
   setTimeout(()=>{clearInterval(iv);el.classList.remove('rolling');rollDice();},1200);
 }
 function rollDice(){
-  if(busy||!state||state.phase!=='dice'||me!==state.diceRoller)return;
+  if(busy||pendingWrite||!state||state.phase!=='dice'||me!==state.diceRoller)return;
   busy=true;
   const s=deepCopy(state);
   const val=Math.floor(Math.random()*6)+1;
@@ -1068,17 +1101,18 @@ function scheduleAdvance(s){
   mycardTimer=setTimeout(async()=>{
     if(!state||state.phase!=='mycard')return;
     // Use a transaction so only one client advances, even if multiple fire simultaneously
-    await db.ref('rooms/'+roomCode+'/state').transaction(curr=>{
+    try{await db.ref('rooms/'+roomCode+'/state').transaction(curr=>{
       if(!curr||curr.phase!=='mycard')return;
       curr.phase='declare';curr.version=(curr.version||0)+1;curr.ts=Date.now();
       return curr;
     });
+    }catch(e){roomNotice('Connection interrupted. Reconnecting…');if(state&&state.phase==='mycard')scheduleAdvance(state);}
   },delay);
 }
 
 // ── Chain ──────────────────────────────────────────────────────────────
 function declareRaja(){
-  if(busy||!state||state.phase!=='declare')return;
+  if(busy||pendingWrite||!state||state.phase!=='declare')return;
   if(state.playerRoles[me]!=='raja')return;
   busy=true;
   const s=deepCopy(state);
@@ -1087,13 +1121,14 @@ function declareRaja(){
 }
 
 function guessPlayer(targetIdx){
-  if(busy||!state||state.phase!=='chain'||state.chainFinder!==me)return;
+  if(busy||pendingWrite||!state||state.phase!=='chain'||state.chainFinder!==me)return;
   busy=true;
   const s=deepCopy(state);
   s.roundPoints=s.roundPoints||{};
   const _doneSet=new Set(s.doneFinderIdxs||[]);
   const _foundRoleSet=new Set(s.foundRoles||[]);
   if(_doneSet.has(targetIdx)||_foundRoleSet.has(s.playerRoles[targetIdx])||targetIdx===me){busy=false;return;}
+  if(!Number.isInteger(targetIdx)||targetIdx<0||targetIdx>=s.players.length){busy=false;return;}
   const target=chainTarget(s);
   const tName=(s.players[targetIdx]||{name:'?'}).name;
   if(s.playerRoles[targetIdx]===target){
@@ -1142,14 +1177,14 @@ async function hostEndGame(){
   busy=false;
 }
 async function hostNextRound(){
-  if(!isHost()||!state||busy)return;
+  if(!isHost()||!state||state.phase!=='result'||busy||pendingWrite)return;
   busy=true;
   const s=deepCopy(state);
   if(s.round<s.totalRounds){s.round++;beginRound(s);}else{s.phase='over';writeRoom(s);}
   busy=false;
 }
 async function hostRematch(){
-  if(!isHost()||!state||busy)return;
+  if(!isHost()||!state||state.phase!=='over'||busy||pendingWrite)return;
   busy=true;
   const s=deepCopy(state);
   s.players.forEach(p=>p.score=0);s.round=1;beginRound(s);busy=false;

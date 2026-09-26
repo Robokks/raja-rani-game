@@ -76,6 +76,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#0a0a1e;font-family:
 </div>
 
 <script src="lib/three.min.js"></script>
+<script src="lib/game-pause.js"></script>
 <script>
 'use strict';
 /* ═══════════════════════════════════════════════════════════════════
@@ -272,7 +273,16 @@ addEventListener('keyup',e=>{
   addEventListener('mouseup',off);
 });
 
+function resetControls(){
+  Object.keys(keys).forEach(k=>keys[k]=false);
+  document.querySelectorAll('.ctl').forEach(el=>el.classList.remove('pressed'));
+}
+const pauseControl=GamePause.install({isPlaying:()=>running,resetInput:resetControls});
+
 function startRun(){
+  resetControls();
+  segments.forEach((s,i)=>{s.position.z=-i*SEG_LEN;});
+  document.getElementById('combo').classList.remove('pop');
   running=true;
   px=laneX(2);pz=0;speed=14;targetSpeed=28;
   score=0;dist=0;combo=0;topCombo=0;comboT=0;shake=0;
@@ -325,7 +335,9 @@ function nearMiss(mult){
 }
 
 function crash(){
+  if(!running)return;
   running=false;
+  resetControls();
   shake=1;
   const finalScore=Math.round(score+dist);
   document.getElementById('o-score').textContent=finalScore;
@@ -343,6 +355,8 @@ let last=0;
 function frame(ts){
   requestAnimationFrame(frame);
   const dt=Math.min((ts-last)/1000,0.05);last=ts;
+  pauseControl.sync();
+  if(pauseControl.paused)return;
 
   if(running){
     // speed control: cruise 100, gas to 240, brake down
@@ -373,7 +387,7 @@ function frame(ts){
       const dx=Math.abs(t.mesh.position.x-px);
       const dz=Math.abs(rel);
       // collision AABB
-      if(dz<4.0&&dx<1.85){crash();}
+      if(dz<4.0&&dx<1.85){crash();break;}
       // near miss: just passed, close laterally, fast enough
       if(!t.passed&&rel>2&&rel<10){
         t.passed=true;
