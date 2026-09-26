@@ -23,3 +23,15 @@ Before release, verify:
 ## Arcade controls
 
 Highway Rush, Fruit Slash, and Space Blaster support the on-screen **Pause** button and **P / Escape**. Switching apps or hiding the tab pauses play and releases held controls. Use **Resume game**, **Enter**, **Space**, **P**, or **Escape** to continue.
+
+## Highway Rush graphics
+
+The Coastline edition uses the bundled Three.js renderer with procedural car geometry and textures. Its art assets are generated locally; there are no external model or texture downloads. The garage offers four car paint colours and three graphics settings:
+
+- **Auto** caps resolution for the device and reduces detail after sustained slow frames.
+- **High detail** enables dynamic shadows and a higher resolution cap.
+- **Smooth** uses a lower resolution cap and baked contact shadows for lighter rendering.
+
+The upgrade includes reflective car paint/glass, wheel detail, braking lights, coastal terrain, palms, ocean, directional signs, sunset lighting and a damped chase camera. The game still uses the original traffic, scoring, pause and restart rules.
+
+`tests/highway-scene.test.js` checks real geometry, camera/recycling logic and quality settings without a GPU. These checks do **not** validate GLSL shader compilation, visual appearance or real-device frame rate. Browser visual QA is required before treating the graphics upgrade as release-ready.
