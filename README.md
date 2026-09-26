@@ -35,3 +35,7 @@ The Coastline edition uses the bundled Three.js renderer with procedural car geo
 The upgrade includes reflective car paint/glass, wheel detail, braking lights, coastal terrain, palms, ocean, directional signs, sunset lighting and a damped chase camera. The game still uses the original traffic, scoring, pause and restart rules.
 
 `tests/highway-scene.test.js` checks real geometry, camera/recycling logic and quality settings without a GPU. These checks do **not** validate GLSL shader compilation, visual appearance or real-device frame rate. Browser visual QA is required before treating the graphics upgrade as release-ready.
+
+### Browser graphics check
+
+`node tests/highway-browser.cjs` serves the checkout on loopback, blocks external requests and checks the game in desktop and phone-sized Chromium sessions. Install the project's dependencies and Playwright Chromium first. The `Highway graphics browser check` workflow captures garage/driving screenshots and a JSON report as a seven-day build artifact. Software rendering verifies shaders and controls; it is not a real-phone performance benchmark.

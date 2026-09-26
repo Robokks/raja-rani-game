@@ -3,3 +3,4 @@ package-lock.json
 __pycache__/
 .claude/worktrees/
 server/node_modules/
+test-results/

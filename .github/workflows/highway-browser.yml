@@ -1,0 +1,26 @@
+name: Highway graphics browser check
+on:
+  push:
+    branches: ['test/highway-graphics-browser']
+  pull_request:
+    paths: ['highway-rush.html', 'lib/highway-scene.js', 'lib/game-pause.js', 'tests/highway-browser.cjs', '.github/workflows/highway-browser.yml']
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --ignore-scripts --no-audit --no-fund --package-lock=false
+      - run: npx playwright install --with-deps chromium
+      - run: node tests/highway-browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: highway-graphics-check
+          path: test-results/
+          retention-days: 7
