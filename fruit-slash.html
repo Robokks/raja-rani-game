@@ -24,6 +24,7 @@ canvas{display:block;width:100vw;height:100vh;cursor:crosshair}
 <body>
 <a id="back" href="index.html">‹ Games</a>
 <canvas id="gc"></canvas>
+<script src="lib/game-pause.js"></script>
 <script>
 'use strict';
 // ═══════════════════════════════════════════════════════════════════════════
@@ -199,6 +200,8 @@ function startGame() {
   state = 'play';
   score = 0; lives = 3; combo = 0; difficulty = 0; elapsed = 0;
   spawnTimer = 0.6;
+  comboTimer = 0; shake = 0; flash = 0; slowmo = 0; waveTimer = 0;
+  slicing = false; trail.length = 0;
   fruits.length = 0; halves.length = 0; particles.length = 0;
   floats.length = 0; splats.length = 0;
 }
@@ -211,14 +214,15 @@ function ptr(e) {
 function down(e) {
   if (e.target.id === 'back') return;
   e.preventDefault();
-  if (state !== 'play') { startGame(); return; }
+  if (pauseControl.paused) return;
+  if (state !== 'play') startGame();
   slicing = true;
   const p = ptr(e);
   trail.length = 0;
   trail.push({ ...p, t: performance.now() });
 }
 function move(e) {
-  if (!slicing || state !== 'play') return;
+  if (!slicing || state !== 'play' || pauseControl.paused) return;
   e.preventDefault();
   const p = ptr(e);
   const last = trail[trail.length - 1];
@@ -234,6 +238,8 @@ window.addEventListener('mouseup', up);
 cv.addEventListener('touchstart', down, { passive: false });
 cv.addEventListener('touchmove', move, { passive: false });
 window.addEventListener('touchend', up);
+window.addEventListener('touchcancel', up);
+const pauseControl=GamePause.install({isPlaying:()=>state==='play',resetInput:()=>{up();trail.length=0;}});
 
 // ─── Drawing: fruit bodies ───────────────────────────────────────────────────
 function drawFruitBody(d, r, bomb) {
@@ -433,6 +439,8 @@ function loop(ts) {
   requestAnimationFrame(loop);
   let dt = Math.min((ts - lastT) / 1000, 1 / 20);
   lastT = ts;
+  pauseControl.sync();
+  if (pauseControl.paused) return;
   const t = ts / 1000;
 
   // slow-motion on multi-slice

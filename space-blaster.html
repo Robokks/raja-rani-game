@@ -53,6 +53,7 @@ canvas{display:block;position:fixed;inset:0;}
   <div class="cb" id="btn-fire" aria-label="Fire"><div>🔥</div><span>FIRE</span></div>
   <div class="cb" id="btn-right" aria-label="Move right"><div>▶</div><span>RIGHT</span></div>
 </div>
+<script src="lib/game-pause.js"></script>
 <script>
 'use strict';
 const C=document.getElementById('c'),X=C.getContext('2d');
@@ -94,7 +95,12 @@ addTouch('btn-fire',()=>tF=true,()=>tF=false);
 C.addEventListener('touchend',e=>{e.preventDefault();tryStart();},{passive:false});
 C.addEventListener('click',tryStart);
 
-function tryStart(){if(gs==='menu'||gs==='over')startGame();}
+function tryStart(){if(!pauseControl.paused&&(gs==='menu'||gs==='over'))startGame();}
+function resetControls(){
+  Object.keys(K).forEach(k=>K[k]=false);tL=tR=tF=false;
+  document.querySelectorAll('.pressed').forEach(el=>el.classList.remove('pressed'));
+}
+const pauseControl=GamePause.install({isPlaying:()=>gs==='play',resetInput:resetControls});
 
 // ─── Audio ────────────────────────────────────────────────────────────────────
 let AC;
@@ -184,7 +190,9 @@ function startGame(){
   initAC();
   score=0;lives=3;level=1;
   bulls=[];eBulls=[];parts=[];flashMsg='';
-  P.x=GW/2;P.invuln=0;
+  P.x=GW/2;P.invuln=0;P.lastFire=-Infinity;
+  eFireTimer=0;flashT=0;
+  resetControls();
   initStars();spawnWave();
   gs='play';
   beep(440,.15,'sine',.15);
@@ -215,7 +223,7 @@ function explode(x,y,colors,n=14){
 }
 
 function loseLife(){
-  if(gs!=='play')return;
+  if(gs!=='play'||P.invuln>0)return;
   lives--;
   P.invuln=2.2;
   explode(P.x,P.y,['#22d3ee','#ffffff','#a5f3fc'],22);
@@ -232,6 +240,8 @@ let lt=0;
 function loop(ts){
   const dt=Math.min((ts-lt)/1000,.05);lt=ts;
   requestAnimationFrame(loop);
+  pauseControl.sync();
+  if(pauseControl.paused)return;
   update(dt,ts);
   draw(ts);
 }
